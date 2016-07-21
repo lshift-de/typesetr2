@@ -1,9 +1,13 @@
-package net.lshift.typesetr.postprocessors
+package net.lshift.typesetr
+package postprocessors
 
 import net.lshift.typesetr.xml.Tag
 
 import scala.annotation.tailrec
-import scala.xml.{Elem, MetaData, Node, Text, UnprefixedAttribute}
+import scala.xml.{ Elem, MetaData, Node, Text, UnprefixedAttribute }
+import xml._
+import xml.Tags._
+import xml.Attributes._
 
 trait PostProcessor {
 
@@ -16,6 +20,8 @@ trait PostProcessor {
 
 trait PostProcessorUtils {
   self: PostProcessor =>
+
+  import xml.TagGroups._
 
   sealed abstract class GroupKey
   case class TextKey(text: Text) extends GroupKey

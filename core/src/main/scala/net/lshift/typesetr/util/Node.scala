@@ -17,9 +17,9 @@ class NodeOps(val x: scala.xml.Node) extends AnyVal {
   def hasTag(target: Tag): Boolean =
     hasTag(List(target))
 
-  @tailrec
   def hasAttribute(attrs: List[Attribute]): Boolean = x match {
     case elem: Elem =>
+      @tailrec
       def checkAttribute(m: MetaData): Boolean =
         (m != null) && ( // Lord, have mercy.
           attrs.contains(Attribute(m.key)) || checkAttribute(m.next))
