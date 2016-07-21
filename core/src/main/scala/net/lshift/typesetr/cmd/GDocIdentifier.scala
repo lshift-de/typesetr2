@@ -15,6 +15,6 @@ object GDocIdentifier {
   implicit def toRead[T]: Read[GDocIdentifier] = Read.reads { (v: String) =>
     val f = new File(v)
     if (f.exists()) GDocPath(f)
-    else            GDocId(v) // TODO: verify the pattern of GUID
+    else GDocId(v) // TODO: verify the pattern of GUID
   }
 }

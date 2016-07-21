@@ -8,7 +8,6 @@ import net.lshift.typesetr.cmd.{ CompressKind, OutputFormat, CommandParser, Conf
 import net.lshift.typesetr.util.Logger
 import org.apache.commons.io.FilenameUtils
 
-
 /* *
  * The main entry point to triggering the converter
  *
@@ -19,7 +18,7 @@ object Converter {
     CommandParser().parse(args) match {
       case Some(config) =>
         val logger = Logger(config.error)
-        
+
         // Start the external process
         for {
           _ <- rewriteInput(config).toLeft("").right
@@ -55,11 +54,11 @@ object Converter {
 
   def retrieveInputFile(config: Config): Either[String, File] = {
     Right(config.inFile.getOrElse({
-      
+
       // Read from a standard input and save to
       // a temporary file
       val conts = scala.io.Source.stdin.getLines().mkString(System.lineSeparator)
-  
+
       // Identify the extension of the file
       import DocumentKind._
       val kind = conts match {
