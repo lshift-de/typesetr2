@@ -17,7 +17,8 @@ object OutputFormat {
   implicit def toOpt: Read[OutputFormat] = Read.reads { (name: String) =>
     name match {
       case OutputFormat(f) => f
-      case other           => throw new IllegalArgumentException(s"Unknown format $other")
+      case other =>
+        throw new IllegalArgumentException(s"Unknown output format $other")
     }
   }
 

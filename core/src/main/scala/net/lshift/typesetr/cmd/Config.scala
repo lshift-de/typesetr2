@@ -5,13 +5,16 @@ import java.io.File
 import io.circe.Json
 import net.lshift.typesetr._
 
-case class Config(format: OutputFormat = OutputFormat.Pdf,
+case class Config(inFormat: InputFormat = InputFormat.Odt,
+                  outFormat: OutputFormat = OutputFormat.Pdf,
                   inFile: Option[File] = None,
                   outFile: Option[File] = None,
                   style: Style = Style.default(),
                   styleBase: File = new File("/opt/typesetr/styles"),
                   page: Int = 1,
                   pixels: Int = 600,
+                  Yoptimize: Boolean = true,
+                  Yns: Boolean = true,
                   noClean: Boolean = false,
                   gdocMeta: Json = Json.Null,
                   include: List[GDocIdentifier] = Nil,

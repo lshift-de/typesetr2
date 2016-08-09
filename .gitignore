@@ -1,6 +1,6 @@
 .idea/
 .git/
 target/
-core/target/
+core/target
 project/target/
 project/project/

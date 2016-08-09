@@ -6,128 +6,172 @@ import net.lshift.typesetr.xml.Tag
 import scala.annotation.tailrec
 import scala.xml.{ Elem, MetaData, Node, Text, UnprefixedAttribute }
 import xml._
-import xml.Tags._
+import xml.InternalTags._
 import xml.Attributes._
+import net.lshift.typesetr.parsers.{ NodeRepr, TextRepr, Repr }
 
-trait PostProcessor {
+import util.Logger
 
-  type ElemSig = (Tag, MetaData)
+abstract class PostProcessor {
 
-  def process(body: Any): Option[Any]
+  type ElemSig = (Tag, List[Attribute])
 
-  protected def coalesce(nodes: List[Node]): List[Node]
+  def process[T](node: Repr.Aux[T])(implicit builder: NodeRepr[T], logger: Logger): Repr.Aux[T] = {
+    val nodes = coalesce(node.body.toList)
+    builder.create(
+      tag = node.tag,
+      elem = node.source,
+      children = nodes,
+      contents = node.contents,
+      attrs = node.attr)
+  }
+
+  protected def coalesce[T](nodes: List[Repr.Aux[T]])(implicit builder: NodeRepr[T], logger: Logger): List[Repr.Aux[T]]
+
 }
 
-trait PostProcessorUtils {
+trait PostProcessorUtils extends OpimizerStrategies {
   self: PostProcessor =>
 
   import xml.TagGroups._
 
-  sealed abstract class GroupKey
-  case class TextKey(text: Text) extends GroupKey
-  case class SigKey(elemSig: ElemSig) extends GroupKey
-
   // group together potential elements
-  protected def coalesce(elems: List[Node]): List[Node] = {
+  protected def coalesce[T](nodes: List[Repr.Aux[T]])(implicit builder: NodeRepr[T], logger: Logger): List[Repr.Aux[T]] = {
 
     object BogusElement {
-      def isBogus(x: Node): Boolean = unapply(x).isEmpty
+      def isBogus(x: Repr): Boolean = unapply(x).isEmpty
 
-      def unapply(x: Node): Option[Elem] = x match {
-        case e: Elem =>
-          e match {
-            // empty void element
-            case _ if e hasTag FULLY_VOID_TAGS =>
-              Some(e)
-            // emptyblock element
-            case _ if (e hasTag NON_EMPTY_BLOCK_TAGS) && e.child.isEmpty =>
-              Some(e)
-            // empty link
-            case _ if (e hasTag A) && (e hasAttribute NAME) =>
-              Some(e)
-            case _ =>
-              None
-          }
-        case _ =>
+      def unapply(e: Repr): Option[Repr] =
+        if (e hasTag FULLY_VOID_TAGS)
+          Some(e)
+        //emptyblock element
+        else if ((e hasTag NON_EMPTY_BLOCK_TAGS) && e.isEmpty)
+          Some(e)
+        // empty link
+        else if ((e hasTag A) && (e hasAttribute HREF))
+          Some(e)
+        else
           None
-      }
     }
 
-    def groupByTagAndAttr(x: Node): GroupKey =
-      x match {
-        // todo: other atoms?
-        case text: Text =>
-          TextKey(text)
-        case elem: Elem =>
-          SigKey((elem.label, elem.attributes))
+    def groupByTagAndAttr[T](x: Repr.Aux[T]): Int => GroupKey = (idx: Int) =>
+      x.tag match {
+        case Tag.textTag => TextKey(idx)
+        case t           => SigKey((t, x.attr), idx)
       }
 
-    def maybeCollapseGroups(key: ElemSig, elems: Seq[Node]): Seq[Node] =
+    def maybeCollapseGroups[T](key: ElemSig, elems: Seq[Repr.Aux[T]])(implicit builder: NodeRepr[T], logger: Logger): Seq[Repr.Aux[T]] = {
       elems match {
         case singleElem :: Nil => elems
         case _ =>
+          logger.info(s"Collapse groups of ${key._1}")
           key._1 match {
             case inline if inline isIn INLINE_TAG_WITH_BLOCKQUOTE =>
               // weird odt splitting
-              coalesceSiblings(key, elems).filterNot(BogusElement.isBogus)
+              // TODO: enable filtering once styles are back
+              coalesceSiblings(key, elems) //.filterNot(BogusElement.isBogus)
             case BLOCK =>
+              // TODO: enable filtering once styles are back
               // collapse blocks into one
-              coalesceBlocks(key, elems).filterNot(BogusElement.isBogus)
+              coalesceBlocks(key, elems) //.filterNot(BogusElement.isBogus)
             // FIXME: missing LIT and CMD
             // checking
             case _ =>
-              (for {
+              logger.info("Coalesce based on parent-child relation")
+              /*(for {
                 elem <- elems
                 elem1 <- coalesceParentChild(key, elem)
                 elem2 <- coalesceHeadings(elem1)
-              } yield elem2).flatten
-
+              } yield elem2).flatten*/
+              // TODO: looks like the current implementation
+              // is too eager.
+              elems
           }
       }
+    }
 
-    val grouped = elems.groupBy(groupByTagAndAttr _)
+    val nodes1 = nodes.map(process(_)(builder, logger))
+
+    // Group all the child nodes by the tag.
+    // Note: when grouping we have to consider if they are not
+    //       separated by some different group.
+    val withGroupTag = nodes1.foldLeft((0, (Nil: List[GroupKey], Nil: List[Repr.Aux[T]])))({
+      case ((0, (Nil, Nil)), r) =>
+        (0, (groupByTagAndAttr(r)(0) :: Nil, r :: Nil))
+      case ((idx, (tags @ (last :: rest), reprs)), r) =>
+        val groupedMaybe = groupByTagAndAttr(r)
+        val grouped = groupedMaybe(idx)
+        if (last == grouped) (idx, (grouped :: tags, r :: reprs))
+        else {
+          val idx1 = idx + 1
+          (idx1, (groupedMaybe(idx1) :: tags, r :: reprs))
+        }
+    })._2
+
+    val grouped = withGroupTag._2.zip(withGroupTag._1).reverse.groupBy(_._2)
 
     (for {
-      key <- grouped.keys.toList
-      elems <- grouped(key)
+      key <- grouped.keys.toList.sortBy(_.idx)
+      elems0 <- grouped.get(key)
     } yield {
+      val elems = elems0.map(_._1)
       key match {
-        case TextKey(_)  => elems
-        case SigKey(key) => maybeCollapseGroups(key, elems)
+        case TextKey(_) =>
+          val text = elems.flatMap(_.extractPlainText).mkString("")
+          Repr.makeTextElem(text)(builder.textNode(text), builder) :: Nil
+        case SigKey(key, _) =>
+          maybeCollapseGroups(key, elems)
       }
     }).flatten
+
   }
+
+  sealed abstract class GroupKey {
+    def idx: Int
+  }
+  case class TextKey(idx: Int) extends GroupKey
+  case class SigKey(elemSig: ElemSig, idx: Int) extends GroupKey
+
+}
+
+trait OptimizerCoalesceBlocks {
+  self: PostProcessor =>
+
+  import xml.TagGroups._
 
   // .block -> pre | blockquote handling
   // hacky and limited ATM; no support for nesting etc.
-  private def coalesceBlocks(sig: ElemSig, elems: Seq[Node]): Seq[Node] = {
+  protected def coalesceBlocks[T](sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit builder: NodeRepr[T]): Seq[Repr.Aux[T]] = {
 
     @tailrec
-    def codeBlock(elems: Seq[Node], txt: List[Option[Text]]): (Option[Node], Seq[Node]) = elems match {
-      case (elem: Elem) :: rest if elem hasTag CODE =>
+    def codeBlock[T](elems: Seq[Repr.Aux[T]], txt: List[Option[String]]): (Option[Repr.Aux[T]], Seq[Repr.Aux[T]]) = elems match {
+      case (elem: Repr) :: rest if elem hasTag CODE =>
         // extract text from the code element
-        codeBlock(rest, extractPlainText(elem) :: txt)
+        codeBlock(rest, elem.extractPlainText :: txt)
       case _ if txt.nonEmpty =>
-        (Some(makeElem(PRE, Text(txt.flatten.mkString("\n")))), elems)
+        // TODO: collapse blocks into one xml node
+        // that represents the ODT equivalent
+        (Some(Repr.makeElem(PRE, txt.flatten.mkString("\n"))(???, ???)), elems)
       case _ =>
         (None, elems)
     }
 
     @tailrec
-    def nonCodeBlock(elems: Seq[Node], blockq: Seq[Node]): (Seq[Node], Seq[Node]) = elems match {
-      case (elem: Elem) :: rest if elem hasTag CODE =>
-        (optMakeElem(BLOCKQUOTE, blockq).getOrElse(Seq()), elems)
+    def nonCodeBlock[T](elems: Seq[Repr.Aux[T]], blockq: Seq[Repr.Aux[T]])(implicit builder: NodeRepr[T]): (Seq[Repr.Aux[T]], Seq[Repr.Aux[T]]) = elems match {
+      case (elem: Repr) :: rest if elem hasTag CODE =>
+        (Repr.optMakeElem(BLOCKQUOTE, blockq).getOrElse(Seq()), elems)
 
-      case (elem: Elem) :: rest =>
+      case (elem: Repr) :: rest =>
         if (elem hasAttrWithVal ("class", "right")) {
           // append footer
-          nonCodeBlock(rest,
-            makeElem(FOOTER, Seq(makeElem(CITE, Seq(elem)))))
+          val citation = Seq(Repr.makeElem(CITE, Seq(elem))(???, ???))
+          nonCodeBlock[T](rest,
+            Seq(Repr.makeElem(FOOTER, citation)(???, ???)))
         } else {
           val toAppend =
             if ((elem hasTag BLOCK_TAGS) || (elem hasTag FOOTNOTE))
               // wrap in P
-              makeElem(P, Seq(elem))
+              Repr.makeElem(P, Seq(elem))(???, ???)
             else
               elem
           nonCodeBlock(rest, toAppend +: blockq)
@@ -135,11 +179,11 @@ trait PostProcessorUtils {
 
       case _ =>
         // No more blocks
-        (optMakeElem(BLOCKQUOTE, blockq).getOrElse(Seq()), elems)
+        (Repr.optMakeElem(BLOCKQUOTE, blockq).getOrElse(Seq()), elems)
     }
 
     @tailrec
-    def coalesceBlocks0(elems: Seq[Node], acc: Seq[Node]): Seq[Node] = elems match {
+    def coalesceBlocks0[T](elems: Seq[Repr.Aux[T]], acc: Seq[Repr.Aux[T]])(implicit builder: NodeRepr[T]): Seq[Repr.Aux[T]] = elems match {
       case Nil =>
         acc
       case _ =>
@@ -152,13 +196,81 @@ trait PostProcessorUtils {
     coalesceBlocks0(elems, Seq())
   }
 
-  private def coalesceSiblings(sig: ElemSig, elems: Seq[Node]): Seq[Node] = {
+}
+
+trait OptimizerCoalesceSiblings {
+  self: PostProcessor =>
+
+  protected def coalesceSiblings[T](sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit builder: NodeRepr[T], logger: Logger): Seq[Repr.Aux[T]] = {
     // pack together the elements of the group
     // should apply cleaning up recursively
-    val compactedElems = elems.flatMap(_.child)
-    if (sig._1 == SPAN) compactedElems
-    else makeElem(sig._1, compactedElems, Some(sig._2))
+    val compactedElems = coalesce(elems.flatMap(_.body).toList)
+    logger.info(s"coalesce siblings: $sig > Reduced ${elems.length} to ${compactedElems.length}")
+    val r = elems match {
+      case Nil => Nil
+      case first :: _ =>
+        if (sig._1 == SPAN) compactedElems
+        // TODO, create a new XML node
+        else Repr.makeElem(sig._1, compactedElems, sig._2)(first.source, builder) :: Nil
+    }
+    r
   }
+}
+
+trait OptimzerCoalesceHeadings {
+  self: PostProcessor =>
+
+  import xml.TagGroups._
+
+  // Is there any actual textual content in the heading?
+  protected def coalesceHeadings[T](body: Repr.Aux[T])(implicit builder: NodeRepr[T]): Option[Seq[Repr.Aux[T]]] = {
+
+    object IsAnchor {
+      def unapply(node: Repr): Option[Repr] = node match {
+        case (elem: Repr) if (elem hasTag A) && (elem hasAttribute NAME) =>
+          Some(elem)
+        case _ =>
+          None
+      }
+    }
+
+    def isAnchor(node: Repr): Boolean =
+      IsAnchor.unapply(node).nonEmpty
+    def isString(node: Repr): Boolean = node.source match {
+      case _: Text => true
+      case _       => false
+    }
+
+    val (cleanedBody, noImgFig) =
+      (for {
+        bodyElem <- whack(body, n => !(n hasTag CAN_OCCUR_IN_HEADER))
+        noImgElem <- whack(bodyElem, n => n hasTag List(IMG, FIGURE))
+      } yield (bodyElem, noImgElem)).unzip
+
+    if (isBlank(noImgFig)) {
+      Some(Seq(Repr.makeElem(body.tag, cleanedBody,
+        body.attr.filter(_.key != STYLE))(body.source, implicitly[NodeRepr[T]])))
+    } else {
+      val nodes = (for {
+        elem <- cleanedBody if !isAnchor(elem) && !isString(elem)
+      } yield elem)
+
+      if (nodes.isEmpty) None else Some(nodes)
+    }
+  }
+}
+
+trait OpimizerStrategies {
+  self: PostProcessor =>
+
+  protected def coalesceBlocks[T](sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit builder: NodeRepr[T]): Seq[Repr.Aux[T]]
+  protected def coalesceSiblings[T](sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit builder: NodeRepr[T], logger: Logger): Seq[Repr.Aux[T]]
+  protected def coalesceHeadings[T](body: Repr.Aux[T])(implicit builder: NodeRepr[T]): Option[Seq[Repr.Aux[T]]]
+  protected def coalesceParentChild[T](sig: ElemSig, elem: Repr.Aux[T])(implicit builder: NodeRepr[T]): Option[Repr.Aux[T]]
+}
+
+trait OpimizerCoalesceParentChild {
+  self: PostProcessor =>
 
   // rationale:
   //     <li>
@@ -170,23 +282,23 @@ trait PostProcessorUtils {
   //       a
   //       <ul>...</ul>
   //     </li>
-  private def coalesceParentChild(sig: ElemSig, elem: Node): Option[Node] = {
+  protected def coalesceParentChild[T](sig: ElemSig, elem: Repr.Aux[T])(implicit nodeRepr: NodeRepr[T]): Option[Repr.Aux[T]] = {
 
     object BodyWithBogusP {
       val liftableTags = List(LI, DT, DD, FOOTNOTE)
 
       object DoesNotStartWithP {
-        def unapply(elems: List[Node]): Option[Seq[Node]] = {
+        def unapply[T](elems: List[Repr.Aux[T]]) = {
           if (elems exists (_.hasTag(P))) None
           else Some(elems)
         }
       }
 
-      def unapply(elem: Node): Option[Seq[Node]] = {
+      def unapply[T](elem: Repr.Aux[T]) = {
         if (elem hasTag liftableTags)
-          elem.child match {
-            case (elem: Elem) :: DoesNotStartWithP(elems) if elem.hasTag(P) =>
-              Some(elem.child ++ elems)
+          elem.body match {
+            case (elem: Repr) :: DoesNotStartWithP(elems) if elem.hasTag(P) =>
+              Some(elem.body.asInstanceOf[Seq[Repr.Aux[T]]] ++ elems)
             case _ =>
               None
           }
@@ -197,9 +309,9 @@ trait PostProcessorUtils {
     object LiftableP {
       val allowedInnerTags = List(PAGEBREAK, BLOCKQUOTE)
 
-      def unapply(elem: Node): Option[Node] = elem match {
-        case (elem: Elem) if elem.hasTag(P) &&
-          elem.child.forall(_ hasTag allowedInnerTags) =>
+      def unapply[T](elem: Repr.Aux[T]) = elem match {
+        case (elem: Repr) if elem.hasTag(P) &&
+          elem.body.forall(_ hasTag allowedInnerTags) =>
           Some(elem)
         case _ =>
           None
@@ -209,78 +321,41 @@ trait PostProcessorUtils {
     object LiftableSpanStyle {
       val invalidAttributes = List(COLOR, BACKGROUND_COLOR)
 
-      def unapply(elem: Node): Option[(Seq[Node], Seq[Node])] = elem match {
-        case (elem: Elem) if (elem hasTag SPAN) && (elem hasAttribute STYLE) =>
-          val attrs: MetaData = elem.attributes.filter { metaData =>
-            invalidAttributes.contains(xml.Attribute(metaData.key))
-          }
-          Some((attrs.flatMap(_.value).toSeq, elem.child))
-        case _ =>
-          None
-      }
+      def unapply[T](elem: Repr.Aux[T]): Option[(Seq[Attribute], Seq[Repr.Aux[T]])] =
+        elem match {
+          case (elem: Repr) if (elem hasTag SPAN) && (elem hasAttribute STYLE) =>
+            val attrs = elem.attr.filter { _.key in invalidAttributes }
+            Some((attrs, elem.body))
+          case _ =>
+            None
+        }
     }
 
     Some(elem match {
       case BodyWithBogusP(children) =>
-        makeElem(elem.label, children, Some(elem.attributes))
+        Repr.makeElem(elem.tag, children, elem.attr)(???, ???)
       case LiftableP(_) =>
         elem
       case LiftableSpanStyle(attrs, body) =>
-        val meta0 = elem.attributes.remove(STYLE)
-        val meta = new UnprefixedAttribute(STYLE, attrs, meta0)
-        makeElem(elem.label, body, Some(meta))
+        val meta = elem.attr.filter(_.key != STYLE) ++
+          List(Attribute(STYLE, attrs.mkString(" ")))
+        //val meta = new UnprefixedAttribute(STYLE, attrs, meta0)
+        Repr.makeElem(elem.tag, body, meta)(???, ???)
       case _ =>
         elem
     })
   }
+}
 
-  // Is there any actual textual content in the heading?
-  private def coalesceHeadings(body: Node): Option[Seq[Node]] = {
+object Optimizer {
+  private final lazy val opt: PostProcessor = new Opt
 
-    object IsAnchor {
-      def unapply(node: Node): Option[Elem] = node match {
-        case (elem: Elem) if (elem hasTag A) && (elem hasAttribute NAME) =>
-          Some(elem)
-        case _ =>
-          None
-      }
-    }
+  private class Opt extends PostProcessor
+    with PostProcessorUtils
+    with OpimizerCoalesceParentChild
+    with OptimizerCoalesceBlocks
+    with OptimizerCoalesceSiblings
+    with OptimzerCoalesceHeadings
 
-    def isAnchor(node: Node): Boolean = IsAnchor.unapply(node).nonEmpty
-    def isString(node: Node): Boolean = ???
-
-    val (cleanedBody, noImgFig) =
-      (for {
-        bodyElem <- whack(body, n => !(n hasTag CAN_OCCUR_IN_HEADER))
-        noImgElem <- whack(bodyElem, n => n hasTag List(IMG, FIGURE))
-      } yield (bodyElem, noImgElem)).unzip
-
-    if (isBlank(noImgFig)) {
-      for {
-        elem0 <- extractElem(body)
-      } yield {
-        elem0.copy(child = cleanedBody,
-          attributes = elem0.attributes.remove("style"))
-      }
-    } else {
-      val nodes = (for {
-        elem <- cleanedBody if !isAnchor(elem) && !isString(elem)
-      } yield elem)
-
-      if (nodes.isEmpty) None else Some(nodes)
-    }
-  }
-
-  def extractElem(node: Node): Option[Elem] = node match {
-    case elem: Elem => Some(elem)
-    case _          => None
-  }
-
-  private def extractPlainText(node: Node): Option[Text] = node match {
-    case atom: Text =>
-      Some(atom)
-    case _ =>
-      None
-  }
-
+  def apply(): PostProcessor = opt
 }

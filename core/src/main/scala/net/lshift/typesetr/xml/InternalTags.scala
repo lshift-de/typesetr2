@@ -1,7 +1,6 @@
 package net.lshift.typesetr.xml
 
-object Tags {
-
+object InternalTags {
   final lazy val TITLE = Tag("title")
   final lazy val SUBTITLE = Tag("sub")
   final lazy val A = Tag("a")
@@ -17,26 +16,26 @@ object Tags {
   final lazy val CITE = Tag("cite")
   final lazy val Q = Tag("q")
   final lazy val WBR = Tag("wbr")
-  final lazy val H1 = Tag("h1")
 
+  final lazy val H1 = Tag("h1")
   final lazy val H2 = Tag("h2")
   final lazy val H3 = Tag("h3")
   final lazy val H4 = Tag("h4")
   final lazy val H5 = Tag("h5")
   final lazy val H6 = Tag("h6")
-  final lazy val CAPTION = Tag("caption")
 
+  final lazy val CAPTION = Tag("caption")
   final lazy val COLGROUP = Tag("colgroup")
   final lazy val COL = Tag("col")
   final lazy val TH = Tag("th")
   final lazy val TR = Tag("tr")
   final lazy val TD = Tag("td")
-  final lazy val P = Tag("p")
 
+  final lazy val P = Tag("p")
   final lazy val ASIDE = Tag("aside")
   final lazy val OUTPUT = Tag("output")
-  final lazy val DL = Tag("dl")
 
+  final lazy val DL = Tag("dl")
   final lazy val OL = Tag("ol")
   final lazy val UL = Tag("ul")
   final lazy val LI = Tag("li")
@@ -52,12 +51,11 @@ object Tags {
   final lazy val PRE = Tag("pre")
   final lazy val TABLE = Tag("table")
   final lazy val TFOOT = Tag("tfoot")
-  final lazy val HR = Tag("hr")
 
+  final lazy val HR = Tag("hr")
   final lazy val BR = Tag("br")
   final lazy val DIV = Tag("div")
   final lazy val IMG = Tag("img")
-  final lazy val FRAME = Tag("frame")
 
   final lazy val HEAD = Tag("head")
   final lazy val META = Tag("meta")
@@ -68,8 +66,6 @@ object Tags {
   final lazy val PAGEBREAK = Tag(".pagebreak")
   final lazy val BLOCK = Tag(".block")
 
-  final lazy val LIT = Tag("lit")
-  final lazy val CMD = Tag("cmd")
-
-  final lazy val ROOT = Tag("ROOT")
+  final lazy val LIT = Tag("LIT")
+  final lazy val CMD = Tag("CMD")
 }

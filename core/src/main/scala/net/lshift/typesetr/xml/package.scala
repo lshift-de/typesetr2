@@ -1,5 +1,7 @@
 package net.lshift.typesetr
 
+import net.lshift.typesetr.parsers.{ NodeRepr, TextRepr, Repr }
+
 import scala.xml._
 
 package object xml {
@@ -25,37 +27,40 @@ package object xml {
     >>> blank(('a', {'href': 'some link'}, ['', ('span', {}, 'link text')]))
     False
   */
-  final def isBlank(nodes: Seq[Node]): Boolean =
+  final def isBlank(nodes: Seq[Repr]): Boolean =
     nodes.forall(isBlank)
 
-  final def isBlank(node: Node): Boolean = {
-    node match {
-      case atom: Text =>
-        atom.data.trim == ""
-      // TODO: other cases
-      case elem: Elem =>
-        elem.child.forall(isBlank)
-    }
+  final def isBlank(node: Repr): Boolean = node match {
+    case TextRepr(text) =>
+      text.trim == ""
+    case elem =>
+      elem.body.forall(isBlank)
   }
 
   // TODO: rename to sth more meaningful
-  final def whack(node: Node,
-                  filterBy: Node => Boolean,
-                  removeBody: Boolean = false): Seq[Node] = {
-    node match {
+  final def whack[T](node: Repr.Aux[T],
+                     filterBy: Repr => Boolean,
+                     removeBody: Boolean = false)(
+                       implicit builder: NodeRepr[T]): Seq[Repr.Aux[T]] = {
+    node.source match {
       case atom: Atom[_] =>
-        Seq(atom)
+        Seq(node)
       case elem: Elem =>
-        if (filterBy(elem)) {
+        if (filterBy(node)) {
           if (removeBody) Seq()
-          else elem.child.toList.flatMap(n =>
-            whack(n, filterBy, removeBody))
+          else node.body.toList.flatMap(n =>
+            whack[T](n, filterBy, removeBody))
         } else {
           // recursively call children
-          val children1 = elem.child.toList.flatMap(n => whack(n, filterBy, removeBody))
-          Seq(elem.copy(child = children1))
+          val children1 = node.body.toList.flatMap(
+            n => whack(n, filterBy, removeBody))
+          builder.createWithAttributes(
+            tag = node.tag,
+            elem = node.source,
+            attrs = node.attr,
+            children = children1) :: Nil
         }
-      case node =>
+      case _ =>
         Seq(node)
     }
   }

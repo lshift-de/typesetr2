@@ -23,14 +23,19 @@ object CommandParser extends OptReaders {
   private lazy val parser = new scopt.OptionParser[Config]("typeseter-converter") {
     head("converter", "0.2")
 
-    opt[OutputFormat]('f', "format").required().action((x, c) =>
-      c.copy(format = x))
+    opt[InputFormat]('i', "inFormat").required().action((x, c) =>
+      c.copy(inFormat = x))
+      .valueName("[odt, docx, md]]")
+      .text("The input format you'd like to convert from")
+
+    opt[OutputFormat]('o', "outFormat").required().action((x, c) =>
+      c.copy(outFormat = x))
       .valueName("[tex, pdf, png, html, epub, meta, internal, pickle]")
       .text("The output format you'd like to convert to")
 
     opt[Option[File]]("infile").optional().action((x, c) =>
       c.copy(inFile = x))
-      .text("The odt file to convert (default: stdin)")
+      .text("The file to convert (default: stdin)")
 
     opt[Option[File]]("outfile").optional().action((x, c) =>
       c.copy(outFile = x))
@@ -54,6 +59,14 @@ object CommandParser extends OptReaders {
     opt[Int]("pixels").optional().action((x, c) =>
       c.copy(pixels = x))
       .text("PNG image size")
+
+    opt[Boolean]("Yopt").optional().action((x, c) =>
+      c.copy(Yoptimize = x))
+      .text("Optimize the initial document")
+
+    opt[Boolean]("Yns").optional().action((x, c) =>
+      c.copy(Yns = x))
+      .text("Include namespace info")
 
     opt[Boolean]("no-clean").optional().action((x, c) =>
       c.copy(noClean = x))
@@ -140,12 +153,6 @@ object CommandParser extends OptReaders {
 }
 
 trait OptReaders {
-
-  implicit def toFileRead: Read[File] = Read.reads { (v: String) =>
-    val f = new File(v)
-    if (f.exists()) f
-    else throw new IllegalArgumentException(s"File $v does not exist")
-  }
 
   implicit def toJsonRead: Read[Json] = Read.reads { (v: String) => Json.fromString(v) }
 
