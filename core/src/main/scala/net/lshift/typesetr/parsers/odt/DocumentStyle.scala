@@ -13,7 +13,7 @@ abstract class DocumentStyle {
 
   def textWidth: Int
 
-  def style: Style
+  def styles: Map[String, Style]
 
 }
 
@@ -34,7 +34,7 @@ object DocumentStyle {
 
       def footer: Repr.Aux[this.Underlying] = footer0
 
-      def style: Style = Style.empty
+      def styles: Map[String, Style] = Map.empty
 
     }
 
@@ -51,7 +51,8 @@ object DocumentStyle {
 
     def footer: Repr.Aux[T] = repr.empty()
 
-    def style: Style = Style.empty
+    def styles: Map[String, Style] = Map.empty
+
   }
 
 }

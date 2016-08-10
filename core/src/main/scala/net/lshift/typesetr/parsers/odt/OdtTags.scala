@@ -13,6 +13,7 @@ object OdtTags {
   val MasterStyle: XmlTag = (OdtParser.ns("office"), "master-styles")
   val Scripts: XmlTag = (OdtParser.ns("office"), "scripts")
   val Annotation: XmlTag = (OdtParser.ns("office"), "annotation")
+  val Styles: XmlTag = (OdtParser.ns("office"), "styles")
 
   val Frame: XmlTag = (OdtParser.ns("draw"), "frame")
   val Image: XmlTag = (OdtParser.ns("draw"), "image")
@@ -37,12 +38,16 @@ object OdtTags {
   val SeqDecl: XmlTag = (OdtParser.ns("text"), "sequence-decls")
   val StyleNameAttr: XmlTag = (OdtParser.ns("text"), "style-name")
   val SoftPageBreak: XmlTag = (OdtParser.ns("text"), "soft-page-break")
-  val TableStyleNameAttr: XmlTag = (OdtParser.ns("table"), "style-name")
+  val TextOutlineStyle: XmlTag = (OdtParser.ns("text"), "outline-style")
+  val TextNotesConf: XmlTag = (OdtParser.ns("text"), "notes-configuration")
+  val TextLineNumConf: XmlTag = (OdtParser.ns("text"), "linenumbering-configuration")
 
+  val TableStyleNameAttr: XmlTag = (OdtParser.ns("table"), "style-name")
   val Table: XmlTag = (OdtParser.ns("table"), "table")
   val TableColumn: XmlTag = (OdtParser.ns("table"), "table-column")
   val TableRow: XmlTag = (OdtParser.ns("table"), "table-row")
   val TableCell: XmlTag = (OdtParser.ns("table"), "table-cell")
+
   val Id: XmlTag = (OdtParser.ns("xml"), "id")
 
   val HrefAttr: XmlTag = (OdtParser.ns("xlink"), "href")
@@ -52,6 +57,7 @@ object OdtTags {
 
   // style tags
   val MasterPage: XmlTag = (OdtParser.ns("style"), "master-page")
+  val StyleDefault: XmlTag = (OdtParser.ns("style"), "default-style")
   val StyleHeader: XmlTag = (OdtParser.ns("style"), "header")
   val StyleFooter: XmlTag = (OdtParser.ns("style"), "footer")
   val StyleStyle: XmlTag = (OdtParser.ns("style"), "style")

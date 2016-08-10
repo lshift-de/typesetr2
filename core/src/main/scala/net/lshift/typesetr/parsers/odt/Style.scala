@@ -3,7 +3,8 @@ package parsers
 package odt
 
 import net.lshift.typesetr.parsers.Repr
-import xml.{ Attribute, AttributeKey, FontFamily, Tag }
+import net.lshift.typesetr.xml.attributes.FontFamily
+import xml.{ Attribute, AttributeKey, Tag }
 
 import scala.xml.Node
 
@@ -14,6 +15,8 @@ abstract class Style { self =>
   def marginLeft: Option[Int]
   def textIdent: Option[Int]
   def tpe: Option[Tag] // or 'tag'
+
+  def parent: Option[StyleId]
 
   def update(tpe0: Option[Tag] = self.tpe,
              fontFamily0: Option[FontFamily] = fontFamily): self.type =
@@ -48,6 +51,8 @@ object Style {
 
     def fontFamily: Option[FontFamily] =
       None
+
+    override def parent: Option[StyleId] = ???
   }
 
   lazy val empty: Style =
@@ -63,6 +68,9 @@ object Style {
       def attribute(key: AttributeKey): Option[Attribute] = None
 
       def fontFamily: Option[FontFamily] = None
+
+      def parent: Option[StyleId] = None
     }
 }
 
+case class StyleId(name: String)

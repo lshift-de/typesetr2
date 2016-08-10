@@ -68,4 +68,5 @@ object InternalTags {
 
   final lazy val LIT = Tag("LIT")
   final lazy val CMD = Tag("CMD")
+  final lazy val LIST = Tag("LIST")
 }

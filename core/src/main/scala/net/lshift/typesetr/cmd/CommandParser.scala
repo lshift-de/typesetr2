@@ -107,17 +107,9 @@ object CommandParser extends OptReaders {
       c.copy(comments = x))
       .text("Whether to preserve comments")
 
-    opt[Boolean]("verbose").optional().action((x, c) =>
-      c.copy(verbose = x))
-      .text("Increase diagnostic output verbosity")
-
-    opt[Boolean]("quiet").optional().action((x, c) =>
-      c.copy(quiet = x))
-      .text("Never print any diagnostic output")
-
-    opt[LogLevel]("error").optional().action((x, c) =>
-      c.copy(error = x))
-      .valueName("[log, raise, debug]")
+    opt[LogLevel]("log").optional().action((x, c) =>
+      c.copy(logging = x))
+      .valueName("[none, log, raise, debug]")
       .text("For debugging: what to do on document errors")
 
     checkConfig(c =>

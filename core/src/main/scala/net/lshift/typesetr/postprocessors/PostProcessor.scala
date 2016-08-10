@@ -78,14 +78,14 @@ trait PostProcessorUtils extends OpimizerStrategies {
             // checking
             case _ =>
               logger.info("Coalesce based on parent-child relation")
-              /*(for {
+              (for {
                 elem <- elems
                 elem1 <- coalesceParentChild(key, elem)
                 elem2 <- coalesceHeadings(elem1)
-              } yield elem2).flatten*/
-              // TODO: looks like the current implementation
-              // is too eager.
-              elems
+              } yield elem2).flatten
+            // TODO: looks like the current implementation
+            // is too eager.
+            //elems
           }
       }
     }
@@ -141,7 +141,7 @@ trait OptimizerCoalesceBlocks {
 
   // .block -> pre | blockquote handling
   // hacky and limited ATM; no support for nesting etc.
-  protected def coalesceBlocks[T](sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit builder: NodeRepr[T]): Seq[Repr.Aux[T]] = {
+  protected def coalesceBlocks[T](sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit builder: NodeRepr[T], logger: Logger): Seq[Repr.Aux[T]] = {
 
     @tailrec
     def codeBlock[T](elems: Seq[Repr.Aux[T]], txt: List[Option[String]]): (Option[Repr.Aux[T]], Seq[Repr.Aux[T]]) = elems match {
@@ -223,7 +223,7 @@ trait OptimzerCoalesceHeadings {
   import xml.TagGroups._
 
   // Is there any actual textual content in the heading?
-  protected def coalesceHeadings[T](body: Repr.Aux[T])(implicit builder: NodeRepr[T]): Option[Seq[Repr.Aux[T]]] = {
+  protected def coalesceHeadings[T](body: Repr.Aux[T])(implicit builder: NodeRepr[T], logger: Logger): Option[Seq[Repr.Aux[T]]] = {
 
     object IsAnchor {
       def unapply(node: Repr): Option[Repr] = node match {
@@ -236,6 +236,7 @@ trait OptimzerCoalesceHeadings {
 
     def isAnchor(node: Repr): Boolean =
       IsAnchor.unapply(node).nonEmpty
+
     def isString(node: Repr): Boolean = node.source match {
       case _: Text => true
       case _       => false
@@ -248,6 +249,7 @@ trait OptimzerCoalesceHeadings {
       } yield (bodyElem, noImgElem)).unzip
 
     if (isBlank(noImgFig)) {
+      logger.debug(s"[optimizer] empty img figure $noImgFig in $body")
       Some(Seq(Repr.makeElem(body.tag, cleanedBody,
         body.attr.filter(_.key != STYLE))(body.source, implicitly[NodeRepr[T]])))
     } else {
@@ -255,7 +257,11 @@ trait OptimzerCoalesceHeadings {
         elem <- cleanedBody if !isAnchor(elem) && !isString(elem)
       } yield elem)
 
-      if (nodes.isEmpty) None else Some(nodes)
+      if (nodes.isEmpty) {
+        logger.debug(s"[optimizer] headings: non-anchor and non-string in $cleanedBody")
+        None
+      } else Some(nodes)
+      Some(body :: Nil)
     }
   }
 }
@@ -263,10 +269,10 @@ trait OptimzerCoalesceHeadings {
 trait OpimizerStrategies {
   self: PostProcessor =>
 
-  protected def coalesceBlocks[T](sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit builder: NodeRepr[T]): Seq[Repr.Aux[T]]
+  protected def coalesceBlocks[T](sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit builder: NodeRepr[T], logger: Logger): Seq[Repr.Aux[T]]
   protected def coalesceSiblings[T](sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit builder: NodeRepr[T], logger: Logger): Seq[Repr.Aux[T]]
-  protected def coalesceHeadings[T](body: Repr.Aux[T])(implicit builder: NodeRepr[T]): Option[Seq[Repr.Aux[T]]]
-  protected def coalesceParentChild[T](sig: ElemSig, elem: Repr.Aux[T])(implicit builder: NodeRepr[T]): Option[Repr.Aux[T]]
+  protected def coalesceHeadings[T](body: Repr.Aux[T])(implicit builder: NodeRepr[T], logger: Logger): Option[Seq[Repr.Aux[T]]]
+  protected def coalesceParentChild[T](sig: ElemSig, elem: Repr.Aux[T])(implicit builder: NodeRepr[T], logger: Logger): Option[Repr.Aux[T]]
 }
 
 trait OpimizerCoalesceParentChild {
@@ -282,7 +288,7 @@ trait OpimizerCoalesceParentChild {
   //       a
   //       <ul>...</ul>
   //     </li>
-  protected def coalesceParentChild[T](sig: ElemSig, elem: Repr.Aux[T])(implicit nodeRepr: NodeRepr[T]): Option[Repr.Aux[T]] = {
+  protected def coalesceParentChild[T](sig: ElemSig, elem: Repr.Aux[T])(implicit nodeRepr: NodeRepr[T], logger: Logger): Option[Repr.Aux[T]] = {
 
     object BodyWithBogusP {
       val liftableTags = List(LI, DT, DD, FOOTNOTE)
@@ -333,10 +339,12 @@ trait OpimizerCoalesceParentChild {
 
     Some(elem match {
       case BodyWithBogusP(children) =>
+        logger.debug("[parent-child] body with bogus p")
         Repr.makeElem(elem.tag, children, elem.attr)(???, ???)
       case LiftableP(_) =>
         elem
       case LiftableSpanStyle(attrs, body) =>
+        logger.debug("[parent-child] liftable span")
         val meta = elem.attr.filter(_.key != STYLE) ++
           List(Attribute(STYLE, attrs.mkString(" ")))
         //val meta = new UnprefixedAttribute(STYLE, attrs, meta0)

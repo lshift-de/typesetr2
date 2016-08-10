@@ -37,10 +37,10 @@ class OdtParser() extends Parser {
       rootStyle <- inFile.style.map(XML.loadFile)
 
       rawFont <- rootStyle \!! OdtTags.Font
-
-      rawStyle <- rootStyle \!! OdtTags.AutomaticStyle
-      (styleNode, style) <- parseStyle(rootStyle)
-      autoStyle <- parseBody(rawStyle)(style, logger)
+      rawAutoStyle <- rootStyle \!! OdtTags.AutomaticStyle
+      rawStyle <- rootStyle \!! OdtTags.Styles
+      (styleNode, style) <- loadStyles(rootStyle)
+      autoStyle <- parseBody(rawAutoStyle)(style, logger)
 
       rawBody <- root \!! OdtTags.Body
       rawScripts <- root \!! OdtTags.Scripts
@@ -80,7 +80,7 @@ class OdtParser() extends Parser {
     meta.getTag(tag).toRight("0cm").fold(inCm, inCm)
   }
 
-  def parseStyle(node: scala.xml.Node)(implicit logger: Logger): Option[(Repr.Aux[Underlying], DocumentStyle.Aux[Underlying])] = {
+  def loadStyles(node: scala.xml.Node)(implicit logger: Logger): Option[(Repr.Aux[Underlying], DocumentStyle.Aux[Underlying])] = {
 
     val doc = (for {
       rawHeader <- node \!! (OdtTags.MasterStyle / OdtTags.MasterPage / OdtTags.StyleHeader)
@@ -109,7 +109,7 @@ class OdtParser() extends Parser {
     doc map ((node1, _))
   }
 
-  def parseBody(node: scala.xml.Node)(implicit style: DocumentStyle.Aux[Underlying], logger: Logger): Option[Repr.Aux[Underlying]] =
+  def parseBody(node: scala.xml.Node)(implicit docStyle: DocumentStyle.Aux[Underlying], logger: Logger): Option[Repr.Aux[Underlying]] =
     node match {
       case Text(text) =>
         Some(node.wrap(tag = Tag.textTag, body = Nil, contents = Some(text)))
@@ -119,7 +119,7 @@ class OdtParser() extends Parser {
         parseBodyElement(node, Nil)
     }
 
-  private def parseBodyElement(node: Underlying, attr: List[Attribute])(implicit sty: DocumentStyle.Aux[Underlying], logger: Logger): Option[Repr.Aux[Underlying]] = {
+  private def parseBodyElement(node: Underlying, attr: List[Attribute])(implicit docStyle: DocumentStyle.Aux[Underlying], logger: Logger): Option[Repr.Aux[Underlying]] = {
     // TODO: handle page breaks
     // TODO: handle lists
 
@@ -128,6 +128,9 @@ class OdtParser() extends Parser {
 
     lazy val children = node.child.flatMap(parseBody)
     implicit val source: Underlying = node
+
+    val sty: Style = Style.empty // todo: need to extract from doc styles
+    // based on the context name
 
     node.xmlTag match {
       case OdtTags.Tab =>
@@ -148,8 +151,9 @@ class OdtParser() extends Parser {
 
       case OdtTags.H =>
         // TODO: why on non-blank we wrap it?
+        logger.debug(s"[parser] header tag: $node")
         val repr = for {
-          tagName <- implicitly[DocumentStyle].style.tpe if !(node isBlank)
+          tagName <- sty.tpe if !(node isBlank)
         } yield node.wrap(tag = ???, body = children)
 
         repr
@@ -190,7 +194,7 @@ class OdtParser() extends Parser {
       case OdtTags.P =>
         // infer indentation level from the style
         val indentLvl =
-          First(sty.style.marginLeft) |+| First(sty.style.textIdent)
+          First(sty.marginLeft) |+| First(sty.textIdent)
 
         Some(scalaz.Tag.unwrap(indentLvl) map { lvl =>
           val attr1 = Attribute("indent", lvl.toString) :: attr
@@ -200,13 +204,13 @@ class OdtParser() extends Parser {
       case OdtTags.Span =>
         // TODO: Style handling
         //println(node.child)
-        val body1 = translateStyleToTags(children, styleToTagsMap)
-        sty.style.fontFamily.foldLeft(body1) {
+        val body1 = translateStyleToTags(children, styleToTagsMap, sty)
+        sty.fontFamily.foldLeft(body1) {
           case (b, font) =>
             if (Utils.isCodeFont(font)) Repr.makeElem(Tags.CODE, b) :: Nil
             else b
         }
-        val body2 = sty.style.fontFamily.map(font =>
+        val body2 = sty.fontFamily.map(font =>
           if (Utils.isCodeFont(font)) Repr.makeElem(Tags.CODE, body1) :: Nil
           else body1).getOrElse(body1)
 
@@ -307,11 +311,11 @@ class OdtParser() extends Parser {
   }
 
   private def translateStyleToTags(body: Seq[Repr.Aux[Underlying]],
-                                   trans: StyleToTags)(
-                                     implicit sty: DocumentStyle, orig: scala.xml.Node): Seq[Repr.Aux[Underlying]] = {
+                                   trans: StyleToTags, sty: Style)(
+                                     implicit orig: scala.xml.Node): Seq[Repr.Aux[Underlying]] = {
     trans.foldLeft(body) {
       case (body1, s2t) =>
-        sty.style.attribute(s2t.key).flatMap(_ =>
+        sty.attribute(s2t.key).flatMap(_ =>
           for {
             styleTag <- s2t.vals.find(_.value == s2t)
             src <- orig.withAttribute(Attribute(s2t.key, styleTag.value), body1)

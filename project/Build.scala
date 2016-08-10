@@ -68,7 +68,8 @@ object MyBuild extends Build {
       "org.yaml" % "snakeyaml" % "1.17",
       "org.scalaz" %% "scalaz-core" % "7.2.4",
       "commons-io" % "commons-io" % "2.4",
-      "org.jbibtex" % "jbibtex" % "1.0.15"
+      "org.jbibtex" % "jbibtex" % "1.0.15",
+      "com.chuusai" %% "shapeless" % "2.3.1"
     )
   )
 

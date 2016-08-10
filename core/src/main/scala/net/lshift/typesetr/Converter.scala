@@ -22,7 +22,7 @@ object Converter {
   def main(args: Array[String]): Unit = {
     CommandParser().parse(args) match {
       case Some(config) =>
-        implicit val logger = Logger(config.error)
+        implicit val logger = Logger(config.logging)
 
         // Start the external process
         val ret = for {
@@ -39,6 +39,8 @@ object Converter {
             case InputFormat.Docx =>
               (???, ???)
             case InputFormat.Markdown =>
+              (???, ???)
+            case InputFormat.Html =>
               (???, ???)
           }
 

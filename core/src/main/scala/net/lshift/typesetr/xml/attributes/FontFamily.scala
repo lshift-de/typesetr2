@@ -1,5 +1,6 @@
-package net.lshift.typesetr
-package xml
+package net.lshift.typesetr.xml.attributes
+
+import scala.language.implicitConversions
 
 case class FontFamily(name: String)
 

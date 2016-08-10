@@ -24,6 +24,4 @@ case class Config(inFormat: InputFormat = InputFormat.Odt,
                   compress: Option[CompressKind] = None,
                   bibliography: List[File] = Nil,
                   comments: Boolean = true,
-                  verbose: Boolean = false,
-                  quiet: Boolean = false,
-                  error: LogLevel = LogLevel.Log)
+                  logging: LogLevel = LogLevel.NoLog)
