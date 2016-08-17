@@ -1,9 +1,12 @@
 package net.lshift.typesetr
 package parsers.odt
 
+import styles.StyleId
+
+import net.lshift.typesetr.parsers.odt.styles.Style
 import net.lshift.typesetr.parsers.{ ReprEmptyBuilder, Repr }
 
-abstract class DocumentStyle {
+abstract class DocumentStyle { self =>
 
   type Underlying
 
@@ -13,7 +16,24 @@ abstract class DocumentStyle {
 
   def textWidth: Int
 
-  def styles: Map[String, Style]
+  def style(id: StyleId): Option[Style] = styles.get(id)
+
+  def +:(style: (StyleId, Style)): self.type =
+    if (styles.contains(style._1)) self
+    else {
+      updateStyles(style)
+      self
+    }
+
+  protected def styles: Map[StyleId, Style]
+
+  protected def updateStyles(style: (StyleId, Style)): self.type
+
+  override def toString: String = {
+    s"""|Document Style:
+        | Text width: ${textWidth}
+        |${styles.values.map(_.toString).mkString("\n")}""".stripMargin
+  }
 
 }
 
@@ -24,7 +44,7 @@ object DocumentStyle {
   def apply[T](header0: Repr.Aux[T],
                footer0: Repr.Aux[T],
                textWidth0: Int): DocumentStyle.Aux[T] =
-    new DocumentStyle {
+    new DocumentStyle { self =>
 
       type Underlying = T
 
@@ -34,14 +54,20 @@ object DocumentStyle {
 
       def footer: Repr.Aux[this.Underlying] = footer0
 
-      def styles: Map[String, Style] = Map.empty
+      protected var styles: Map[StyleId, Style] = Map.empty
+
+      protected def updateStyles(style: (StyleId, Style)): self.type = {
+        if (!styles.contains(style._1))
+          styles = styles + style
+        self
+      }
 
     }
 
   def empty[T](implicit reprBuilder: ReprEmptyBuilder[T]): DocumentStyle.Aux[T] =
     new EmptyDocumentStyle(reprBuilder)
 
-  class EmptyDocumentStyle[T](repr: ReprEmptyBuilder[T]) extends DocumentStyle {
+  class EmptyDocumentStyle[T](repr: ReprEmptyBuilder[T]) extends DocumentStyle { self =>
 
     type Underlying = T
 
@@ -51,7 +77,13 @@ object DocumentStyle {
 
     def footer: Repr.Aux[T] = repr.empty()
 
-    def styles: Map[String, Style] = Map.empty
+    protected var styles: Map[StyleId, Style] = Map.empty
+
+    protected def updateStyles(style: (StyleId, Style)): self.type = {
+      if (!styles.contains(style._1))
+        styles = styles + style
+      self
+    }
 
   }
 

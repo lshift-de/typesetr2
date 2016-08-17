@@ -2,8 +2,10 @@ package net.lshift.typesetr
 package parsers
 
 import net.lshift.typesetr.parsers.Repr.Aux
+import net.lshift.typesetr.parsers.odt.styles.{StylePropKey, StyleFactory, Style}
+import net.lshift.typesetr.xml.attributes.StyleAttribute
 import xml._
-import net.lshift.typesetr.parsers.odt.{ OdtTags, OdtNameSpaces, Style, DocumentStyle }
+import net.lshift.typesetr.parsers.odt._
 
 import java.io.File
 
@@ -16,6 +18,8 @@ import scalaz.Scalaz._
 import util.Logger
 
 import scala.language.{ postfixOps, implicitConversions }
+
+import shapeless.{Poly, Poly2, HList, HNil, :: => !:, Witness}
 
 class OdtParser() extends Parser {
 
@@ -75,24 +79,24 @@ class OdtParser() extends Parser {
       case res               => None
     }
 
-  private def layoutData(meta: scala.xml.MetaData, attr: AttributeKey): Option[Int] = {
+  private def layoutData(meta: scala.xml.MetaData, attr: AttributeKey, owner: scala.xml.Node): Option[Int] = {
     val tag: XmlTag = (OdtParser.ns("fo"), attr.key)
     meta.getTag(tag).toRight("0cm").fold(inCm, inCm)
   }
 
   def loadStyles(node: scala.xml.Node)(implicit logger: Logger): Option[(Repr.Aux[Underlying], DocumentStyle.Aux[Underlying])] = {
-
+    val loader = StyleFactory()
     val doc = (for {
       rawHeader <- node \!! (OdtTags.MasterStyle / OdtTags.MasterPage / OdtTags.StyleHeader)
       rawFooter <- node \!! (OdtTags.MasterStyle / OdtTags.MasterPage / OdtTags.StyleFooter)
       pageLayout <- node \!! (OdtTags.AutomaticStyle / OdtTags.StylePageLayout)
     } yield {
       for {
-        pageWidth <- layoutData(pageLayout.attributes, "page-width")
-        marginLeft <- layoutData(pageLayout.attributes, "margin-left")
-        marginRight <- layoutData(pageLayout.attributes, "margin-right")
-        paddingLeft <- layoutData(pageLayout.attributes, "padding-left")
-        paddingRight <- layoutData(pageLayout.attributes, "padding-right")
+        pageWidth <- layoutData(pageLayout.attributes, "page-width", pageLayout)
+        marginLeft <- layoutData(pageLayout.attributes, "margin-left", pageLayout)
+        marginRight <- layoutData(pageLayout.attributes, "margin-right", pageLayout)
+        paddingLeft <- layoutData(pageLayout.attributes, "padding-left", pageLayout)
+        paddingRight <- layoutData(pageLayout.attributes, "padding-right", pageLayout)
         header <- parseBody(rawHeader)(DocumentStyle.empty, implicitly[Logger])
         footer <- parseBody(rawFooter)(DocumentStyle.empty, implicitly[Logger])
       } yield {
@@ -100,7 +104,14 @@ class OdtParser() extends Parser {
           pageWidth - (marginLeft + marginRight +
             paddingLeft + paddingRight)
 
-        DocumentStyle(header, footer, w)
+        val doc = DocumentStyle(header, footer, w)
+
+        val doc1 = loader.loadFromStyleDoc(node, doc)
+
+        logger.debug("Loaded style:")
+        logger.debug(doc1.toString)
+
+        doc1
       }
     }).flatten
 
@@ -167,7 +178,7 @@ class OdtParser() extends Parser {
         logger.warn(s"Ignoring List")
         None
 
-      case OdtTags.ListItem =>
+      case OdtTags.TextListItem =>
         node.wrap(tag = xml.Tags.LI, body = children)
 
       case OdtTags.Annotation =>
@@ -194,7 +205,7 @@ class OdtParser() extends Parser {
       case OdtTags.P =>
         // infer indentation level from the style
         val indentLvl =
-          First(sty.marginLeft) |+| First(sty.textIdent)
+          First(sty.marginLeft) |+| First(sty.textIndent)
 
         Some(scalaz.Tag.unwrap(indentLvl) map { lvl =>
           val attr1 = Attribute("indent", lvl.toString) :: attr
@@ -310,26 +321,67 @@ class OdtParser() extends Parser {
     }
   }
 
+  /*
+   * Translate `span` nodes into the internal representation
+   * based on the style of the particular node.
+   *
+   * Note: this may translate a single `<span>` node into a
+   * nested
+   */
   private def translateStyleToTags(body: Seq[Repr.Aux[Underlying]],
                                    trans: StyleToTags, sty: Style)(
                                      implicit orig: scala.xml.Node): Seq[Repr.Aux[Underlying]] = {
-    trans.foldLeft(body) {
-      case (body1, s2t) =>
-        sty.attribute(s2t.key).flatMap(_ =>
-          for {
-            styleTag <- s2t.vals.find(_.value == s2t)
-            src <- orig.withAttribute(Attribute(s2t.key, styleTag.value), body1)
-          } yield Repr.makeElem(tag = styleTag.tag, body = body1)(src, wrapper) :: Nil) getOrElse (body1)
-    }
-  }
 
-  private type StyleToTags = List[StyleToTag]
+    class translate(style: Style, orig: scala.xml.Node) extends Poly2 {
+      implicit def styletoTagToXml[T <: StylePropKey.Of] =
+        at[Seq[Repr.Aux[Underlying]], StyleToTag[T]] { (acc, sty2Tag) =>
+          style.unsafeProperty(sty2Tag.styleKey).flatMap(propValue =>
+            for {
+              val2Tag <- sty2Tag.allowedValues.find(_.value == propValue)
+              attributeTag <- sty2Tag.styleKey.name
+              src <- orig.withAttribute(Attribute(attributeTag, val2Tag.value.name), acc)
+            } yield Repr.makeElem(tag = val2Tag.tag, body = acc)(src, wrapper)
+          ).getOrElse(acc);
+          acc
+        }
+    }
+
+    object translate {
+      def apply(sty: Style, node: scala.xml.Node) = new translate(sty, node)
+    }
+
+    import shapeless.ops.hlist.LeftFolder.{ hlistLeftFolder => folder }
+
+    //import translate._
+    val translateForStyle = translate(sty, orig)
+    import translateForStyle._
+
+    // FIXME: do we really need to help the inferencer by
+    // providing explicitly some implicit arguments?
+    trans.foldLeft(body)(translateForStyle)(
+      // Boilerplate to help the compiler with types
+      folder(translateForStyle.styletoTagToXml, folder))
+  }
 
 }
 
 object OdtParser {
-  private case class StyleToTag(key: AttributeKey, vals: List[ValToTag])
-  private case class ValToTag(value: String, tag: Tag)
+  abstract class StyleToTag[T <: StylePropKey.Of] {
+    val styleKey: T
+    val witness: Witness.Aux[T]
+    val allowedValues: List[ValToTag[styleKey.Result]]
+  }
+
+  object StyleToTag {
+    def apply[T <: StylePropKey.Of](key0: T)(vs: List[ValToTag[key0.Result]])(implicit w: Witness.Aux[T]): StyleToTag[T] =
+      new StyleToTag[T] {
+        val styleKey: key0.type = key0
+        val witness: Witness.Aux[T] = w
+        val allowedValues: List[ValToTag[styleKey.Result]] = vs
+      }
+  }
+
+  case class ValToTag[+T <: StyleAttribute](value: T, tag: Tag)
 
   val ns: NameSpaces = OdtNameSpaces(Map(
     "style" -> "urn:oasis:names:tc:opendocument:xmlns:style:1.0",
@@ -388,14 +440,21 @@ object OdtParser {
     type BodyTpe = Repr.Aux[scala.xml.Node]
   }
 
-  private val styleToTagsMap: List[StyleToTag] =
-    StyleToTag("underline", ValToTag("true", xml.Tags.U) :: Nil) ::
-      StyleToTag("font_weight", ValToTag("bold", xml.Tags.B) :: Nil) ::
-      StyleToTag("font_style", ValToTag("italic", xml.Tags.I) :: Nil) ::
-      StyleToTag("line_through", ValToTag("bold", xml.Tags.B) :: Nil) ::
-      StyleToTag("font_weight", ValToTag("true", xml.Tags.S) :: Nil) ::
-      StyleToTag("text_position", ValToTag("sub", xml.Tags.SUB) :: ValToTag("super", xml.Tags.SUP) :: Nil) ::
-      Nil
+  type StyleToTags =
+    StyleToTag[StylePropKey.Underline.type] !:
+      StyleToTag[StylePropKey.FontWeight.type] !:
+        StyleToTag[StylePropKey.FontStyleProp.type] !:
+          StyleToTag[StylePropKey.LineThrough.type] !:
+            StyleToTag[StylePropKey.TextPosition.type] !:
+              HNil
+
+  private val styleToTagsMap: StyleToTags =
+    StyleToTag(StylePropKey.Underline)(ValToTag[attributes.Underline](attributes.Underline.Solid, xml.Tags.U) :: Nil) ::
+      StyleToTag(StylePropKey.FontWeight)(ValToTag[attributes.FontWeight](attributes.FontWeight.Bold, xml.Tags.B) :: Nil) ::
+        StyleToTag(StylePropKey.FontStyleProp)(ValToTag[attributes.FontStyle](attributes.FontStyle.Italic, xml.Tags.I) :: Nil) ::
+          StyleToTag(StylePropKey.LineThrough)(ValToTag[attributes.LineThrough](attributes.LineThrough.Solid, xml.Tags.S) :: Nil) ::
+            StyleToTag[StylePropKey.TextPosition.type](StylePropKey.TextPosition)(ValToTag(attributes.TextPosition.Sub, xml.Tags.SUB) :: ValToTag(attributes.TextPosition.Sup, xml.Tags.SUP) :: Nil) ::
+              HNil
 
   private final val sizeP = """(\d+)cm""".r
 }

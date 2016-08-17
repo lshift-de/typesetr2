@@ -1,8 +1,15 @@
 package net.lshift.typesetr.xml
 
-case class XmlTag(namespace: NameSpace, tag: String)
+import scala.language.implicitConversions
+
+case class XmlTag(namespace: NameSpace, tag: String) {
+
+  override def toString: String = s"$namespace:$tag"
+
+}
 
 object XmlTag {
+
   implicit def fromRawToOdtTag(info: (Option[NameSpace], String)): XmlTag =
     if (info._1.isEmpty) throw new IllegalArgumentException(s"Invalid odt tag ${info._1} for ${info._2}")
     else XmlTag(info._1.get, info._2)
@@ -17,12 +24,5 @@ object XmlTag {
     def toInternalTag: Tag = Tag.InternalTagWithNS(t.namespace.v, t.tag)
 
   }
-}
 
-case class XmlPath(prefix: Option[XmlPath], tag: XmlTag)
-
-object XmlPath {
-  implicit class XmlPathOps(val p: XmlPath) extends AnyVal {
-    def /(t: XmlTag): XmlPath = XmlPath(Some(p), t)
-  }
 }

@@ -105,20 +105,16 @@ class NodeOps(val x: scala.xml.Node) extends AnyVal {
 }
 
 class MetaDataOps(val x: scala.xml.MetaData) extends AnyVal {
+  // Note: retrieval of attributes API is seriously broken in scala.xml
+  // therefore we workaround the problem by mapping them to the attribute map
+  // and checking their keys
 
-  def getTag(tag: XmlTag): Option[String] = {
-    def getTag0(tag0: XmlTag, meta: scala.xml.MetaData): Option[String] =
-      if (meta == null) None
-      else {
-        // TODO: include proper namespace checking
-        val res = meta.get(tag0.tag).flatMap(ns =>
-          ns.toList.headOption).map(_.toString)
+  def getTag(tag: XmlTag): Option[String] =
+    genericGetTag(s"${tag.namespace.short}:${tag.tag}")
 
-        if (res.isEmpty) getTag0(tag, meta.next)
-        else res
-      }
+  private def genericGetTag(entry: String): Option[String] = {
+    x.asAttrMap.get(entry)
 
-    getTag0(tag, x)
   }
 
 }

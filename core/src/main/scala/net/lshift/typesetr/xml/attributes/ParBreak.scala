@@ -2,16 +2,21 @@ package net.lshift.typesetr.xml.attributes
 
 import scala.language.implicitConversions
 
-abstract class ParBreak(val v: String)
+abstract class ParBreak(val v: String) extends StyleAttribute {
+
+  def name: String = v
+
+}
 
 object ParBreak {
 
-  implicit def stringToParBreak(x: String): ParBreak = x match {
-    case Auto.v     => Auto
-    case Column.v   => Column
-    case Page.v     => Page
-    case EvenPage.v => EvenPage
-    case OddPage.v  => OddPage
+  implicit def stringToParBreak(x: String): Option[ParBreak] = x match {
+    case Auto.v     => Some(Auto)
+    case Column.v   => Some(Column)
+    case Page.v     => Some(Page)
+    case EvenPage.v => Some(EvenPage)
+    case OddPage.v  => Some(OddPage)
+    case _          => None
   }
 
   case object Auto extends ParBreak("auto")

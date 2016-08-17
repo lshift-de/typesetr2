@@ -6,14 +6,14 @@ import scala.language.postfixOps
 
 class OdtNameSpaces(mapping: Map[String, String]) extends NameSpaces {
   def apply(key: NameSpaceKey): Option[NameSpace] =
-    mapping.get(key.value).map(NameSpace)
+    mapping.get(key.value).map(v => NameSpace(v, key.value))
 
   def name: String = "odt"
 
   protected def iterator: Iterable[(NameSpaceKey, NameSpace)] =
     mapping.map {
       case (key, value) =>
-        (NameSpaceKey(key), NameSpace(value))
+        (NameSpaceKey(key), NameSpace(value, key))
     } toIterable
 }
 

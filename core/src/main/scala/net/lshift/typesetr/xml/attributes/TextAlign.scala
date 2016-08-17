@@ -2,17 +2,22 @@ package net.lshift.typesetr.xml.attributes
 
 import scala.language.implicitConversions
 
-abstract class TextAlign(val align: String)
+abstract class TextAlign(val align: String) extends StyleAttribute {
+
+  def name: String = align
+
+}
 
 object TextAlign {
 
-  implicit def stringToTextAlign(x: String): TextAlign = x match {
-    case Start.align   => Start
-    case End.align     => End
-    case Left.align    => Left
-    case Right.align   => Right
-    case Center.align  => Center
-    case Justify.align => Justify
+  implicit def stringToTextAlign(x: String): Option[TextAlign] = x match {
+    case Start.align   => Some(Start)
+    case End.align     => Some(End)
+    case Left.align    => Some(Left)
+    case Right.align   => Some(Right)
+    case Center.align  => Some(Center)
+    case Justify.align => Some(Justify)
+    case _             => None
   }
 
   case object Start extends TextAlign("start")
