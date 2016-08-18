@@ -72,7 +72,7 @@ abstract class Style { self =>
       printProp("paragraph-break", parBreak),
       printProp("minimal-height", minHeight),
       printProp("column-width", colWidth))
-    s"""|Style ${id}:
+    s"""|Style '${id}':${parent.map(p => s"\n| > Parent-style: $p").getOrElse("")}
         ${props.flatten.mkString("")}""".stripMargin
   }
 
@@ -177,7 +177,7 @@ object Style {
     extends Style {
 
     def unsafeProperty[T <: StylePropKey](x: T): Option[x.Result] =
-      (mmap.toMap[StylePropKey, Any]).get(x).asInstanceOf[Option[x.Result]]
+      (mmap.toMap[StylePropKey, Any]).get(x).asInstanceOf[Option[Option[x.Result]]].flatten
 
     protected def property[T <: StylePropKey](x: Witness.Aux[T])(
       implicit sel: ops.record.Selector[MMap, x.T]) : sel.Out = mmap(x)
@@ -241,7 +241,7 @@ object Style {
 
       def parent: Option[StyleId] = None
 
-      def id: StyleId = ???
+      def id: StyleId = StyleId.none
 
     }
 }

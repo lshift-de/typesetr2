@@ -56,10 +56,10 @@ object StylePropKey {
 
   case object FontSeize extends StylePropKey with RegexConverter {
     type Result = Int
-    val regex = "\\d+(.\\d+)?(pt|\\%)".r
+    val regex = "(\\d+)(.\\d+)?(pt|\\%)".r
     implicit val Tag: this.type = this
-    def toResult = (x: String) => x.toInt
-    def name: Option[XmlTag] = Some(OdtTags.StyleFFamilyName)
+    def toResult = (x: String) => firstGroup(x).map(_.toInt).getOrElse(0)
+    def name: Option[XmlTag] = Some(OdtTags.FoFSize)
   }
 
   case object FontWeight extends StylePropKey {
@@ -125,6 +125,7 @@ object StylePropKey {
     def name: Option[XmlTag] = Some(OdtTags.FoLineHeight)
   }
 
+  // TODO: we seem to have situations when left margin is defined in inches
   case object MarginLeft extends StylePropKey with RegexConverter {
     type Result = Int
     val regex = "-?(\\d+)([.]\\d+)?cm".r

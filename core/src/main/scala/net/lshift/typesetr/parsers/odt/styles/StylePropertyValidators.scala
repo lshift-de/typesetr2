@@ -26,23 +26,23 @@ object StylePropertyValidators extends StylePropertyValidators {
       PStyleTpe, SpanStyleTpe, TableTpeStyle, TableRowTpeStyle,
       TableCellTpeStyle, TableColTpeStyle  // ITag.FOOTNOTE ?!?
     ))*/
-    StylePropKey.FontFamily -> StyleValidator.all[FontFamily](opt(_)),
-    StylePropKey.FontSeize -> StyleValidator.r(StylePropKey.FontSeize.regex, StylePropKey.FontSeize.convert, required = false),
-    StylePropKey.FontWeight -> StyleValidator.list[FontWeight](List(FontWeight.Bold, FontWeight.Normal), defaultToV[FontWeight] _, required = false),
-    StylePropKey.FontStyleProp -> StyleValidator.list[FontStyle](List(FontStyle.Italic, FontStyle.Normal), defaultToV[FontStyle] _, required = false),
-    StylePropKey.Underline -> StyleValidator.list[Underline](List(Underline.Solid, Underline.None), eqTo[Underline](Underline.Solid) _, required = false),
-    StylePropKey.LineThrough -> StyleValidator.list[LineThrough](List(LineThrough.Solid, LineThrough.None), eqTo[LineThrough](LineThrough.Solid) _, required = false),
-    StylePropKey.Color -> StyleValidator.r(Color.rgbR, defaultTo[xml.attributes.Color](Color("#000000")), required = false),
-    StylePropKey.BackgroundColor -> StyleValidator.r(Color.rgbR, defaultTo[xml.attributes.Color](Color("#ffffff")), required = false),
-    StylePropKey.TextPosition -> StyleValidator.r[TextPosition]("(sub|super)\b".r, (x: String) => Some(x.split('\b')(0)), required = false),
-    StylePropKey.TextAlign -> StyleValidator.list(TextAlign.all, StylePropKey.TextAlign.toResult, required = false),
-    StylePropKey.LineHeight -> StyleValidator.r(StylePropKey.LineHeight.regex, StylePropKey.LineHeight.convert, required = false),
-    StylePropKey.MarginLeft -> StyleValidator.r(StylePropKey.MarginLeft.regex, StylePropKey.MarginLeft.convert, required = false),
-    StylePropKey.TextIndent -> StyleValidator.r(StylePropKey.TextIndent.regex, StylePropKey.TextIndent.convert, required = false),
-    StylePropKey.ParBreak-> StyleValidator.list(ParBreak.all, defaultTo[ParBreak](ParBreak.Auto), required = false),
-    StylePropKey.SubListStyles -> StyleValidator.all[String](_ => None),
-    StylePropKey.MinHeight -> StyleValidator.r(StylePropKey.MinHeight.regex, StylePropKey.MinHeight.convert, required = false),
-    StylePropKey.ColWidth -> StyleValidator.r(StylePropKey.ColWidth.regex, StylePropKey.ColWidth.convert, required = false)
+    StylePropKey.FontFamily       -> StyleValidator.all[FontFamily](opt(_)),
+    StylePropKey.FontSeize        -> StyleValidator.r(StylePropKey.FontSeize.regex, StylePropKey.FontSeize.convert, required = false),
+    StylePropKey.FontWeight       -> StyleValidator.list[FontWeight](List(FontWeight.Bold, FontWeight.Normal), defaultToV[FontWeight] _, required = false),
+    StylePropKey.FontStyleProp    -> StyleValidator.list[FontStyle](List(FontStyle.Italic, FontStyle.Normal), defaultToV[FontStyle] _, required = false),
+    StylePropKey.Underline        -> StyleValidator.list[Underline](List(Underline.Solid, Underline.None), eqTo[Underline](Underline.Solid) _, required = false),
+    StylePropKey.LineThrough      -> StyleValidator.list[LineThrough](List(LineThrough.Solid, LineThrough.None), eqTo[LineThrough](LineThrough.Solid) _, required = false),
+    StylePropKey.Color            -> StyleValidator.r(Color.rgbR, defaultTo[xml.attributes.Color](Color("#000000")), required = false),
+    StylePropKey.BackgroundColor  -> StyleValidator.r(Color.rgbR, defaultTo[xml.attributes.Color](Color("#ffffff")), required = false),
+    StylePropKey.TextPosition     -> StyleValidator.r[TextPosition]("(sub|super)\b".r, (x: String) => Some(x.split('\b')(0)), required = false),
+    StylePropKey.TextAlign        -> StyleValidator.list(TextAlign.all, StylePropKey.TextAlign.toResult, required = false),
+    StylePropKey.LineHeight       -> StyleValidator.r(StylePropKey.LineHeight.regex, StylePropKey.LineHeight.convert, required = false),
+    StylePropKey.MarginLeft       -> StyleValidator.r(StylePropKey.MarginLeft.regex, StylePropKey.MarginLeft.convert, required = false),
+    StylePropKey.TextIndent       -> StyleValidator.r(StylePropKey.TextIndent.regex, StylePropKey.TextIndent.convert, required = false),
+    StylePropKey.ParBreak         -> StyleValidator.list(ParBreak.all, defaultTo[ParBreak](ParBreak.Auto), required = false),
+    StylePropKey.SubListStyles    -> StyleValidator.all[String](_ => None),
+    StylePropKey.MinHeight        -> StyleValidator.r(StylePropKey.MinHeight.regex, StylePropKey.MinHeight.convert, required = false),
+    StylePropKey.ColWidth         -> StyleValidator.r(StylePropKey.ColWidth.regex, StylePropKey.ColWidth.convert, required = false)
   )
 
 }

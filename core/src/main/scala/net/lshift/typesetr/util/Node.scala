@@ -96,7 +96,7 @@ class NodeOps(val x: scala.xml.Node) extends AnyVal {
 
   def withAttribute(attr: Attribute, body: Seq[Repr.Aux[scala.xml.Node]]): Option[scala.xml.Node] = (x, attr.value) match {
     case (node: Elem, Some(v)) =>
-      val meta = new UnprefixedAttribute(attr.key.key, v, null)
+      val meta = new UnprefixedAttribute(attr.key.key, v, scala.xml.Null)
       Some(new Elem(node.prefix, node.label, meta, node.scope, node.minimizeEmpty, body.map(_.source): _*))
     case _ =>
       None

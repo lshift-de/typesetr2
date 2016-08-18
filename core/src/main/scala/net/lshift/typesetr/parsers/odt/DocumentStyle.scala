@@ -6,6 +6,9 @@ import styles.StyleId
 import net.lshift.typesetr.parsers.odt.styles.Style
 import net.lshift.typesetr.parsers.{ ReprEmptyBuilder, Repr }
 
+import scalaz.Tags.First
+import scalaz.Scalaz._
+
 abstract class DocumentStyle { self =>
 
   type Underlying
@@ -16,14 +19,17 @@ abstract class DocumentStyle { self =>
 
   def textWidth: Int
 
-  def style(id: StyleId): Option[Style] = styles.get(id)
+  def style(id: StyleId): Option[Style] =
+    scalaz.Tag.unwrap(First(styles.get(id)) |+| First(byNameFallback(id)))
 
-  def +:(style: (StyleId, Style)): self.type =
-    if (styles.contains(style._1)) self
-    else {
-      updateStyles(style)
-      self
-    }
+  private def byNameFallback(id: StyleId): Option[Style] =
+    styles.find(_._1.name == id.name).map(_._2)
+
+  def +:(style: (StyleId, Style)): self.type = {
+    assert(!styles.contains(style._1))
+    updateStyles(style)
+    self
+  }
 
   protected def styles: Map[StyleId, Style]
 
@@ -32,7 +38,7 @@ abstract class DocumentStyle { self =>
   override def toString: String = {
     s"""|Document Style:
         | Text width: ${textWidth}
-        |${styles.values.map(_.toString).mkString("\n")}""".stripMargin
+        |${styles.toList.sortBy(_._1).map(_._2.toString).mkString("\n")}""".stripMargin
   }
 
 }

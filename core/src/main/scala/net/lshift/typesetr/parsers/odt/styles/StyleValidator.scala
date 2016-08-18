@@ -97,6 +97,8 @@ class RegexValidator[V](reg: Pattern, val transform: String => Option[V],
 
   def validateValue(v: String): Boolean = reg.matcher(v).matches()
 
+  override def toString: String = s"Regex validator: ${reg.pattern()}"
+
 }
 
 class AcceptAllValidator[V](val transform: String => Option[V])

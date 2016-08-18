@@ -14,6 +14,8 @@ import shapeless._
 import syntax.singleton._
 import record._
 
+import util.Logger
+
 import scalaz.Tags.First
 import scalaz.Scalaz._
 
@@ -27,13 +29,13 @@ abstract class StyleFactory {
    * Load all style definition into a `doc` style document
    * given the initiial `rootStyle` node.
    */
-  def loadFromStyleDoc(rootStyle: scala.xml.Node, doc: DocumentStyle.Aux[U]): DocumentStyle.Aux[U]
+  def loadFromStyleDoc(rootStyle: scala.xml.Node, doc: DocumentStyle.Aux[U])(implicit logger: Logger): DocumentStyle.Aux[U]
 
   /*
    * Parse a single style node and return
    * a validated and translated representation of it.
    */
-  protected def parseStyle(node: scala.xml.Node, doc: DocumentStyle): Option[Style]
+  protected def parseStyle(node: scala.xml.Node, doc: DocumentStyle)(implicit logger: Logger): Option[Style]
 
 }
 
@@ -41,31 +43,31 @@ class StyleFactoryImpl extends StyleFactory {
 
   import StyleFactoryImpl._
 
-  private implicit val defaultNS: NameSpaces = OdtParser.ns
-
-  def loadFromStyleDoc(rootStyle: Node, doc: DocumentStyle.Aux[U]): DocumentStyle.Aux[U] = {
+  def loadFromStyleDoc(rootStyle: Node, doc: DocumentStyle.Aux[U])(implicit logger: Logger): DocumentStyle.Aux[U] = {
     (for {
-      stylesNode <- rootStyle \!! OdtTags.Styles
-      automaticStylesNode <- rootStyle \!! OdtTags.AutomaticStyle
-    } yield {
-      val docWithStyles1 = parseGroupNode(stylesNode, doc)
-      parseGroupNode(automaticStylesNode, docWithStyles1)
-    }).getOrElse(doc)
+      docWithStyles <- parseGroupNode(rootStyle \!! OdtTags.Styles, doc)
+      docWithAutoStyles <- parseGroupNode(rootStyle \!! OdtTags.AutomaticStyle, docWithStyles)
+    } yield docWithAutoStyles) getOrElse (doc)
+
   }
 
-  private def parseGroupNode(node: Node, doc: DocumentStyle.Aux[U]): DocumentStyle.Aux[U] =
-    (node.child).foldLeft(doc) { case (doc, node) =>
-      (for {
-        name <- node.attributes.getTag(OdtTags.StyleName)
-        style <- parseStyle(node, doc)
-        styleId <- extractStyleId(node)
-      } yield (styleId, style) +: doc) getOrElse doc
+  private def parseGroupNode(node: Option[Node], doc: DocumentStyle.Aux[U])(implicit logger: Logger): Option[DocumentStyle.Aux[U]] =
+    node match {
+      case None   => Some(doc)
+      case Some(node) =>
+        Some((node.child).foldLeft(doc) { case (doc, node) =>
+          (for {
+            name <- node.attributes.getTag(OdtTags.StyleName)
+            style <- parseStyle(node, doc)
+            styleId <- StyleId.fromNode(node)
+          } yield (styleId, style) +: doc) getOrElse doc
+        })
     }
 
-  protected def parseStyle(styleNode: Node, doc: DocumentStyle): Option[Style] = {
+  protected def parseStyle(styleNode: Node, doc: DocumentStyle)(implicit logger: Logger): Option[Style] = {
     if (invalidNodes.contains(styleNode.xmlTag)) None
     else {
-      val id = extractStyleId(styleNode)
+      val id = StyleId.fromNode(styleNode)
       val parent = styleNode.attributes.getTag(OdtTags.StyleParentStyle)
 
       lazy val parentStyle = (for {
@@ -89,7 +91,7 @@ class StyleFactoryImpl extends StyleFactory {
             // If the family type of the style is a paragraph, then it's a paragraph
             First(id.filter(_.family == ParagraphFamily).map(_ => PStyleTpe)) |+|
             // If the family type of the style is table, them it's a table
-            First(id.flatMap(s => TableStyleType.unapply(s.family))) |+|
+            First(id.flatMap(s => s.family.flatMap(TableStyleType.unapply))) |+|
             // Otherwise it's just a span
             First(Some(SpanStyleTpe))
 
@@ -133,24 +135,14 @@ class StyleFactoryImpl extends StyleFactory {
 
   private def parseListStyle(styleNode: Node): Option[Style] = ???
 
-  private def extractStyleId(node: Node): Option[StyleId] = {
-    val family =
-      if (node.xmlTag == OdtTags.TextListStyle) None
-      else node.attributes.getTag(OdtTags.StyleFamily)
-
-    for {
-      family <- node.attributes.getTag(OdtTags.StyleFamily)
-        if node.xmlTag != OdtTags.TextListStyle
-      name <- scalaz.Tag.unwrap(First(node.attributes.getTag(OdtTags.StyleName)) |+|
-              First(node.attributes.getTag(OdtTags.StyleName)))
-    } yield StyleId(family, name)
-  }
 }
 
 object StyleFactory {
 
   // Returns a default implementation of the style factory
-  def apply(): StyleFactory = new StyleFactoryImpl
+  def apply(): StyleFactory = _instance
+
+  private lazy val _instance = new StyleFactoryImpl
 
   // We don't want to access the instance of the records because
   // it may not necessarily exist yet.

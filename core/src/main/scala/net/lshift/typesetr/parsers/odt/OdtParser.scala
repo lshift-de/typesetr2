@@ -4,6 +4,7 @@ package parsers
 import net.lshift.typesetr.parsers.Repr.Aux
 import net.lshift.typesetr.parsers.odt.styles.{StylePropKey, StyleFactory, Style}
 import net.lshift.typesetr.xml.attributes.StyleAttribute
+import odt.styles.StyleId
 import xml._
 import net.lshift.typesetr.parsers.odt._
 
@@ -52,7 +53,8 @@ class OdtParser() extends Parser {
       rawStyleInBody <- root \!! OdtTags.AutomaticStyle
       styleInBody <- parseBody(rawStyleInBody)(style, logger)
     } yield {
-      val bodyNodes = rawBody.child.flatMap(parseBody(_)(style, logger))
+      val style1 = StyleFactory().loadFromStyleDoc(root, style)
+      val bodyNodes = rawBody.child.flatMap(parseBody(_)(style1, logger))
       val body1 = Repr.makeElem(Tags.BODY, bodyNodes)(rawBody, wrapper)
 
       (root, scriptsNode :: parseFonts(rawFont) :: styleInBody :: body1 :: Nil)
@@ -80,7 +82,7 @@ class OdtParser() extends Parser {
     }
 
   private def layoutData(meta: scala.xml.MetaData, attr: AttributeKey, owner: scala.xml.Node): Option[Int] = {
-    val tag: XmlTag = (OdtParser.ns("fo"), attr.key)
+    val tag: XmlTag = (implicitly[NameSpaces].apply("fo"), attr.key)
     meta.getTag(tag).toRight("0cm").fold(inCm, inCm)
   }
 
@@ -140,7 +142,18 @@ class OdtParser() extends Parser {
     lazy val children = node.child.flatMap(parseBody)
     implicit val source: Underlying = node
 
-    val sty: Style = Style.empty // todo: need to extract from doc styles
+    lazy val sty: Style = {
+      lazy val styleIdOpt = StyleId.forNonStyleNode(node)
+      (for {
+        styleId <- styleIdOpt
+        style   <- docStyle.style(styleId)
+      } yield style).getOrElse {
+        logger.info(s"no style for ${styleIdOpt}")
+        Style.empty
+      }
+    }
+
+    // todo: need to extract from doc styles
     // based on the context name
 
     node.xmlTag match {
@@ -163,11 +176,9 @@ class OdtParser() extends Parser {
       case OdtTags.H =>
         // TODO: why on non-blank we wrap it?
         logger.debug(s"[parser] header tag: $node")
-        val repr = for {
-          tagName <- sty.tpe if !(node isBlank)
-        } yield node.wrap(tag = ???, body = children)
-
-        repr
+        for {
+          styleTpe <- sty.tpe if !(node isBlank)
+        } yield node.wrap(tag = styleTpe.tag, body = children)
 
       case OdtTags.List =>
         // attr:
@@ -304,20 +315,16 @@ class OdtParser() extends Parser {
   private def parseStyleNode(node: scala.xml.Node)(implicit sty: DocumentStyle.Aux[Underlying], logger: Logger): Option[Repr.Aux[Underlying]] = {
     lazy val children = node.child.flatMap(parseStyleNode(_))
     node.xmlTag match {
+      // Small subset, currently just pass
+      /*
       case t @ OdtTags.StyleStyle =>
-        Some(node.wrap(tag = t.toInternalTag, body = children))
       case t @ OdtTags.StylePProps =>
-        Some(node.wrap(tag = t.toInternalTag, body = children))
       case t @ OdtTags.StyleTProps =>
-        Some(node.wrap(tag = t.toInternalTag, body = children))
       case t @ OdtTags.StylePageLayout =>
-        Some(node.wrap(tag = t.toInternalTag, body = children))
       case t @ OdtTags.StylePageLayoutProps =>
-        Some(node.wrap(tag = t.toInternalTag, body = children))
-      case t @ OdtTags.AutomaticStyle =>
-        Some(node.wrap(tag = t.toInternalTag, body = children))
+      case t @ OdtTags.AutomaticStyle =>*/
       case t =>
-        None
+        Some(node.wrap(tag = t.toInternalTag, body = children))
     }
   }
 
@@ -339,10 +346,10 @@ class OdtParser() extends Parser {
             for {
               val2Tag <- sty2Tag.allowedValues.find(_.value == propValue)
               attributeTag <- sty2Tag.styleKey.name
-              src <- orig.withAttribute(Attribute(attributeTag, val2Tag.value.name), acc)
-            } yield Repr.makeElem(tag = val2Tag.tag, body = acc)(src, wrapper)
-          ).getOrElse(acc);
-          acc
+              // Leave the style attribute, as is.
+              //src <- orig.withAttribute(Attribute(attributeTag, val2Tag.value.name), acc)
+            } yield Seq(Repr.makeElem(tag = val2Tag.tag, body = acc)(orig, wrapper))
+          ).getOrElse(acc)
         }
     }
 
@@ -350,17 +357,10 @@ class OdtParser() extends Parser {
       def apply(sty: Style, node: scala.xml.Node) = new translate(sty, node)
     }
 
-    import shapeless.ops.hlist.LeftFolder.{ hlistLeftFolder => folder }
-
-    //import translate._
     val translateForStyle = translate(sty, orig)
     import translateForStyle._
 
-    // FIXME: do we really need to help the inferencer by
-    // providing explicitly some implicit arguments?
-    trans.foldLeft(body)(translateForStyle)(
-      // Boilerplate to help the compiler with types
-      folder(translateForStyle.styletoTagToXml, folder))
+    trans.foldLeft(body)(translateForStyle)
   }
 
 }
@@ -382,24 +382,6 @@ object OdtParser {
   }
 
   case class ValToTag[+T <: StyleAttribute](value: T, tag: Tag)
-
-  val ns: NameSpaces = OdtNameSpaces(Map(
-    "style" -> "urn:oasis:names:tc:opendocument:xmlns:style:1.0",
-    "text" -> "urn:oasis:names:tc:opendocument:xmlns:text:1.0",
-    "office" -> "urn:oasis:names:tc:opendocument:xmlns:office:1.0",
-    "draw" -> "urn:oasis:names:tc:opendocument:xmlns:drawing:1.0",
-    "table" -> "urn:oasis:names:tc:opendocument:xmlns:table:1.0",
-
-    // openoffice crudified standard namespaces
-    "fo" -> "urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0",
-    "svg" -> "urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0",
-
-    // general stands
-    "dc" -> "http://purl.org/dc/elements/1.1/",
-    "xlink" -> "http://www.w3.org/1999/xlink",
-    "xml" -> "http://www.w3.org/XML/1998/namespace"))
-
-  private implicit val defaultNS: NameSpaces = ns
 
   private implicit lazy val defaultWrapper: NodeRepr[scala.xml.Node] =
     new OdtNodeRepr
@@ -435,7 +417,9 @@ object OdtParser {
     tag: Tag,
     contents: Option[String],
     attr: List[Attribute]) extends Repr {
-    if (contents.isEmpty && (tag == Tag.textTag)) ???
+
+    assert(contents.nonEmpty || (tag != Tag.textTag))
+
     type R = scala.xml.Node
     type BodyTpe = Repr.Aux[scala.xml.Node]
   }

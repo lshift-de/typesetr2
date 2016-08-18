@@ -4,6 +4,10 @@ import scala.language.implicitConversions
 
 abstract class Tag {
   def name: String
+
+  // 'flagged' nodes should never be optimized,
+  // and are taken as-is
+  def flagged: Boolean
 }
 
 object Tag {
@@ -43,8 +47,12 @@ object Tag {
 
   }
 
-  case class InternalTag(name: String) extends Tag
+  case class InternalTag(name: String) extends Tag {
+    def flagged: Boolean = false
+  }
 
-  case class InternalTagWithNS(ns: String, name: String) extends Tag
+  case class InternalTagWithNS(ns: String, name: String) extends Tag {
+    def flagged: Boolean = true
+  }
 
 }

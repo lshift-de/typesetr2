@@ -15,7 +15,7 @@ object XmlTag {
     else XmlTag(info._1.get, info._2)
 
   implicit def strRepr(tag: XmlTag): String =
-    s"${tag.namespace}:${tag.tag}"
+    s"${tag.namespace.short}:${tag.tag}"
 
   implicit class XmlTagOps(val t: XmlTag) extends AnyVal {
 
