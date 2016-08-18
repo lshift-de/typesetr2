@@ -56,9 +56,13 @@ trait PostProcessorUtils extends OpimizerStrategies {
 
     def groupByTagAndAttr[T](x: Repr.Aux[T]): Int => GroupKey = (idx: Int) =>
       x.tag match {
-        case t if t.flagged => SkolemKey(idx)
-        case Tag.textTag    => TextKey(idx)
-        case t              => SigKey((t, x.attr), idx)
+        case Tag.textTag => TextKey(idx)
+        case t =>
+          t.state match {
+            case Tag.Optimize => SigKey((t, x.attr), idx)
+            case Tag.Leave    => SkolemKey(idx)
+            case Tag.Replace  => RemoveKey(idx)
+          }
       }
 
     def maybeCollapseGroups[T](key: ElemSig, elems: Seq[Repr.Aux[T]])(implicit builder: NodeRepr[T], logger: Logger): Seq[Repr.Aux[T]] = {
@@ -124,6 +128,8 @@ trait PostProcessorUtils extends OpimizerStrategies {
           maybeCollapseGroups(key, elems)
         case SkolemKey(_) =>
           elems
+        case RemoveKey(_) =>
+          Nil
       }
     }).flatten
 
@@ -135,6 +141,7 @@ trait PostProcessorUtils extends OpimizerStrategies {
   case class TextKey(idx: Int) extends GroupKey
   case class SigKey(elemSig: ElemSig, idx: Int) extends GroupKey
   case class SkolemKey(idx: Int) extends GroupKey
+  case class RemoveKey(idx: Int) extends GroupKey
 
 }
 

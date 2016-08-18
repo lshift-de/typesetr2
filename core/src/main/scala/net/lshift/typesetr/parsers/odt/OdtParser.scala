@@ -22,6 +22,8 @@ import scala.language.{ postfixOps, implicitConversions }
 
 import shapeless.{Poly, Poly2, HList, HNil, :: => !:, Witness}
 
+import xml.{InternalTags => Tags}
+
 class OdtParser() extends Parser {
 
   import OdtParser._
@@ -190,10 +192,10 @@ class OdtParser() extends Parser {
         None
 
       case OdtTags.TextListItem =>
-        node.wrap(tag = xml.Tags.LI, body = children)
+        node.wrap(tag = Tags.LI, body = children)
 
       case OdtTags.Annotation =>
-        node.wrap(tag = xml.Tags.ASIDE, body = children)
+        node.wrap(tag = Tags.ASIDE, body = children)
 
       case OdtTags.Creator | OdtTags.NoteCitation | OdtTags.BookmarkEnd =>
         // TODO: include the potential child nodes
@@ -211,7 +213,7 @@ class OdtParser() extends Parser {
 
       case OdtTags.NoteBody =>
         // TODO: postprocessing should get rid of the whitespaces
-        Repr.makeElem(xml.Tags.FOOTNOTE, children)
+        Repr.makeElem(Tags.FOOTNOTE, children)
 
       case OdtTags.P =>
         // infer indentation level from the style
@@ -220,8 +222,8 @@ class OdtParser() extends Parser {
 
         Some(scalaz.Tag.unwrap(indentLvl) map { lvl =>
           val attr1 = Attribute("indent", lvl.toString) :: attr
-          Repr.makeElem(tag = xml.Tags.BLOCK, children, attr1)
-        } getOrElse (node.wrap(tag = xml.Tags.P, body = children)))
+          Repr.makeElem(tag = Tags.BLOCK, children, attr1)
+        } getOrElse (node.wrap(tag = Tags.P, body = children)))
 
       case OdtTags.Span =>
         // TODO: Style handling
@@ -236,7 +238,7 @@ class OdtParser() extends Parser {
           if (Utils.isCodeFont(font)) Repr.makeElem(Tags.CODE, body1) :: Nil
           else body1).getOrElse(body1)
 
-        Repr.makeElem(tag = xml.Tags.SPAN, body = body2)
+        Repr.makeElem(tag = Tags.SPAN, body = body2)
 
       case OdtTags.A =>
         val tpeAttr = AttributeKey(OdtTags.HrefType)
@@ -244,14 +246,14 @@ class OdtParser() extends Parser {
         //assert((tpeAttr inAttributes (attr)).getOrElse("") == "simple")
 
         val body = children.flatMap(child =>
-          whack(child, _ hasTag (xml.Tags.SPAN | xml.Tags.U)))
-        Repr.makeElem(tag = xml.Tags.A, body)
+          whack(child, _ hasTag (Tags.SPAN | Tags.U)))
+        Repr.makeElem(tag = Tags.A, body)
 
       case OdtTags.BookmarkStart =>
         // TOOD: Missing guards
         val attr: List[Attribute] = node.attributes.getTag(OdtTags.TextNameAttr).
           map(v => Attribute("href", v) :: Nil).getOrElse(Nil)
-        node.wrap(tag = xml.Tags.A, body = children, attributes = attr)
+        node.wrap(tag = Tags.A, body = children, attributes = attr)
 
       case OdtTags.Table =>
         logger.warn(s"[limitation] Ignoring Table node")
@@ -259,13 +261,13 @@ class OdtParser() extends Parser {
         None
 
       case OdtTags.TableRow =>
-        node.wrap(tag = xml.Tags.TR, body = children)
+        node.wrap(tag = Tags.TR, body = children)
 
       case OdtTags.TableCell =>
-        node.wrap(tag = xml.Tags.TD, body = children)
+        node.wrap(tag = Tags.TD, body = children)
 
       case OdtTags.TableColumn =>
-        node.wrap(tag = xml.Tags.COL, body = children)
+        node.wrap(tag = Tags.COL, body = children)
 
       case OdtTags.Frame =>
         // TODO: ignore for the moment
@@ -281,7 +283,7 @@ class OdtParser() extends Parser {
             Attribute("src", v) :: Nil
           } getOrElse (Nil)
 
-        node.wrap(tag = xml.Tags.IMG, body = children, attributes = attr)
+        node.wrap(tag = Tags.IMG, body = children, attributes = attr)
 
       case t @ OdtTags.StyleHeader =>
         node.wrap(tag = t.toInternalTag, body = children)
@@ -433,11 +435,11 @@ object OdtParser {
               HNil
 
   private val styleToTagsMap: StyleToTags =
-    StyleToTag(StylePropKey.Underline)(ValToTag[attributes.Underline](attributes.Underline.Solid, xml.Tags.U) :: Nil) ::
-      StyleToTag(StylePropKey.FontWeight)(ValToTag[attributes.FontWeight](attributes.FontWeight.Bold, xml.Tags.B) :: Nil) ::
-        StyleToTag(StylePropKey.FontStyleProp)(ValToTag[attributes.FontStyle](attributes.FontStyle.Italic, xml.Tags.I) :: Nil) ::
-          StyleToTag(StylePropKey.LineThrough)(ValToTag[attributes.LineThrough](attributes.LineThrough.Solid, xml.Tags.S) :: Nil) ::
-            StyleToTag[StylePropKey.TextPosition.type](StylePropKey.TextPosition)(ValToTag(attributes.TextPosition.Sub, xml.Tags.SUB) :: ValToTag(attributes.TextPosition.Sup, xml.Tags.SUP) :: Nil) ::
+    StyleToTag(StylePropKey.Underline)(ValToTag[attributes.Underline](attributes.Underline.Solid, Tags.U) :: Nil) ::
+      StyleToTag(StylePropKey.FontWeight)(ValToTag[attributes.FontWeight](attributes.FontWeight.Bold, Tags.B) :: Nil) ::
+        StyleToTag(StylePropKey.FontStyleProp)(ValToTag[attributes.FontStyle](attributes.FontStyle.Italic, Tags.I) :: Nil) ::
+          StyleToTag(StylePropKey.LineThrough)(ValToTag[attributes.LineThrough](attributes.LineThrough.Solid, Tags.S) :: Nil) ::
+            StyleToTag[StylePropKey.TextPosition.type](StylePropKey.TextPosition)(ValToTag(attributes.TextPosition.Sub, Tags.SUB) :: ValToTag(attributes.TextPosition.Sup, Tags.SUP) :: Nil) ::
               HNil
 
   private final val sizeP = """(\d+)cm""".r

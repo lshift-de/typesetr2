@@ -7,18 +7,22 @@ abstract class Tag {
 
   // 'flagged' nodes should never be optimized,
   // and are taken as-is
-  def flagged: Boolean
+  def state: Tag.TagState
 }
 
 object Tag {
 
   def apply(name: String): Tag = InternalTag(name)
 
+  def replace(name: String): Tag = ReplaceTag(name)
+
   lazy val nodeTag = Tag("node")
 
   lazy val textTag = Tag("text")
 
   lazy val syntheticTextTag = Tag("synth-text")
+
+  lazy val replaceTag = ReplaceTag("replace-node")
 
   implicit def toString(x: Tag): String = x.name
 
@@ -31,6 +35,7 @@ object Tag {
 
     def isIn(tags: List[Tag]): Boolean =
       tags.contains(x)
+
     def isIn(tag: Tag): Boolean =
       tag == x
 
@@ -48,11 +53,22 @@ object Tag {
   }
 
   case class InternalTag(name: String) extends Tag {
-    def flagged: Boolean = false
+    def state: TagState = Optimize
   }
 
   case class InternalTagWithNS(ns: String, name: String) extends Tag {
-    def flagged: Boolean = true
+    def state: TagState = Leave
   }
 
+  case class ReplaceTag(name: String) extends Tag {
+    def state: TagState = Replace
+  }
+
+  sealed abstract class TagState
+
+  case object Optimize extends TagState
+  case object Leave extends TagState
+  case object Replace extends TagState
+
 }
+

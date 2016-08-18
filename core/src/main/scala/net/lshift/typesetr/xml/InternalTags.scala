@@ -62,11 +62,15 @@ object InternalTags {
   final lazy val BODY = Tag("body")
 
   // ----------------
-  final lazy val FOOTNOTE = Tag(".footnote")
+  // TODO:
+  // For now we just ignore footnotes.
+  final lazy val FOOTNOTE = Tag.replace(".footnote")
   final lazy val PAGEBREAK = Tag(".pagebreak")
   final lazy val BLOCK = Tag(".block")
 
-  final lazy val LIT = Tag("LIT")
-  final lazy val CMD = Tag("CMD")
-  final lazy val LIST = Tag("LIST")
+  final lazy val LIT = Tag("lit")
+  final lazy val CMD = Tag("cmd")
+  final lazy val LIST = Tag("list")
+
+  final lazy val ROOT = Tag("root")
 }
