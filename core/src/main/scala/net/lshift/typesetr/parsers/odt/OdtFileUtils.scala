@@ -109,13 +109,14 @@ object OdtFile {
 
           origFile.copyToDir(dir)
           copy(f, new File(dir + File.separator + CONTENT_F), REPLACE_EXISTING)
-          val files = dir.listFiles()
+          val (files1, mimeFile) = dir.listFiles().toList.span(_.getName != MIMETYPE)
 
           // Entries must not contain a leading backslash
           val pre = dir.getAbsolutePath + File.separator
 
           val q = new mutable.Queue[File]()
-          q.enqueue(dir.listFiles: _*)
+          q.enqueue(mimeFile: _*)
+          q.enqueue(files1: _*)
 
           val zip = new ZipOutputStream(target)
 
