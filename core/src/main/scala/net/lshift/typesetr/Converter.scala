@@ -6,10 +6,10 @@ import java.io.{ FileOutputStream, OutputStream, PrintWriter, File }
 
 import net.lshift.typesetr.cmd.InputFormat.Markdown
 import net.lshift.typesetr.cmd._
-import net.lshift.typesetr.parsers.odt.OdtWriter
-import net.lshift.typesetr.parsers.{ NodeRepr, OdtParser }
+import net.lshift.typesetr.parsers.{ NodeFactory, OdtParser }
 import net.lshift.typesetr.postprocessors.Optimizer
 import net.lshift.typesetr.util.Logger
+import net.lshift.typesetr.writers.odt.OdtWriter
 import org.apache.commons.io.FilenameUtils
 import sun.awt.SunToolkit.OperationTimedOut
 

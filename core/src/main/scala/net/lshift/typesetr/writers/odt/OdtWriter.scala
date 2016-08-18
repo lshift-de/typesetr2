@@ -1,16 +1,14 @@
 package net.lshift.typesetr
-package parsers
+package writers
 package odt
 
 import java.io.FileOutputStream
 import java.nio.channels.Channels
 
-import net.lshift.typesetr.cmd.Config
-import net.lshift.typesetr.parsers.Repr.Aux
-import net.lshift.typesetr.parsers.Writer
-import net.lshift.typesetr.util
-import net.lshift.typesetr.util.Logger
-import net.lshift.typesetr.xml.Tag
+import cmd.Config
+import parsers.Repr.Aux
+import util.Logger
+import xml.Tag
 
 import scala.annotation.tailrec
 import scala.xml._
@@ -77,7 +75,7 @@ class OdtWriter extends Writer {
             writer.write(s"$space<${n.prefix}:${n.label}$attrbs $scope/>$NewLine")
           case _ =>
             writer.write(s"$space<${n.prefix}:${n.label}$attrbs $scope>$NewLine")
-            node.body.forall(writeNode(_, indent.increment))
+            node.body.forall(writeNode(_, indent + 1))
             writer.write(s"$space</${n.prefix}:${n.label}>$NewLine")
         }
         true

@@ -1,6 +1,6 @@
 package net.lshift.typesetr
 
-import net.lshift.typesetr.parsers.{ NodeRepr, TextRepr, Repr }
+import net.lshift.typesetr.parsers.{ NodeFactory, TextRepr, Repr }
 
 import scala.xml._
 
@@ -41,7 +41,7 @@ package object xml {
   final def whack[T](node: Repr.Aux[T],
                      filterBy: Repr => Boolean,
                      removeBody: Boolean = false)(
-                       implicit builder: NodeRepr[T]): Seq[Repr.Aux[T]] = {
+                       implicit builder: NodeFactory[T]): Seq[Repr.Aux[T]] = {
     node.source match {
       case atom: Atom[_] =>
         Seq(node)

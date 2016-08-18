@@ -30,7 +30,7 @@ class OdtParser() extends Parser {
 
   type Underlying = scala.xml.Node
 
-  lazy val wrapper = implicitly[NodeRepr[Underlying]]
+  lazy val wrapper = implicitly[NodeFactory[Underlying]]
 
   def parseToRawBody(input: File,
                      rewrittenInput: Boolean,
@@ -385,10 +385,10 @@ object OdtParser {
 
   case class ValToTag[+T <: StyleAttribute](value: T, tag: Tag)
 
-  private implicit lazy val defaultWrapper: NodeRepr[scala.xml.Node] =
-    new OdtNodeRepr
+  private implicit lazy val defaultWrapper: NodeFactory[scala.xml.Node] =
+    new OdtNodeFactory
 
-  private class OdtNodeRepr extends NodeRepr[scala.xml.Node] {
+  private class OdtNodeFactory extends NodeFactory[scala.xml.Node] {
 
     def create(tag: Tag,
                elem: scala.xml.Node,

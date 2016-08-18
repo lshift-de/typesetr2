@@ -40,28 +40,28 @@ object Repr {
 
   def makeElem[T](tag: Tag,
                   body: Seq[Repr.Aux[T]])(
-    implicit source: T, builder: NodeRepr[T]): Repr.Aux[T] =
+    implicit source: T, builder: NodeFactory[T]): Repr.Aux[T] =
     builder.create(tag, source, body)
 
   def makeElem[T](tag: Tag,
                   contents: String)(
-    implicit source: T, builder: NodeRepr[T]): Repr.Aux[T] =
+    implicit source: T, builder: NodeFactory[T]): Repr.Aux[T] =
     builder.create(tag, source, Nil)
 
   def makeElem[T](tag: Tag,
                   body: Seq[Repr.Aux[T]],
                   attr: List[Attribute])(
-    implicit source: T, builder: NodeRepr[T]): Repr.Aux[T] =
+    implicit source: T, builder: NodeFactory[T]): Repr.Aux[T] =
     builder.createWithAttributes(tag, source, body, attr)
 
   def makeTextElem[T](contents0: String, synthetic: Boolean = false)(
-    implicit source: T, builder: NodeRepr[T]): Repr.Aux[T] = {
+    implicit source: T, builder: NodeFactory[T]): Repr.Aux[T] = {
     val t = if (synthetic) Tag.syntheticTextTag else Tag.textTag
     builder.createWithContents(t, source, contents0)
   }
 
 
-  def optMakeElem[T](tag: Tag, body: Seq[Repr.Aux[T]])(implicit builder: NodeRepr[T]): Option[Seq[Repr.Aux[T]]] =
+  def optMakeElem[T](tag: Tag, body: Seq[Repr.Aux[T]])(implicit builder: NodeFactory[T]): Option[Seq[Repr.Aux[T]]] =
     if (body.isEmpty) None
     else ???
 

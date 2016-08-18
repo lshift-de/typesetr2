@@ -2,7 +2,7 @@ package net.lshift.typesetr.parsers
 
 import net.lshift.typesetr.xml.{ Attribute, Tag }
 
-abstract class NodeRepr[T] {
+abstract class NodeFactory[T] {
 
   def create(tag: Tag, elem: T,
              children: Seq[Repr.Aux[T]] = Nil,

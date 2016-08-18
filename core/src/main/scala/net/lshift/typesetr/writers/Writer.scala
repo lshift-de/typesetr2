@@ -1,9 +1,8 @@
 package net.lshift.typesetr
-package parsers
+package writers
 
-import net.lshift.typesetr.parsers.Repr._
-import net.lshift.typesetr.util
 import cmd.Config
+import parsers.Repr._
 
 abstract class Writer {
 

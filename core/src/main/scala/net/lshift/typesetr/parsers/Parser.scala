@@ -23,8 +23,4 @@ abstract class Parser {
                    asides: Any,
                    rewriteInfo: Any): Any
 
-  // Parser-dependent wrapper that creates
-  // platform-independent nodes used by typesetr
-  // in the optimization phase
-  def wrapper: NodeRepr[Underlying]
 }

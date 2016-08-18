@@ -1,7 +1,7 @@
 package net.lshift.typesetr
 package util
 
-import parsers.{ Repr, NodeRepr }
+import parsers.{ Repr, NodeFactory }
 
 import scala.annotation.tailrec
 import scala.xml.{ Attribute => SAttribute, _ }
@@ -69,7 +69,7 @@ class NodeOps(val x: scala.xml.Node) extends AnyVal {
   def wrap(tag: Tag,
            body: Seq[Repr.Aux[scala.xml.Node]],
            attributes: List[Attribute] = Nil,
-           contents: Option[String] = None)(implicit builder: NodeRepr[scala.xml.Node]): Repr.Aux[scala.xml.Node] =
+           contents: Option[String] = None)(implicit builder: NodeFactory[scala.xml.Node]): Repr.Aux[scala.xml.Node] =
     if (contents.nonEmpty) {
       assert(body.isEmpty)
       builder.createWithContents(tag, x, contents.get)
@@ -78,7 +78,7 @@ class NodeOps(val x: scala.xml.Node) extends AnyVal {
     else
       builder.createWithAttributes(tag, x, body, attributes)
 
-  def wrapRec(tag: Tag)(implicit builder: NodeRepr[scala.xml.Node]): Repr.Aux[scala.xml.Node] = {
+  def wrapRec(tag: Tag)(implicit builder: NodeFactory[scala.xml.Node]): Repr.Aux[scala.xml.Node] = {
     val children0 = x.child.map(_.wrapRec(tag))
     x.wrap(tag, children0, Nil)
   }
