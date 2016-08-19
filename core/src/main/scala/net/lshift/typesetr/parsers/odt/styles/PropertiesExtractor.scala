@@ -9,25 +9,16 @@ import scalaz.Scalaz._
 
 import scala.language.implicitConversions
 
-case class Props(textProps: Option[scala.xml.Node],
-                 parProps: Option[scala.xml.Node],
-                 tableProps: Option[scala.xml.Node])
-
-object Props {
-  implicit def toProps(ps: (Option[scala.xml.Node], Option[scala.xml.Node], Option[scala.xml.Node])): Props =
-    Props(ps._1, ps._2, ps._3)
-}
-
 // Extracts a node of the given `name` from the appropriate
 // properties node, `props`.
-abstract class PropertiesExtractor(val props: Props) {
+abstract class PropertiesExtractor(props: Props) {
   def extract(name: XmlTag): Option[String]
 }
 
 // There are different kinds of nodes that store properties nodes.
 // Some of them have internal nodes that have the same name, so
 // builders instantiate the extractors where they will be looked up.
-abstract class PropertiesExtractorBuilder {
+abstract class PropertiesExtractorFactory {
   def build(ps: Props): PropertiesExtractor
 }
 
@@ -35,11 +26,10 @@ abstract class PropertiesExtractorBuilder {
 // define text, paragraphs, tables, or a mixture of the former.
 object PropertiesExtractor {
 
-  def text: PropertiesExtractorBuilder =
-    textB
+  def text: PropertiesExtractorFactory = textB
 
   private lazy val textB =
-    new PropertiesExtractorBuilder {
+    new PropertiesExtractorFactory {
       def build(ps: Props): PropertiesExtractor =
         new PropertiesExtractor(ps) {
           def extract(name: XmlTag): Option[String] =
@@ -47,11 +37,10 @@ object PropertiesExtractor {
         }
     }
 
-  def paragraph: PropertiesExtractorBuilder =
-    paragraphB
+  def paragraph: PropertiesExtractorFactory = paragraphB
 
   private lazy val paragraphB =
-    new PropertiesExtractorBuilder {
+    new PropertiesExtractorFactory {
       def build(ps: Props): PropertiesExtractor =
         new PropertiesExtractor(ps) {
           def extract(name: XmlTag): Option[String] =
@@ -59,11 +48,10 @@ object PropertiesExtractor {
         }
     }
 
-  def table: PropertiesExtractorBuilder =
-    tableB
+  def table: PropertiesExtractorFactory = tableB
 
   private lazy val tableB =
-    new PropertiesExtractorBuilder {
+    new PropertiesExtractorFactory {
       def build(ps: Props): PropertiesExtractor =
         new PropertiesExtractor(ps) {
           def extract(name: XmlTag): Option[String] =
@@ -71,11 +59,10 @@ object PropertiesExtractor {
         }
     }
 
-  def mixed: PropertiesExtractorBuilder =
-    mixedB
+  def mixed: PropertiesExtractorFactory = mixedB
 
   private lazy val mixedB =
-    new PropertiesExtractorBuilder {
+    new PropertiesExtractorFactory {
       def build(ps: Props): PropertiesExtractor =
         new PropertiesExtractor(ps) {
           def extract(name: XmlTag): Option[String] =

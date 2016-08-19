@@ -16,9 +16,9 @@ abstract class PostProcessor {
 
   type ElemSig = (Tag, List[Attribute])
 
-  def process[T](node: Repr.Aux[T])(implicit builder: NodeFactory[T], logger: Logger): Repr.Aux[T] = {
+  def process[T](node: Repr.Aux[T])(implicit factory: NodeFactory[T], logger: Logger): Repr.Aux[T] = {
     val nodes = coalesce(node.body.toList)
-    builder.create(
+    factory.create(
       tag = node.tag,
       elem = node.source,
       children = nodes,
@@ -26,7 +26,7 @@ abstract class PostProcessor {
       attrs = node.attr)
   }
 
-  protected def coalesce[T](nodes: List[Repr.Aux[T]])(implicit builder: NodeFactory[T], logger: Logger): List[Repr.Aux[T]]
+  protected def coalesce[T](nodes: List[Repr.Aux[T]])(implicit factory: NodeFactory[T], logger: Logger): List[Repr.Aux[T]]
 
 }
 
@@ -36,7 +36,7 @@ trait PostProcessorUtils extends OpimizerStrategies {
   import xml.TagGroups._
 
   // group together potential elements
-  protected def coalesce[T](nodes: List[Repr.Aux[T]])(implicit builder: NodeFactory[T], logger: Logger): List[Repr.Aux[T]] = {
+  protected def coalesce[T](nodes: List[Repr.Aux[T]])(implicit factory: NodeFactory[T], logger: Logger): List[Repr.Aux[T]] = {
 
     object BogusElement {
       def isBogus(x: Repr): Boolean = unapply(x).isEmpty
@@ -95,7 +95,7 @@ trait PostProcessorUtils extends OpimizerStrategies {
       }
     }
 
-    val nodes1 = nodes.map(process(_)(builder, logger))
+    val nodes1 = nodes.map(process(_)(factory, logger))
 
     // Group all the child nodes by the tag.
     // Note: when grouping we have to consider if they are not
@@ -123,7 +123,7 @@ trait PostProcessorUtils extends OpimizerStrategies {
       key match {
         case TextKey(_) =>
           val text = elems.flatMap(_.extractPlainText).mkString("")
-          Repr.makeTextElem(text)(builder.textNode(text), builder) :: Nil
+          Repr.makeTextElem(text)(factory.textNode(text), factory) :: Nil
         case SigKey(key, _) =>
           maybeCollapseGroups(key, elems)
         case SkolemKey(_) =>
@@ -152,7 +152,7 @@ trait OptimizerCoalesceBlocks {
 
   // .block -> pre | blockquote handling
   // hacky and limited ATM; no support for nesting etc.
-  protected def coalesceBlocks[T](sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit builder: NodeFactory[T], logger: Logger): Seq[Repr.Aux[T]] = {
+  protected def coalesceBlocks[T](sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit factory: NodeFactory[T], logger: Logger): Seq[Repr.Aux[T]] = {
 
     @tailrec
     def codeBlock[T](elems: Seq[Repr.Aux[T]], txt: List[Option[String]]): (Option[Repr.Aux[T]], Seq[Repr.Aux[T]]) = elems match {
@@ -212,7 +212,7 @@ trait OptimizerCoalesceBlocks {
 trait OptimizerCoalesceSiblings {
   self: PostProcessor =>
 
-  protected def coalesceSiblings[T](sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit builder: NodeFactory[T], logger: Logger): Seq[Repr.Aux[T]] = {
+  protected def coalesceSiblings[T](sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit factory: NodeFactory[T], logger: Logger): Seq[Repr.Aux[T]] = {
     // pack together the elements of the group
     // should apply cleaning up recursively
     val compactedElems = coalesce(elems.flatMap(_.body).toList)
@@ -222,7 +222,7 @@ trait OptimizerCoalesceSiblings {
       case first :: _ =>
         if (sig._1 == SPAN) compactedElems
         // TODO, create a new XML node
-        else Repr.makeElem(sig._1, compactedElems, sig._2)(first.source, builder) :: Nil
+        else Repr.makeElem(sig._1, compactedElems, sig._2)(first.source, factory) :: Nil
     }
     r
   }
@@ -280,10 +280,10 @@ trait OptimzerCoalesceHeadings {
 trait OpimizerStrategies {
   self: PostProcessor =>
 
-  protected def coalesceBlocks[T](sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit builder: NodeFactory[T], logger: Logger): Seq[Repr.Aux[T]]
-  protected def coalesceSiblings[T](sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit builder: NodeFactory[T], logger: Logger): Seq[Repr.Aux[T]]
-  protected def coalesceHeadings[T](body: Repr.Aux[T])(implicit builder: NodeFactory[T], logger: Logger): Option[Seq[Repr.Aux[T]]]
-  protected def coalesceParentChild[T](sig: ElemSig, elem: Repr.Aux[T])(implicit builder: NodeFactory[T], logger: Logger): Option[Repr.Aux[T]]
+  protected def coalesceBlocks[T](sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit factory: NodeFactory[T], logger: Logger): Seq[Repr.Aux[T]]
+  protected def coalesceSiblings[T](sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit factory: NodeFactory[T], logger: Logger): Seq[Repr.Aux[T]]
+  protected def coalesceHeadings[T](body: Repr.Aux[T])(implicit factory: NodeFactory[T], logger: Logger): Option[Seq[Repr.Aux[T]]]
+  protected def coalesceParentChild[T](sig: ElemSig, elem: Repr.Aux[T])(implicit factory: NodeFactory[T], logger: Logger): Option[Repr.Aux[T]]
 }
 
 trait OpimizerCoalesceParentChild {

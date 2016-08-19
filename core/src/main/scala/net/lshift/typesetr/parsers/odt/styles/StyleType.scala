@@ -17,6 +17,17 @@ sealed abstract class StyleType(val name: String) {
   def tag: Tag
 }
 
+object StyleType {
+
+  def all = List(TitleStyleTpe, SubTitleStyleTpe,
+                 HeadingStyle.h1, HeadingStyle.h2, HeadingStyle.h3, HeadingStyle.h4,
+                 HeadingStyle.h5, HeadingStyle.h6,
+                 ListStyleTpe, // can"t use "ol"", "ul", because we"ll find out later
+                 PStyleTpe, SpanStyleTpe, TableTpeStyle, TableRowTpeStyle,
+                 TableCellTpeStyle, TableColTpeStyle)
+
+}
+
 case object ListStyleTpe extends StyleType("list") {
 
   def tag: Tag = ITags.LIST

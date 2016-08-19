@@ -19,13 +19,7 @@ object StylePropertyValidators extends StylePropertyValidators {
     new TagValidators[K, StyleValidator.Aux[k.Result]]
 
   final val map = shapeless.HMap[TagValidators](
-    /*StylePropKey.Tpe -> StyleValidator.propsList(List[StyleType](TitleStyleTpe, SubTitleStyleTpe,
-      HeadingStyle.h1, HeadingStyle.h2, HeadingStyle.h3, HeadingStyle.h4,
-      HeadingStyle.h5, HeadingStyle.h6,
-      ListStyleTpe, // can"t use "ol"", "ul", because we"ll find out later
-      PStyleTpe, SpanStyleTpe, TableTpeStyle, TableRowTpeStyle,
-      TableCellTpeStyle, TableColTpeStyle  // ITag.FOOTNOTE ?!?
-    ))*/
+    /*StylePropKey.Tpe -> StyleValidator.list(StyleType.all)*/
     StylePropKey.FontFamily       -> StyleValidator.all[FontFamily](opt(_)),
     StylePropKey.FontSeize        -> StyleValidator.r(StylePropKey.FontSeize.regex, StylePropKey.FontSeize.convert, required = false),
     StylePropKey.FontWeight       -> StyleValidator.list[FontWeight](List(FontWeight.Bold, FontWeight.Normal), defaultToV[FontWeight] _, required = false),

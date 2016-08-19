@@ -114,6 +114,7 @@ class OdtWriter extends Writer {
 }
 
 object OdtWriter {
+
   private final val Indent = 4
 
   private final val Encoding = Seq(
@@ -129,4 +130,5 @@ object OdtWriter {
   private final val NewLine = "\n"
 
   private final val TextEncoding = "UTF-8"
+
 }

@@ -14,8 +14,6 @@ sealed abstract class StyleId {
 
   def name: String
 
-  def withThisFamily(name0: String) = StyleId(family, name0)
-
   override def toString: String =
     family map (f => s"$f:$name") getOrElse (s"none:$name")
 
@@ -50,6 +48,10 @@ object StyleId {
       name <- scalaz.Tag.unwrap(First(node.attributes.getTag(attr)) |+|
         First(node.attributes.getTag(OdtTags.TableStyleNameAttr)))
     } yield StyleId(family, name)
+  }
+
+  implicit class StyleIdOps(val s: StyleId) extends AnyVal {
+    def withThisFamily(name0: String) = StyleId(s.family, name0)
   }
 
   private case class StyleIdImpl(family: Option[String], name: String) extends StyleId

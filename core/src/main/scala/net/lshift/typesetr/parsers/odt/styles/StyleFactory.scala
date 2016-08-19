@@ -48,25 +48,26 @@ class StyleFactoryImpl extends StyleFactory {
       docWithStyles <- parseGroupNode(rootStyle \!! OdtTags.Styles, doc)
       docWithAutoStyles <- parseGroupNode(rootStyle \!! OdtTags.AutomaticStyle, docWithStyles)
     } yield docWithAutoStyles) getOrElse (doc)
-
   }
 
   private def parseGroupNode(node: Option[Node], doc: DocumentStyle.Aux[U])(implicit logger: Logger): Option[DocumentStyle.Aux[U]] =
     node match {
-      case None   => Some(doc)
+      case None       => Some(doc)
       case Some(node) =>
         Some((node.child).foldLeft(doc) { case (doc, node) =>
           (for {
-            name <- node.attributes.getTag(OdtTags.StyleName)
-            style <- parseStyle(node, doc)
-            styleId <- StyleId.fromNode(node)
-          } yield (styleId, style) +: doc) getOrElse doc
+            name      <- node.attributes.getTag(OdtTags.StyleName)
+            styleInfo <- parseStyle(node, doc)
+            styleId   <- StyleId.fromNode(node)
+          } yield (styleId, styleInfo) +: doc) getOrElse doc
         })
     }
 
   protected def parseStyle(styleNode: Node, doc: DocumentStyle)(implicit logger: Logger): Option[Style] = {
-    if (invalidNodes.contains(styleNode.xmlTag)) None
-    else {
+    if (invalidNodes.contains(styleNode.xmlTag)) {
+      logger.info(s"Ignoring node $styleNode")
+      None
+    } else {
       val id = StyleId.fromNode(styleNode)
       val parent = styleNode.attributes.getTag(OdtTags.StyleParentStyle)
 
@@ -89,7 +90,7 @@ class StyleFactoryImpl extends StyleFactory {
             // Inherit style type from the parent node if any
             First(parentStyle.flatMap(_.tpe)) |+|
             // If the family type of the style is a paragraph, then it's a paragraph
-            First(id.filter(_.family == ParagraphFamily).map(_ => PStyleTpe)) |+|
+            First(id.filter(_.family == Some(ParagraphFamily)).map(_ => PStyleTpe)) |+|
             // If the family type of the style is table, them it's a table
             First(id.flatMap(s => s.family.flatMap(TableStyleType.unapply))) |+|
             // Otherwise it's just a span
@@ -108,8 +109,14 @@ class StyleFactoryImpl extends StyleFactory {
                          First(styleNode \!! (OdtTags.StyleTableCellProps)) |+|
                          First(styleNode \!! (OdtTags.StyleTableProps)))
 
-      val props: Props = (textProps, parProps, tableProps)
-      object toMap extends Poly1 {
+      /*
+       * For each style property:
+       *  - extract the appropriate xml node from text, paragraph and/or table xml nodes
+       *  - validate it
+       *  - transform the string value into a first class Scala object
+       */
+      class toMap(props: Props) extends Poly1 {
+        // Creates a single (StyleProperty -> StylePropertyValue) record.
         implicit def conv[T <: StylePropKey](implicit x: T) =
           at[T] { _ =>
             (x ->>
@@ -117,19 +124,29 @@ class StyleFactoryImpl extends StyleFactory {
                 StylePropertyValidators.map(x)(StylePropertyValidators.map.caseRel),
                 StylePropertyExtractors.map(x)(StylePropertyExtractors.map.caseRel).
                   build(props))) }
+
+
+        private def prop[T <: StylePropKey](x: T)(styleValidator: StyleValidator.Aux[x.Result],
+                                                  propExtractor: PropertiesExtractor): Option[x.Result] = {
+          x.name flatMap { xmlTag =>
+            val node = propExtractor.extract(xmlTag)
+            if (styleValidator.validate(node)) node.flatMap(styleValidator.transform)
+            else None
+          }
+        }
+
       }
-      val styleMap = StyleFactory.keys.map(toMap)
-      id map (styleId => Style.safeStyle(styleMap, styleId, parentStyle.map(_.id), tpe))
-    }
-  }
 
+      object toMap {
+        def apply(props: Props): toMap = new toMap(props)
+      }
 
-  private def prop[T <: StylePropKey](x: T)(implicit styleValidator: StyleValidator.Aux[x.Result],
-                                            propExtractor: PropertiesExtractor): Option[x.Result] = {
-    x.name flatMap { xmlTag =>
-      val node = propExtractor.extract(xmlTag)
-      if (styleValidator.validate(node)) node.flatMap(styleValidator.transform)
-      else None
+      val mappingFun = toMap((textProps, parProps, tableProps))
+      import mappingFun._
+
+      val styleMap = Style.styleProperties.map(mappingFun)
+      id map (styleId =>
+        Style.typesafeStyle(styleMap, styleId, parentStyle.map(_.id), tpe))
     }
   }
 
@@ -143,18 +160,6 @@ object StyleFactory {
   def apply(): StyleFactory = _instance
 
   private lazy val _instance = new StyleFactoryImpl
-
-  // We don't want to access the instance of the records because
-  // it may not necessarily exist yet.
-  // What we have however, is the precise type, which has materialized
-  // type information of its expected keys and values.
-  // To retrieve the latter we use some implicit magic.
-  private class KeysOfRecordMapHelper[H <: HList] {
-    def keys[K <: HList]()(implicit keysWitness: shapeless.ops.record.Keys.Aux[H, K]): keysWitness.Out =
-      keysWitness()
-  }
-
-  final lazy val keys = { (new KeysOfRecordMapHelper[Style.MMap]).keys() }
 
 }
 

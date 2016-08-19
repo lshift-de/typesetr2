@@ -147,27 +147,31 @@ object Style {
 
   type Aux[S <: StylePropKey] = Option[S#Result] with KeyTag[S#V, Option[S#Result]]
 
+  /*
+   * Heterogenous list of records representing a mapping between style
+   * properties and types of their values
+   */
   type MMap =
     Aux[StylePropKey.FontFamily.type] ::
-      Aux[StylePropKey.FontSeize.type] ::
-      Aux[StylePropKey.FontWeight.type] ::
-      Aux[StylePropKey.FontStyleProp.type] ::
-      Aux[StylePropKey.Underline.type] ::
-      Aux[StylePropKey.LineThrough.type] ::
-      Aux[StylePropKey.Color.type] ::
-      Aux[StylePropKey.BackgroundColor.type] ::
-      Aux[StylePropKey.TextPosition.type] ::
-      Aux[StylePropKey.TextAlign.type] ::
-      Aux[StylePropKey.LineHeight.type] ::
-      Aux[StylePropKey.MarginLeft.type] ::
-      Aux[StylePropKey.TextIndent.type] ::
-      Aux[StylePropKey.ParBreak.type] ::
-      Aux[StylePropKey.ColWidth.type] ::
-      Aux[StylePropKey.MinHeight.type] ::
+    Aux[StylePropKey.FontSeize.type] ::
+    Aux[StylePropKey.FontWeight.type] ::
+    Aux[StylePropKey.FontStyleProp.type] ::
+    Aux[StylePropKey.Underline.type] ::
+    Aux[StylePropKey.LineThrough.type] ::
+    Aux[StylePropKey.Color.type] ::
+    Aux[StylePropKey.BackgroundColor.type] ::
+    Aux[StylePropKey.TextPosition.type] ::
+    Aux[StylePropKey.TextAlign.type] ::
+    Aux[StylePropKey.LineHeight.type] ::
+    Aux[StylePropKey.MarginLeft.type] ::
+    Aux[StylePropKey.TextIndent.type] ::
+    Aux[StylePropKey.ParBreak.type] ::
+    Aux[StylePropKey.ColWidth.type] ::
+    Aux[StylePropKey.MinHeight.type] ::
       HNil
 
-  def safeStyle(mmap: MMap, id: StyleId,
-                parent: Option[StyleId], tpe: Option[StyleType]): Style =
+  def typesafeStyle(mmap: MMap, id: StyleId,
+                    parent: Option[StyleId], tpe: Option[StyleType]): Style =
     new RecordsBackedStyleImpl(mmap, id, parent, tpe)
 
   private class RecordsBackedStyleImpl(mmap: MMap,
@@ -244,4 +248,17 @@ object Style {
       def id: StyleId = StyleId.none
 
     }
+
+
+  // We don't want to access the instance of the records because
+  // it may not necessarily exist yet.
+  // What we have however, is the precise type, which has materialized
+  // type information of its expected keys and values.
+  // To retrieve the latter we use some implicit magic.
+  private class KeysOfRecordMapHelper[H <: HList] {
+    def keys[K <: HList]()(implicit keysWitness: shapeless.ops.record.Keys.Aux[H, K]): keysWitness.Out =
+      keysWitness()
+  }
+
+  lazy val styleProperties = { (new KeysOfRecordMapHelper[MMap]).keys() }
 }

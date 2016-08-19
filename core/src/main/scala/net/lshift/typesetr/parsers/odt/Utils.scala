@@ -1,6 +1,8 @@
-package net.lshift.typesetr.parsers
+package net.lshift.typesetr
+package parsers
+package odt
 
-import net.lshift.typesetr.xml.attributes.FontFamily
+import xml.attributes.FontFamily
 
 object Utils extends FontUtils
   with FigureUtils

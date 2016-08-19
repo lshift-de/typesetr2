@@ -7,11 +7,18 @@ import java.util.regex.Pattern
 
 import scala.util.matching.Regex
 
+/*
+ * Style validators a) check if the low-level string value is
+ * acceptable b) translates it into a first class Scala object
+ * representation
+ */
 sealed abstract class StyleValidator {
 
-  type T
-
+  // Type of the initial value
   type From
+
+  // Type of the resulting value
+  type T
 
   def validate(v: Option[From]): Boolean =
     (!isRequired || v.nonEmpty) && v.map(validateValue).getOrElse(true)
@@ -24,6 +31,7 @@ sealed abstract class StyleValidator {
 
 }
 
+// Validators of string values.
 abstract class StringStyleValidator extends StyleValidator {
   type From = String
 }
@@ -89,7 +97,8 @@ class TypesafeListValidator[V](vs: List[V], val transform: String => Option[V],
 
 }
 
-class RegexValidator[V](reg: Pattern, val transform: String => Option[V],
+class RegexValidator[V](reg: Pattern,
+                        val transform: String => Option[V],
                         protected val isRequired: Boolean)
   extends StringStyleValidator {
 

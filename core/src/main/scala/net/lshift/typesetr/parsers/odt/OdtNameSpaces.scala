@@ -6,7 +6,7 @@ import scala.language.postfixOps
 
 class OdtNameSpaces(mapping: Map[String, String]) extends NameSpaces {
   def apply(key: NameSpaceKey): Option[NameSpace] =
-    mapping.get(key.value).map(v => NameSpace(v, key.value))
+    mapping.get(key.value).map(v => NameSpace(v, key))
 
   def name: String = "odt"
 
@@ -18,6 +18,5 @@ class OdtNameSpaces(mapping: Map[String, String]) extends NameSpaces {
 }
 
 object OdtNameSpaces {
-  def apply(mapping: Map[String, String]): NameSpaces =
-    new OdtNameSpaces(mapping)
+  def apply(mapping: Map[String, String]): NameSpaces = new OdtNameSpaces(mapping)
 }

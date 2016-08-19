@@ -155,9 +155,6 @@ class OdtParser() extends Parser {
       }
     }
 
-    // todo: need to extract from doc styles
-    // based on the context name
-
     node.xmlTag match {
       case OdtTags.Tab =>
         val tabsNum = node.attributes.getTag(OdtTags.C).map(_.toInt).getOrElse(1)
@@ -312,7 +309,7 @@ class OdtParser() extends Parser {
     }
   }
 
-  // TODO: Build style-map
+  // TODO: avoid double pass-through
   // Currently just pass-through
   private def parseStyleNode(node: scala.xml.Node)(implicit sty: DocumentStyle.Aux[Underlying], logger: Logger): Option[Repr.Aux[Underlying]] = {
     lazy val children = node.child.flatMap(parseStyleNode(_))
@@ -335,7 +332,7 @@ class OdtParser() extends Parser {
    * based on the style of the particular node.
    *
    * Note: this may translate a single `<span>` node into a
-   * nested
+   * cascade of nested nodes.
    */
   private def translateStyleToTags(body: Seq[Repr.Aux[Underlying]],
                                    trans: StyleToTags, sty: Style)(
@@ -368,6 +365,7 @@ class OdtParser() extends Parser {
 }
 
 object OdtParser {
+  // TODO: replace those abstractions with HList of Records.
   abstract class StyleToTag[T <: StylePropKey.Of] {
     val styleKey: T
     val witness: Witness.Aux[T]
@@ -385,47 +383,6 @@ object OdtParser {
 
   case class ValToTag[+T <: StyleAttribute](value: T, tag: Tag)
 
-  private implicit lazy val defaultWrapper: NodeFactory[scala.xml.Node] =
-    new OdtNodeFactory
-
-  private class OdtNodeFactory extends NodeFactory[scala.xml.Node] {
-
-    def create(tag: Tag,
-               elem: scala.xml.Node,
-               children: Seq[Aux[scala.xml.Node]] = Nil,
-               attrs: List[Attribute] = Nil,
-               contents: Option[String] = None): Aux[scala.xml.Node] =
-      OdtRepr(elem, children, tag, contents, attrs)
-
-    def createWithAttributes(
-      tag: Tag,
-      elem: scala.xml.Node,
-      children: Seq[Aux[scala.xml.Node]],
-      attrs: List[Attribute]): Aux[scala.xml.Node] =
-      OdtRepr(elem, children, tag, None, attrs)
-
-    def createWithContents(tag: Tag,
-                           elem: scala.xml.Node,
-                           contents: String): Aux[scala.xml.Node] =
-      OdtRepr(elem, Nil, tag, Some(contents), Nil)
-
-    def textNode(text: String): scala.xml.Node =
-      Text(text)
-  }
-
-  private case class OdtRepr(
-    source: scala.xml.Node,
-    body: Seq[Aux[scala.xml.Node]],
-    tag: Tag,
-    contents: Option[String],
-    attr: List[Attribute]) extends Repr {
-
-    assert(contents.nonEmpty || (tag != Tag.textTag))
-
-    type R = scala.xml.Node
-    type BodyTpe = Repr.Aux[scala.xml.Node]
-  }
-
   type StyleToTags =
     StyleToTag[StylePropKey.Underline.type] !:
       StyleToTag[StylePropKey.FontWeight.type] !:
@@ -441,6 +398,9 @@ object OdtParser {
           StyleToTag(StylePropKey.LineThrough)(ValToTag[attributes.LineThrough](attributes.LineThrough.Solid, Tags.S) :: Nil) ::
             StyleToTag[StylePropKey.TextPosition.type](StylePropKey.TextPosition)(ValToTag(attributes.TextPosition.Sub, Tags.SUB) :: ValToTag(attributes.TextPosition.Sup, Tags.SUP) :: Nil) ::
               HNil
+
+  private implicit lazy val odtNodeFactory: NodeFactory[scala.xml.Node] =
+    new OdtNodeFactory
 
   private final val sizeP = """(\d+)cm""".r
 }

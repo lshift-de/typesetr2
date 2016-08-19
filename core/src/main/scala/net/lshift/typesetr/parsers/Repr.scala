@@ -9,21 +9,30 @@ import scala.xml.{ Text, Node, MetaData, Elem }
 
 import scala.language.implicitConversions
 
+/*
+ * An internal, platform-independent, representation
+ * of a single document node.
+ */
 abstract class Repr {
   self =>
 
+  // An underlying, initial type of the node
   type R
 
+  // Types of children
   type BodyTpe <: Repr.Aux[R]
 
-  type V = String
-
+  // An internal tag associated with the node
   def tag: Tag
 
+  // List of attributes to attach to the node
   def attr: List[Attribute]
 
-  def contents: Option[V]
+  // A potentially non-empty text value of the node
+  def contents: Option[String]
 
+  // The initial information from which this node
+  // has beeen created
   def source: R
 
   def body: Seq[BodyTpe]
@@ -38,6 +47,7 @@ object Repr {
 
   type Aux[T] = Repr { type R = T }
 
+  // TODO: cleanup
   def makeElem[T](tag: Tag,
                   body: Seq[Repr.Aux[T]])(
     implicit source: T, builder: NodeFactory[T]): Repr.Aux[T] =
@@ -65,7 +75,7 @@ object Repr {
     if (body.isEmpty) None
     else ???
 
-  def empty[T](implicit builder: ReprEmptyBuilder[T]): Repr.Aux[T] =
+  def empty[T](implicit builder: ReprNullFactory[T]): Repr.Aux[T] =
     builder.empty()
 
 
@@ -86,7 +96,6 @@ object Repr {
       checkAttribute(attrs)
     }
 
-    // TODO: optimize
     def hasAttribute(attr: Attribute): Boolean =
       hasAttribute(List(attr))
 

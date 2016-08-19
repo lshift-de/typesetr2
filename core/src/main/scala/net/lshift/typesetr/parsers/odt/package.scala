@@ -1,6 +1,9 @@
-package net.lshift.typesetr.parsers
+package net.lshift.typesetr
+package parsers
 
 import net.lshift.typesetr.xml.NameSpaces
+import scala.xml.Node
+import xml.{ Tag, Attribute }
 
 package object odt {
 
@@ -21,4 +24,27 @@ package object odt {
     "xml" -> "http://www.w3.org/XML/1998/namespace"))
 
   implicit val defaultNS: NameSpaces = ns
+
+  implicit lazy val nodeEmptyBuilder: ReprNullFactory[scala.xml.Node] =
+
+    new ReprNullFactory[Node] {
+
+      def empty(): Repr.Aux[Node] = new Repr { self =>
+
+        type R = scala.xml.Node
+
+        type BodyTpe = Repr.Aux[Node]
+
+        def source: R = ???
+
+        def body: Seq[self.BodyTpe] = Nil
+
+        def tag: Tag = Tag.nodeTag
+
+        def contents: Option[String] = None
+
+        def attr: List[Attribute] = Nil
+      }
+
+    }
 }

@@ -8,8 +8,15 @@ import xml.{ XmlTag, Tag }
 
 sealed abstract class StylePropKey { self =>
 
+  // Type of the property's value
   type Result
 
+  /*
+    * The low-level xml attribute
+    *
+    * The attribute has a string value that needs to be
+    * validated and translated into a first-class Scala object
+    */
   def name: Option[XmlTag]
 
   type V = self.type

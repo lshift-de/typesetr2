@@ -2,9 +2,12 @@ package net.lshift.typesetr.parsers
 
 import net.lshift.typesetr.xml.{ Attribute, Tag }
 
+// Interface for format-independent creation of the
+// typesetr's internal nodes
 abstract class NodeFactory[T] {
 
-  def create(tag: Tag, elem: T,
+  def create(tag: Tag,
+             elem: T,
              children: Seq[Repr.Aux[T]] = Nil,
              attrs: List[Attribute] = Nil,
              contents: Option[String] = None): Repr.Aux[T]

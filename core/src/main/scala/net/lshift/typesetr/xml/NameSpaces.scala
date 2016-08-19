@@ -1,8 +1,11 @@
 package net.lshift.typesetr.xml
 
-case class NameSpace(v: String, short: String) {
+/*
+ * Represent short and full namespace information
+ */
+case class NameSpace(v: String, short: NameSpaceKey) {
 
-  override def toString: String = v
+  override def toString: String = short.toString
 
 }
 

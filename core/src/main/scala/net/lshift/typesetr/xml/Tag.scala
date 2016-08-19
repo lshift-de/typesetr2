@@ -2,6 +2,13 @@ package net.lshift.typesetr.xml
 
 import scala.language.implicitConversions
 
+/*
+ * Platform-independent tags
+ *
+ * All formats are parsed into nodes with `Tag` tags,
+ * so that we can apply generic optimization techniques
+ * to the representation of the document.
+ */
 abstract class Tag {
   def name: String
 

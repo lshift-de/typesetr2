@@ -4,27 +4,47 @@ package parsers.odt
 import styles.StyleId
 
 import net.lshift.typesetr.parsers.odt.styles.Style
-import net.lshift.typesetr.parsers.{ ReprEmptyBuilder, Repr }
+import net.lshift.typesetr.parsers.{ ReprNullFactory, Repr }
 
 import scalaz.Tags.First
 import scalaz.Scalaz._
+
+/*
+ * Class representing style information of the ODT document
+ *
+ * Stores information about the individual style properties
+ * that are identified by `StyleId`.
+ */
 
 abstract class DocumentStyle { self =>
 
   type Underlying
 
+  /*
+   * Header and footer nodes are (for some reason?) parsed
+   * in the original Typesetr.
+   * TODO: figure out why on earth do we need those?
+   */
   def header: Repr.Aux[Underlying]
 
   def footer: Repr.Aux[Underlying]
 
   def textWidth: Int
 
+  /*
+   * Return style information for the given id, if available.
+   *
+   * Style is uniquely identified by a family and name, but
+   * not surprisingly most odt files only use name in text nodes,
+   * so we also have a fallback mechanism for the latter.
+   */
   def style(id: StyleId): Option[Style] =
     scalaz.Tag.unwrap(First(styles.get(id)) |+| First(byNameFallback(id)))
 
   private def byNameFallback(id: StyleId): Option[Style] =
     styles.find(_._1.name == id.name).map(_._2)
 
+  // Append a new style info to the existing styles sheet
   def +:(style: (StyleId, Style)): self.type = {
     assert(!styles.contains(style._1))
     updateStyles(style)
@@ -70,10 +90,10 @@ object DocumentStyle {
 
     }
 
-  def empty[T](implicit reprBuilder: ReprEmptyBuilder[T]): DocumentStyle.Aux[T] =
+  def empty[T](implicit reprBuilder: ReprNullFactory[T]): DocumentStyle.Aux[T] =
     new EmptyDocumentStyle(reprBuilder)
 
-  class EmptyDocumentStyle[T](repr: ReprEmptyBuilder[T]) extends DocumentStyle { self =>
+  private class EmptyDocumentStyle[T](repr: ReprNullFactory[T]) extends DocumentStyle { self =>
 
     type Underlying = T
 

@@ -11,7 +11,6 @@ abstract class Parser {
 
   // TODO: temporary interface extracted from
   // the original typesetr converter
-
   def parseToRawBody(input: File,
                      rewrittenInput: Boolean,
                      makeTransclusions: Boolean)(
