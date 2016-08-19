@@ -11,7 +11,7 @@ case class XmlTag(namespace: NameSpace, tag: String) {
 object XmlTag {
 
   implicit def fromRawToOdtTag(info: (Option[NameSpace], String)): XmlTag =
-    if (info._1.isEmpty) throw new IllegalArgumentException(s"Invalid odt tag ${info._1} for ${info._2}")
+    if (info._1.isEmpty) throw new IllegalArgumentException(s"Invalid tag ${info._1} for ${info._2}")
     else XmlTag(info._1.get, info._2)
 
   implicit def strRepr(tag: XmlTag): String =

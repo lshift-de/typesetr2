@@ -20,11 +20,11 @@ sealed abstract class StyleType(val name: String) {
 object StyleType {
 
   def all = List(TitleStyleTpe, SubTitleStyleTpe,
-                 HeadingStyle.h1, HeadingStyle.h2, HeadingStyle.h3, HeadingStyle.h4,
-                 HeadingStyle.h5, HeadingStyle.h6,
-                 ListStyleTpe, // can"t use "ol"", "ul", because we"ll find out later
-                 PStyleTpe, SpanStyleTpe, TableTpeStyle, TableRowTpeStyle,
-                 TableCellTpeStyle, TableColTpeStyle)
+    HeadingStyle.h1, HeadingStyle.h2, HeadingStyle.h3, HeadingStyle.h4,
+    HeadingStyle.h5, HeadingStyle.h6,
+    ListStyleTpe, // can"t use "ol"", "ul", because we"ll find out later
+    PStyleTpe, SpanStyleTpe, TableTpeStyle, TableRowTpeStyle,
+    TableCellTpeStyle, TableColTpeStyle)
 
 }
 

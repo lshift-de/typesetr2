@@ -109,7 +109,7 @@ class MetaDataOps(val x: scala.xml.MetaData) extends AnyVal {
   // therefore we workaround the problem by mapping them to the attribute map
   // and checking their keys
 
-  def getTag(tag: XmlTag): Option[String] =
+  def getTag(tag: XmlAttribute): Option[String] =
     genericGetTag(s"${tag.namespace.short}:${tag.tag}")
 
   private def genericGetTag(entry: String): Option[String] = {

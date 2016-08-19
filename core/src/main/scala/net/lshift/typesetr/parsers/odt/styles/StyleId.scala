@@ -8,6 +8,14 @@ import xml._
 import scalaz.Tags.First
 import scalaz.Scalaz._
 
+/**
+ * Identifier of the style sheet
+ *
+ * According to the spec, style is always unique when you take into account
+ * it's family and name. It should also be searched for this way, except
+ * that text nodes only mention the name and assume that no overriding is
+ * possible.
+ */
 sealed abstract class StyleId {
 
   def family: Option[String]
@@ -39,7 +47,7 @@ object StyleId {
   def forNonStyleNode(node: scala.xml.Node): Option[StyleId] =
     styleFromNode(node, OdtTags.StyleNameAttr)
 
-  private def styleFromNode(node: scala.xml.Node, attr: XmlTag): Option[StyleId] = {
+  private def styleFromNode(node: scala.xml.Node, attr: XmlAttribute): Option[StyleId] = {
     val family =
       if (node.xmlTag == OdtTags.TextListStyle) scala.None
       else node.attributes.getTag(OdtTags.StyleFamily)

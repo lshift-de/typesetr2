@@ -46,7 +46,7 @@ class OdtParser() extends Parser {
       rawFont <- rootStyle \!! OdtTags.Font
       rawAutoStyle <- rootStyle \!! OdtTags.AutomaticStyle
       rawStyle <- rootStyle \!! OdtTags.Styles
-      (styleNode, style) <- loadStyles(rootStyle)
+      (styleNode, style) <- loadDocStyleFromMeta(rootStyle)
       autoStyle <- parseBody(rawAutoStyle)(style, logger)
 
       rawBody <- root \!! OdtTags.Body
@@ -77,45 +77,37 @@ class OdtParser() extends Parser {
   private def parseFonts(node: scala.xml.Node): Repr.Aux[Underlying] =
     node.wrapRec(tag = Tag.nodeTag)
 
-  private def inCm(v: String): Option[Int] =
-    sizeP.findFirstMatchIn(v) match {
-      case Some(sizeP(size)) => Some(size.toInt)
-      case res               => None
-    }
 
-  private def layoutData(meta: scala.xml.MetaData, attr: AttributeKey, owner: scala.xml.Node): Option[Int] = {
-    val tag: XmlTag = (implicitly[NameSpaces].apply("fo"), attr.key)
-    meta.getTag(tag).toRight("0cm").fold(inCm, inCm)
-  }
+  def loadDocStyleFromMeta(node: scala.xml.Node)(implicit logger: Logger): Option[(Repr.Aux[Underlying], DocumentStyle.Aux[Underlying])] = {
+    def length(prop: Option[String]): Option[Int] =
+      prop.toRight("0cm").fold(inCm, inCm)
 
-  def loadStyles(node: scala.xml.Node)(implicit logger: Logger): Option[(Repr.Aux[Underlying], DocumentStyle.Aux[Underlying])] = {
-    val loader = StyleFactory()
     val doc = (for {
-      rawHeader <- node \!! (OdtTags.MasterStyle / OdtTags.MasterPage / OdtTags.StyleHeader)
-      rawFooter <- node \!! (OdtTags.MasterStyle / OdtTags.MasterPage / OdtTags.StyleFooter)
-      pageLayout <- node \!! (OdtTags.AutomaticStyle / OdtTags.StylePageLayout)
+      rawHeader  <- node \!! (OdtTags.MasterStyle / OdtTags.MasterPage / OdtTags.StyleHeader)
+      rawFooter  <- node \!! (OdtTags.MasterStyle / OdtTags.MasterPage / OdtTags.StyleFooter)
+      pgLayout<- node \!! (OdtTags.AutomaticStyle / OdtTags.StylePageLayout)
     } yield {
+      val f = StyleFactory()
       for {
-        pageWidth <- layoutData(pageLayout.attributes, "page-width", pageLayout)
-        marginLeft <- layoutData(pageLayout.attributes, "margin-left", pageLayout)
-        marginRight <- layoutData(pageLayout.attributes, "margin-right", pageLayout)
-        paddingLeft <- layoutData(pageLayout.attributes, "padding-left", pageLayout)
-        paddingRight <- layoutData(pageLayout.attributes, "padding-right", pageLayout)
-        header <- parseBody(rawHeader)(DocumentStyle.empty, implicitly[Logger])
-        footer <- parseBody(rawFooter)(DocumentStyle.empty, implicitly[Logger])
+        marginLeft   <- length(pgLayout.attributes.getTag(OdtTags.FoMarginLeft))
+        marginRight  <- length(pgLayout.attributes.getTag(OdtTags.FoMarginRight))
+        paddingLeft  <- length(pgLayout.attributes.getTag(OdtTags.FoPaddingLeft))
+        paddingRight <- length(pgLayout.attributes.getTag(OdtTags.FoPaddingRight))
+        pageWidth    <- length(pgLayout.attributes.getTag(OdtTags.FoPageWidth))
+        header       <- parseBody(rawHeader)(DocumentStyle.empty, implicitly[Logger])
+        footer       <- parseBody(rawFooter)(DocumentStyle.empty, implicitly[Logger])
       } yield {
         val w =
           pageWidth - (marginLeft + marginRight +
-            paddingLeft + paddingRight)
+          paddingLeft + paddingRight)
 
-        val doc = DocumentStyle(header, footer, w)
+        val emptyStyleSheet = DocumentStyle(header, footer, w)
 
-        val doc1 = loader.loadFromStyleDoc(node, doc)
+        val docWithStyles = f.loadFromStyleDoc(node, emptyStyleSheet)
 
-        logger.debug("Loaded style:")
-        logger.debug(doc1.toString)
+        logger.debug(s"Loaded style:\n${docWithStyles}")
 
-        doc1
+        docWithStyles
       }
     }).flatten
 
@@ -128,14 +120,11 @@ class OdtParser() extends Parser {
     node match {
       case Text(text) =>
         Some(node.wrap(tag = Tag.textTag, body = Nil, contents = Some(text)))
-      case _: Atom[_] =>
-        ???
       case _ =>
-        parseBodyElement(node, Nil)
+        parseBodyElement(node)
     }
 
-  private def parseBodyElement(node: Underlying, attr: List[Attribute])(implicit docStyle: DocumentStyle.Aux[Underlying], logger: Logger): Option[Repr.Aux[Underlying]] = {
-    // TODO: handle page breaks
+  private def parseBodyElement(node: Underlying)(implicit docStyle: DocumentStyle.Aux[Underlying], logger: Logger): Option[Repr.Aux[Underlying]] = {
     // TODO: handle lists
 
     implicit def toOpt[T](x: Repr.Aux[T]): Option[Repr.Aux[T]] =
@@ -158,7 +147,8 @@ class OdtParser() extends Parser {
     node.xmlTag match {
       case OdtTags.Tab =>
         val tabsNum = node.attributes.getTag(OdtTags.C).map(_.toInt).getOrElse(1)
-        val tabNodes = Repr.makeTextElem[Underlying](" \t" * tabsNum, synthetic = true)
+        val tabNodes =
+          Repr.makeTextElem[Underlying](tabEncoded * tabsNum, synthetic = true)
 
         Repr.makeElem(Tag.nodeTag, tabNodes +: children)
 
@@ -166,11 +156,12 @@ class OdtParser() extends Parser {
         val spaces =
           node.attributes.getTag(OdtTags.C).map(_.toInt).getOrElse(1)
 
-        val whitespaceNodes = Repr.makeTextElem[Underlying](" &nbsp;" * spaces, synthetic = true)
+        val whitespaceNodes =
+          Repr.makeTextElem[Underlying](spaceEncoded * spaces, synthetic = true)
         Repr.makeElem(Tag.nodeTag, whitespaceNodes +: children)
 
       case OdtTags.Linebreak =>
-        Repr.makeTextElem[Underlying]("br", synthetic = true)
+        Repr.makeTextElem[Underlying](linebreakEncoded, synthetic = true)
 
       case OdtTags.H =>
         // TODO: why on non-blank we wrap it?
@@ -201,11 +192,8 @@ class OdtParser() extends Parser {
       case t @ OdtTags.Note =>
         // TODO: bring back safe-checks
         children match {
-          case node :: Nil =>
-            //children
-            node
-          case _ =>
-            None
+          case node :: Nil => node
+          case _           => None
         }
 
       case OdtTags.NoteBody =>
@@ -218,24 +206,19 @@ class OdtParser() extends Parser {
           First(sty.marginLeft) |+| First(sty.textIndent)
 
         Some(scalaz.Tag.unwrap(indentLvl) map { lvl =>
-          val attr1 = Attribute("indent", lvl.toString) :: attr
+          val attr1 = Attribute(InternalAttributes.indent, lvl.toString) :: Nil
           Repr.makeElem(tag = Tags.BLOCK, children, attr1)
         } getOrElse (node.wrap(tag = Tags.P, body = children)))
 
       case OdtTags.Span =>
-        // TODO: Style handling
-        //println(node.child)
+
+        // Translate attributes into individual, nested nodes
         val body1 = translateStyleToTags(children, styleToTagsMap, sty)
-        sty.fontFamily.foldLeft(body1) {
-          case (b, font) =>
-            if (Utils.isCodeFont(font)) Repr.makeElem(Tags.CODE, b) :: Nil
-            else b
-        }
         val body2 = sty.fontFamily.map(font =>
           if (Utils.isCodeFont(font)) Repr.makeElem(Tags.CODE, body1) :: Nil
-          else body1).getOrElse(body1)
+          else body1)
 
-        Repr.makeElem(tag = Tags.SPAN, body = body2)
+        Repr.makeElem(tag = Tags.SPAN, body = body2.getOrElse(body1))
 
       case OdtTags.A =>
         val tpeAttr = AttributeKey(OdtTags.HrefType)
@@ -248,9 +231,9 @@ class OdtParser() extends Parser {
 
       case OdtTags.BookmarkStart =>
         // TOOD: Missing guards
-        val attr: List[Attribute] = node.attributes.getTag(OdtTags.TextNameAttr).
-          map(v => Attribute("href", v) :: Nil).getOrElse(Nil)
-        node.wrap(tag = Tags.A, body = children, attributes = attr)
+        val attrs = node.attributes.getTag(OdtTags.TextNameAttr).
+          map(v => Attribute(InternalAttributes.href, v) :: Nil).getOrElse(Nil)
+        node.wrap(tag = Tags.A, body = children, attributes = attrs)
 
       case OdtTags.Table =>
         logger.warn(s"[limitation] Ignoring Table node")
@@ -277,7 +260,7 @@ class OdtParser() extends Parser {
 
         val attr =
           node.attributes.getTag(OdtTags.HrefAttr) map { v =>
-            Attribute("src", v) :: Nil
+            Attribute(InternalAttributes.src, v) :: Nil
           } getOrElse (Nil)
 
         node.wrap(tag = Tags.IMG, body = children, attributes = attr)
@@ -403,4 +386,14 @@ object OdtParser {
     new OdtNodeFactory
 
   private final val sizeP = """(\d+)cm""".r
+
+  private final val spaceEncoded = " &nbsp;"
+  private final val linebreakEncoded = "br"
+  private final val tabEncoded = " \\t"
+
+  private def inCm(v: String): Option[Int] =
+    sizeP.findFirstMatchIn(v) match {
+      case Some(sizeP(size)) => Some(size.toInt)
+      case res               => None
+    }
 }

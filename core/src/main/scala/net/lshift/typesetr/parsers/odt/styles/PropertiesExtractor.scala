@@ -1,7 +1,7 @@
 package net.lshift.typesetr
 package parsers.odt.styles
 
-import xml.XmlTag
+import xml.XmlAttribute
 
 import scala.xml.Node
 import scalaz.Tags.First
@@ -12,7 +12,7 @@ import scala.language.implicitConversions
 // Extracts a node of the given `name` from the appropriate
 // properties node, `props`.
 abstract class PropertiesExtractor(props: Props) {
-  def extract(name: XmlTag): Option[String]
+  def extract(name: XmlAttribute): Option[String]
 }
 
 // There are different kinds of nodes that store properties nodes.
@@ -32,7 +32,7 @@ object PropertiesExtractor {
     new PropertiesExtractorFactory {
       def build(ps: Props): PropertiesExtractor =
         new PropertiesExtractor(ps) {
-          def extract(name: XmlTag): Option[String] =
+          def extract(name: XmlAttribute): Option[String] =
             ps.textProps.flatMap(_.attributes.getTag(name))
         }
     }
@@ -43,7 +43,7 @@ object PropertiesExtractor {
     new PropertiesExtractorFactory {
       def build(ps: Props): PropertiesExtractor =
         new PropertiesExtractor(ps) {
-          def extract(name: XmlTag): Option[String] =
+          def extract(name: XmlAttribute): Option[String] =
             ps.parProps.flatMap(_.attributes.getTag(name))
         }
     }
@@ -54,7 +54,7 @@ object PropertiesExtractor {
     new PropertiesExtractorFactory {
       def build(ps: Props): PropertiesExtractor =
         new PropertiesExtractor(ps) {
-          def extract(name: XmlTag): Option[String] =
+          def extract(name: XmlAttribute): Option[String] =
             ps.tableProps.flatMap(_.attributes.getTag(name))
         }
     }
@@ -65,7 +65,7 @@ object PropertiesExtractor {
     new PropertiesExtractorFactory {
       def build(ps: Props): PropertiesExtractor =
         new PropertiesExtractor(ps) {
-          def extract(name: XmlTag): Option[String] =
+          def extract(name: XmlAttribute): Option[String] =
             scalaz.Tag.unwrap(
               First(ps.textProps.flatMap(_.attributes.getTag(name))) |+|
                 First(ps.parProps.flatMap(_.attributes.getTag(name))))
