@@ -5,6 +5,7 @@ package styles
 
 import xml.attributes.StyleAttribute
 import xml.{ XmlAttribute, Tag}
+import util.Units
 
 sealed abstract class StylePropKey { self =>
 
@@ -39,8 +40,8 @@ object StylePropKey {
     def convert(x: String): Option[self.Result] =
       regex.findFirstMatchIn(x).map(x => toResult(x.matched))
 
-    protected def firstGroup(x: String): Option[String] =
-      regex.findFirstMatchIn(x).map(_.group(1))
+    protected def firstGroup(x: String): Option[Units] =
+      regex.findFirstMatchIn(x).flatMap(v => Units.parse((v.group(1).toInt, v.group(3))))
 
   }
 
@@ -62,10 +63,10 @@ object StylePropKey {
   }
 
   case object FontSeize extends StylePropKey with RegexConverter {
-    type Result = Int
+    type Result = Units
     val regex = "(\\d+)(.\\d+)?(pt|\\%)".r
     implicit val Tag: this.type = this
-    def toResult = (x: String) => firstGroup(x).map(_.toInt).getOrElse(0)
+    def toResult = (x: String) => firstGroup(x).getOrElse(Units.default)
     def name: Option[XmlAttribute] = Some(OdtTags.FoFSize)
   }
 
@@ -125,28 +126,27 @@ object StylePropKey {
   }
 
   case object LineHeight extends StylePropKey with RegexConverter {
-    type Result = Int
-    val regex = "-?(\\d+)([.]\\d*)?%".r
+    type Result = Units
+    val regex = "-?(\\d+)([.]\\d*)?(%)".r
     implicit val Tag: this.type = this
-    def toResult = (x: String) => firstGroup(x).map(_.toInt).getOrElse(0)
+    def toResult = (x: String) => firstGroup(x).getOrElse(Units.default)
     def name: Option[XmlAttribute] = Some(OdtTags.FoLineHeight)
   }
 
   // TODO: we seem to have situations when left margin is defined in inches
   case object MarginLeft extends StylePropKey with RegexConverter {
-    type Result = Int
-    val regex = "-?(\\d+)([.]\\d+)?cm".r
+    type Result = Units
+    val regex = "-?(\\d+)([.]\\d+)?(cm|in)".r
     implicit val Tag: this.type = this
-    def toResult = (x: String) => firstGroup(x).map(_.toInt).getOrElse(0)
+    def toResult = (x: String) => firstGroup(x).getOrElse(Units.default)
     def name: Option[XmlAttribute] = Some(OdtTags.FoMarginLeft)
   }
 
   case object TextIndent extends StylePropKey with RegexConverter {
-    type Result = Int
+    type Result = Units
     implicit val Tag: this.type = this
-
-    val regex = "-?(\\d+)([.]\\d+)?cm".r
-    def toResult = (x: String) => firstGroup(x).map(_.toInt).getOrElse(0)
+    val regex = "-?(\\d+)([.]\\d+)?(cm)".r
+    def toResult = (x: String) => firstGroup(x).getOrElse(Units.default)
     def name: Option[XmlAttribute] = Some(OdtTags.FoTextIndent)
   }
 
@@ -163,18 +163,18 @@ object StylePropKey {
   }
 
   case object MinHeight extends StylePropKey with RegexConverter {
-    type Result = Int
-    val regex = "(\\d+)(.\\d+)?cm".r
+    type Result = Units
+    val regex = "(\\d+)(.\\d+)?(cm)".r
     implicit val Tag: this.type = this
-    def toResult = (x: String) => firstGroup(x).map(_.toInt).getOrElse(0)
+    def toResult = (x: String) => firstGroup(x).getOrElse(Units.default)
     def name: Option[XmlAttribute] = Some(OdtTags.StyleMinHeigh)
   }
 
   case object ColWidth extends StylePropKey with RegexConverter {
-    type Result = Int
-    val regex = "(\\d+)(.\\d+)?cm".r
+    type Result = Units
+    val regex = "(\\d+)(.\\d+)?(cm)".r
     implicit val Tag: this.type = this
-    def toResult = (x: String) => firstGroup(x).map(_.toInt).getOrElse(0)
+    def toResult = (x: String) => firstGroup(x).getOrElse(Units.default)
     def name: Option[XmlAttribute] = Some(OdtTags.StyleColumnWidth)
   }
 }

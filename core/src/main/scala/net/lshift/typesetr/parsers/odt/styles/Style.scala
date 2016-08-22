@@ -9,6 +9,7 @@ import shapeless._
 
 import syntax.singleton._
 import record._
+import util.Units
 
 // TODO: the set of inherited properties from the parent.
 
@@ -24,7 +25,7 @@ abstract class Style { self =>
 
   def fontFamily: Option[FontFamily]
 
-  def fontSize: Option[Int]
+  def fontSize: Option[Units]
 
   def fontWeight: Option[FontWeight]
 
@@ -42,17 +43,17 @@ abstract class Style { self =>
 
   def textAlign: Option[TextAlign]
 
-  def lineHeight: Option[Int]
+  def lineHeight: Option[Units]
 
-  def marginLeft: Option[Int]
+  def marginLeft: Option[Units]
 
-  def textIndent: Option[Int]
+  def textIndent: Option[Units]
 
   def parBreak: Option[ParBreak]
 
-  def minHeight: Option[Int]
+  def minHeight: Option[Units]
 
-  def colWidth: Option[Int]
+  def colWidth: Option[Units]
 
   override def toString: String = {
     val props = List(printProp("type", tpe),
@@ -98,7 +99,7 @@ object Style {
     def fontFamily: Option[FontFamily] =
       property(StylePropKey.FontFamily)
 
-    def fontSize: Option[Int] =
+    def fontSize: Option[Units] =
       property(StylePropKey.FontSeize)
 
     def fontWeight: Option[FontWeight] =
@@ -125,22 +126,22 @@ object Style {
     def textAlign: Option[TextAlign] =
       property(StylePropKey.TextAlign)
 
-    def lineHeight: Option[Int] =
+    def lineHeight: Option[Units] =
       property(StylePropKey.LineHeight)
 
-    def marginLeft: Option[Int] =
+    def marginLeft: Option[Units] =
       property(StylePropKey.MarginLeft)
 
-    def textIndent: Option[Int] =
+    def textIndent: Option[Units] =
       property(StylePropKey.TextIndent)
 
     def parBreak: Option[ParBreak] =
       property(StylePropKey.ParBreak)
 
-    def minHeight: Option[Int] =
+    def minHeight: Option[Units] =
       property(StylePropKey.MinHeight)
 
-    def colWidth: Option[Int] =
+    def colWidth: Option[Units] =
       property(StylePropKey.ColWidth)
 
   }
@@ -189,7 +190,7 @@ object Style {
     def fontFamily: Option[FontFamily] =
       property(StylePropKey.FontFamily)
 
-    def fontSize: Option[Int] =
+    def fontSize: Option[Units] =
       property(StylePropKey.FontSeize)
 
     def fontWeight: Option[FontWeight] =
@@ -216,22 +217,22 @@ object Style {
     def textAlign: Option[TextAlign] =
       property(StylePropKey.TextAlign)
 
-    def lineHeight: Option[Int] =
+    def lineHeight: Option[Units] =
       property(StylePropKey.LineHeight)
 
-    def marginLeft: Option[Int] =
+    def marginLeft: Option[Units] =
       property(StylePropKey.MarginLeft)
 
-    def textIndent: Option[Int] =
+    def textIndent: Option[Units] =
       property(StylePropKey.TextIndent)
 
     def parBreak: Option[ParBreak] =
       property(StylePropKey.ParBreak)
 
-    def minHeight: Option[Int] =
+    def minHeight: Option[Units] =
       property(StylePropKey.MinHeight)
 
-    def colWidth: Option[Int] =
+    def colWidth: Option[Units] =
       property(StylePropKey.ColWidth)
 
   }

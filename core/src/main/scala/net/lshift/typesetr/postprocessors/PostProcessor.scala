@@ -170,7 +170,9 @@ trait OptimizerCoalesceBlocks {
     @tailrec
     def nonCodeBlock[T](elems: Seq[Repr.Aux[T]], blockq: Seq[Repr.Aux[T]])(implicit builder: NodeFactory[T]): (Seq[Repr.Aux[T]], Seq[Repr.Aux[T]]) = elems match {
       case (elem: Repr) :: rest if elem hasTag CODE =>
-        (Repr.optMakeElem(BLOCKQUOTE, blockq).getOrElse(Seq()), elems)
+        (Repr.optMakeElem(BLOCKQUOTE, blockq)(
+          source = blockq.head.source,
+          factory = implicitly[NodeFactory[T]]).getOrElse(Seq()), elems)
 
       case (elem: Repr) :: rest =>
         if (elem hasAttrWithVal ("class", "right")) {
@@ -190,7 +192,7 @@ trait OptimizerCoalesceBlocks {
 
       case _ =>
         // No more blocks
-        (Repr.optMakeElem(BLOCKQUOTE, blockq).getOrElse(Seq()), elems)
+        (blockq, elems)
     }
 
     @tailrec

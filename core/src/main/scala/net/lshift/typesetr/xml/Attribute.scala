@@ -50,4 +50,9 @@ object Attribute {
 
   def apply(name: AttributeKey, v: String): Attribute = AttributeWithVal(name)(v)
 
+  def unapply(x: Attribute): Option[(AttributeKey, String)] =
+    for {
+      v <- x.value
+    } yield (x.key, v)
+
 }

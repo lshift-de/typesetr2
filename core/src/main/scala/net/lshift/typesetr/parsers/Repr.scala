@@ -71,9 +71,9 @@ object Repr {
   }
 
 
-  def optMakeElem[T](tag: Tag, body: Seq[Repr.Aux[T]])(implicit builder: NodeFactory[T]): Option[Seq[Repr.Aux[T]]] =
+  def optMakeElem[T](tag: Tag, body: Seq[Repr.Aux[T]])(implicit source: T, factory: NodeFactory[T]): Option[Seq[Repr.Aux[T]]] =
     if (body.isEmpty) None
-    else ???
+    else Some(makeElem(tag, body) :: Nil)
 
   def empty[T](implicit builder: ReprNullFactory[T]): Repr.Aux[T] =
     builder.empty()

@@ -134,7 +134,7 @@ class OdtParser() extends Parser {
     implicit val source: Underlying = node
 
     lazy val sty: Style = {
-      lazy val styleIdOpt = StyleId.forNonStyleNode(node)
+      val styleIdOpt = StyleId.forNonStyleNode(node)
       (for {
         styleId <- styleIdOpt
         style   <- docStyle.style(styleId)

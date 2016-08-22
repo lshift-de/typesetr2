@@ -8,7 +8,7 @@ import java.nio.channels.Channels
 import cmd.Config
 import parsers.Repr.Aux
 import util.Logger
-import xml.Tag
+import xml.{ InternalAttributes, Tag }
 
 import scala.annotation.tailrec
 import scala.xml._
@@ -66,6 +66,10 @@ class OdtWriter extends Writer {
         }
 
       case _ =>
+
+        translateAttributes(node, indent)
+        // TODO: Analyze the attributes of our node
+        // this may lead to some style changes
         val n = node.source
         val scope =
           if (config.Yns) filterNamespaceBinding(n.scope) else NoSpace
@@ -80,6 +84,22 @@ class OdtWriter extends Writer {
         }
         true
     }
+  }
+
+  private def translateAttributes(node: Aux[N], indent: Int)(
+    implicit pp: PrettyPrinter, config: Config,
+    writer: java.io.Writer, logger: Logger): Boolean = {
+
+    def translateAttribute(attr: List[xml.Attribute]): Unit = attr match {
+      case Nil =>
+      case xml.Attribute(InternalAttributes.indent, v) :: rest =>
+        // TODO: create an indentation if style does not have it.
+        translateAttribute(rest)
+      case _ :: rest => // other internal attributes
+    }
+
+    translateAttribute(node.attr)
+    true
   }
 
   private def filterNamespaceBinding(scope: NamespaceBinding,
