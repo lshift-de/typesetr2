@@ -45,8 +45,10 @@ abstract class DocumentStyle { self =>
     styles.find(_._1.name == id.name).map(_._2)
 
   // Append a new style info to the existing styles sheet
-  def +:(style: (StyleId, Style)): self.type = {
-    assert(!styles.contains(style._1))
+  def +:(style: (StyleId, Style))(implicit logger: util.Logger): self.type = {
+    if (styles.contains(style._1))
+      logger.info((s"Overriding style ${style._1}"))
+    //assert(!styles.contains(style._1))
     updateStyles(style)
     self
   }

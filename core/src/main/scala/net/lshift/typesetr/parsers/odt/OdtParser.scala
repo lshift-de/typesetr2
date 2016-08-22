@@ -50,16 +50,20 @@ class OdtParser() extends Parser {
       autoStyle <- parseBody(rawAutoStyle)(style, logger)
 
       rawBody <- root \!! OdtTags.Body
-      rawScripts <- root \!! OdtTags.Scripts
-      scriptsNode <- parseBody(rawScripts)(style, logger)
       rawStyleInBody <- root \!! OdtTags.AutomaticStyle
       styleInBody <- parseBody(rawStyleInBody)(style, logger)
     } yield {
+      val scriptsNode =
+        (for {
+          rawScripts <- root \!! OdtTags.Scripts
+          scriptsNode <- parseBody(rawScripts)(style, logger)
+        } yield scriptsNode :: Nil).getOrElse(List())
+
       val style1 = StyleFactory().loadFromStyleDoc(root, style)
       val bodyNodes = rawBody.child.flatMap(parseBody(_)(style1, logger))
       val body1 = Repr.makeElem(Tags.BODY, bodyNodes)(rawBody, wrapper)
 
-      (root, scriptsNode :: parseFonts(rawFont) :: styleInBody :: body1 :: Nil)
+      (root, scriptsNode ::: (parseFonts(rawFont) :: styleInBody :: body1 :: Nil))
     }
 
     parsed match {
@@ -116,13 +120,15 @@ class OdtParser() extends Parser {
     doc map ((node1, _))
   }
 
-  def parseBody(node: scala.xml.Node)(implicit docStyle: DocumentStyle.Aux[Underlying], logger: Logger): Option[Repr.Aux[Underlying]] =
+  def parseBody(node: scala.xml.Node)(implicit docStyle: DocumentStyle.Aux[Underlying], logger: Logger): Option[Repr.Aux[Underlying]] = {
+    println("PARSE BODY?")
     node match {
       case Text(text) =>
         Some(node.wrap(tag = Tag.textTag, body = Nil, contents = Some(text)))
       case _ =>
         parseBodyElement(node)
     }
+  }
 
   private def parseBodyElement(node: Underlying)(implicit docStyle: DocumentStyle.Aux[Underlying], logger: Logger): Option[Repr.Aux[Underlying]] = {
     // TODO: handle lists
