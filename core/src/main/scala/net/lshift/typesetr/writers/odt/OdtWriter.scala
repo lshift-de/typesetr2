@@ -2,7 +2,7 @@ package net.lshift.typesetr
 package writers
 package odt
 
-import java.io.FileOutputStream
+import java.io.{ File, FileOutputStream }
 import java.nio.channels.Channels
 
 import cmd.Config
@@ -18,20 +18,32 @@ class OdtWriter extends Writer {
 
   import OdtWriter._
 
-  def writeToFile(node: Aux[N], out: java.io.File)(
-    implicit logger: util.Logger, config: Config): Boolean = {
+  def writeToFile(node: Aux[N])(implicit logger: util.Logger, config: Config): Option[java.io.File] = {
 
     val pp = new PrettyPrinter(80, 2)
-    val outS = new FileOutputStream(out)
+
+    val f =
+      if (config.Yns) {
+        File.createTempFile("content", "xml")
+      } else {
+        val dir = new File("/tmp/styles")
+        dir.mkdirs()
+        val f = new File("/tmp/styles/typesetr.xml")
+        f.createNewFile()
+        f
+      }
+
+    val outS = new FileOutputStream(f)
     val writer = Channels.newWriter(outS.getChannel(), TextEncoding)
 
     try {
       writer.write("<?xml version='1.0' encoding='" + TextEncoding + s"'?>$NewLine")
       writeNode(node, indent = 0)(pp, config, writer, implicitly[Logger])
+      Some(f)
     } catch {
       case ex: Throwable =>
         ex.printStackTrace()
-        false
+        None
     } finally {
       writer.close()
     }

@@ -4,11 +4,12 @@ package writers
 import cmd.Config
 import parsers.Repr._
 
+// TODO: rename
 abstract class Writer {
 
   type N
 
-  def writeToFile(node: Aux[N], out: java.io.File)(
-    implicit logger: util.Logger, config: Config): Boolean
+  def writeToFile(node: Aux[N])(
+    implicit logger: util.Logger, config: Config): Option[java.io.File]
 
 }
