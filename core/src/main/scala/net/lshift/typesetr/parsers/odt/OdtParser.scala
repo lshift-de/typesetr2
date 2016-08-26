@@ -121,7 +121,6 @@ class OdtParser() extends Parser {
   }
 
   def parseBody(node: scala.xml.Node)(implicit docStyle: DocumentStyle.Aux[Underlying], logger: Logger): Option[Repr.Aux[Underlying]] = {
-    println("PARSE BODY?")
     node match {
       case Text(text) =>
         Some(node.wrap(tag = Tag.textTag, body = Nil, contents = Some(text)))

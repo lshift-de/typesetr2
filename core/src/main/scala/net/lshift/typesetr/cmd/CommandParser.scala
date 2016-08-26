@@ -119,8 +119,7 @@ object CommandParser extends OptReaders {
         success)
 
     checkConfig(c => {
-      val f = new File(c.styleBase.getAbsolutePath + File.separator + c.style.toString)
-      println(f.getAbsolutePath)
+      val f = c.styleBase \ c.style.toString
       if (f.isDirectory) success
       else failure(s"Unable to find the source of ${c.style} style in ${c.styleBase.getAbsolutePath}")
     })
