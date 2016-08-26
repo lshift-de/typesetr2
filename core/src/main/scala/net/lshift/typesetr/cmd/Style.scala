@@ -3,6 +3,8 @@ package net.lshift.typesetr.cmd
 import scopt.Read
 import java.io.File
 
+import scala.language.implicitConversions
+
 case class Style(base: String, tpe: String) {
   override def toString = s"$base/$tpe"
 }
@@ -18,4 +20,6 @@ object Style {
       case _ => throw new IllegalArgumentException(s"Invalid style format $v")
     }
   }
+
+  implicit def toString(x: Style): String = x.toString
 }

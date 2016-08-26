@@ -2,17 +2,23 @@ package net.lshift.typesetr.cmd
 
 import scopt.Read
 
-sealed abstract class OutputFormat
+/**
+ * Representation of the output format
+ *
+ * @param suffix - a standard file extension of the output format
+ * @param name - name of the output format
+ */
+sealed abstract class OutputFormat(val suffix: String, val name: String)
 
 object OutputFormat {
-  case object Tex extends OutputFormat
-  case object Pdf extends OutputFormat
-  case object Png extends OutputFormat
-  case object Html extends OutputFormat
-  case object EPub extends OutputFormat
-  case object Meta extends OutputFormat
-  case object Internal extends OutputFormat
-  case object Pickle extends OutputFormat
+
+  case object Tex extends OutputFormat("tex", "latex")
+  case object Pdf extends OutputFormat("pdf", "pdf")
+  case object Png extends OutputFormat("png", "png")
+  case object Html extends OutputFormat("html", "html")
+  case object EPub extends OutputFormat("epub", "epub")
+  case object Meta extends OutputFormat("meta", "meta")
+  case object Internal extends OutputFormat("internal", "internal")
 
   implicit def toOpt: Read[OutputFormat] = Read.reads { (name: String) =>
     name match {
@@ -23,14 +29,13 @@ object OutputFormat {
   }
 
   def unapply(x: String): Option[OutputFormat] = x match {
-    case "text"     => Some(Tex)
+    case "tex"      => Some(Tex)
     case "pdf"      => Some(Pdf)
     case "png"      => Some(Png)
     case "html"     => Some(Html)
     case "epub"     => Some(EPub)
     case "meta"     => Some(Meta)
     case "internal" => Some(Internal)
-    case "pickle"   => Some(Pickle)
     case _          => None
   }
 }
