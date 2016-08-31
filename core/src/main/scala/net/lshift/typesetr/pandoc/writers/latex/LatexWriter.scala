@@ -36,12 +36,14 @@ class LatexWriter(from: File, target: File, template: styles.StyleTemplate, gene
 
       // FIXME: inefficient, avoid generating complete strings
       //        every single time
-      val finalContent =
+      val finalContent0 =
         templBody.
           replaceFirst(SectionBabel, babelHeader).
           replaceFirst(SectionHead, latexHead.mkString("\n")).
-          replaceFirst(SectionMeta, xmpFields.mkString("\n")).
-          replaceAllLiterally(SectionBody, body)
+          replaceFirst(SectionMeta, xmpFields.mkString("\n"))
+      logger.info(s"Template without a body: $finalContent0")
+
+      val finalContent = finalContent0.replaceAllLiterally(SectionBody, body)
       // TODO: include bibliography
 
       val f =
@@ -83,7 +85,7 @@ class LatexWriter(from: File, target: File, template: styles.StyleTemplate, gene
 
   }
 
-  /*
+  /**
    *  Create XMP metadata for pdf (via hyperxmp.sty).
    *
    *
@@ -107,7 +109,9 @@ class LatexWriter(from: File, target: File, template: styles.StyleTemplate, gene
    *  characters without unicode equivalent). PDF/A-2a would also require
    *  tagging.
    *
-  */
+   * @param meta metainfo loaded from the template
+   * @return a latex-compliant representation of the meta information
+   */
   private def xmpMeta(meta: MetaSchema): List[String] = {
     val xmps = XMPMeta.all().flatMap { key =>
       meta.getKey(key).map((key, _))

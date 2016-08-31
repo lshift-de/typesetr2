@@ -50,28 +50,28 @@ object Repr {
   // TODO: cleanup
   def makeElem[T](tag: Tag,
                   body: Seq[Repr.Aux[T]])(
-    implicit source: T, factory: NodeFactory[T]): Repr.Aux[T] =
+    implicit source: T, factory: NodeFactory.Aux[T]): Repr.Aux[T] =
     factory.create(tag, source, body)
 
   def makeElem[T](tag: Tag,
                   contents: String)(
-    implicit source: T, factory: NodeFactory[T]): Repr.Aux[T] =
+    implicit source: T, factory: NodeFactory.Aux[T]): Repr.Aux[T] =
     factory.create(tag, source, Nil)
 
   def makeElem[T](tag: Tag,
                   body: Seq[Repr.Aux[T]],
                   attr: List[Attribute])(
-    implicit source: T, factory: NodeFactory[T]): Repr.Aux[T] =
+    implicit source: T, factory: NodeFactory.Aux[T]): Repr.Aux[T] =
     factory.createWithAttributes(tag, source, body, attr)
 
   def makeTextElem[T](contents0: String, synthetic: Boolean = false)(
-    implicit source: T, factory: NodeFactory[T]): Repr.Aux[T] = {
+    implicit source: T, factory: NodeFactory.Aux[T]): Repr.Aux[T] = {
     val t = if (synthetic) Tag.syntheticTextTag else Tag.textTag
     factory.createWithContents(t, source, contents0)
   }
 
 
-  def optMakeElem[T](tag: Tag, body: Seq[Repr.Aux[T]])(implicit source: T, factory: NodeFactory[T]): Option[Seq[Repr.Aux[T]]] =
+  def optMakeElem[T](tag: Tag, body: Seq[Repr.Aux[T]])(implicit source: T, factory: NodeFactory.Aux[T]): Option[Seq[Repr.Aux[T]]] =
     if (body.isEmpty) None
     else Some(makeElem(tag, body) :: Nil)
 

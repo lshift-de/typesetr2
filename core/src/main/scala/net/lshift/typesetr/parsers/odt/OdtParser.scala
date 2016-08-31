@@ -1,74 +1,76 @@
 package net.lshift.typesetr
 package parsers
 
-import net.lshift.typesetr.parsers.Repr.Aux
-import net.lshift.typesetr.parsers.odt.styles.{StylePropKey, StyleFactory, Style}
+import odt.styles._
 import net.lshift.typesetr.xml.attributes.StyleAttribute
-import odt.styles.StyleId
 import xml._
-import net.lshift.typesetr.parsers.odt._
+import odt._
 
 import java.io.File
 
 import scala.xml.{ Atom, XML, Text }
-
 import scalaz.Tags.First
 import scalaz.{ Tags => STags, Tag => STag, _ }
 import scalaz.Scalaz._
-
-import util.Logger
-
-import scala.language.{ postfixOps, implicitConversions }
-
 import shapeless.{Poly, Poly2, HList, HNil, :: => !:, Witness}
 
+import util.Logger
 import xml.{InternalTags => Tags}
+
+import scala.language.{ postfixOps, implicitConversions }
 
 class OdtParser() extends Parser {
 
   import OdtParser._
 
-  type Underlying = scala.xml.Node
+  type DocNode = scala.xml.Node
 
-  lazy val wrapper = implicitly[NodeFactory[Underlying]]
-
-  def parseToRawBody(input: File,
-                     rewrittenInput: Boolean,
-                     makeTransclusions: Boolean)(implicit logger: Logger): Repr.Aux[Underlying] = {
+  def parse(input: File,
+            makeTransclusions: Boolean)(
+    implicit logger: Logger): ParsedDocument[DocNode] = {
 
     logger.info(s"Parsing $input")
 
     val parsed = for {
+      // 1. Take an input file, and attempt to unpack it
+      //    since it is an ODT binary
       inFile <- input.unpack()
       root <- inFile.content.map(XML.loadFile)
       rootStyle <- inFile.style.map(XML.loadFile)
 
+      // 2. Find all the different nodes in the xml files
+      // a) font node
       rawFont <- rootStyle \!! OdtTags.Font
+      // b) automatic style node in meta
       rawAutoStyle <- rootStyle \!! OdtTags.AutomaticStyle
-      rawStyle <- rootStyle \!! OdtTags.Styles
-      (styleNode, style) <- loadDocStyleFromMeta(rootStyle)
-      autoStyle <- parseBody(rawAutoStyle)(style, logger)
-
+      // c) body node in the content
       rawBody <- root \!! OdtTags.Body
+      // d) automatic style node in the content
       rawStyleInBody <- root \!! OdtTags.AutomaticStyle
-      styleInBody <- parseBody(rawStyleInBody)(style, logger)
+
+      //rawStyle <- rootStyle \!! OdtTags.Styles
+      (styleNode, styleFromMeta) <- loadDocStyleFromMeta(rootStyle)
+      autoStyle <- parseBody(rawAutoStyle)(styleFromMeta, logger)
+
+      styleInBody <- parseBody(rawStyleInBody)(styleFromMeta, logger)
     } yield {
+      // Append to the resulting structure the (optional) scripts node
       val scriptsNode =
         (for {
           rawScripts <- root \!! OdtTags.Scripts
-          scriptsNode <- parseBody(rawScripts)(style, logger)
+          scriptsNode <- parseBody(rawScripts)(styleFromMeta, logger)
         } yield scriptsNode :: Nil).getOrElse(List())
 
-      val style1 = StyleFactory().loadFromStyleDoc(root, style)
-      val bodyNodes = rawBody.child.flatMap(parseBody(_)(style1, logger))
-      val body1 = Repr.makeElem(Tags.BODY, bodyNodes)(rawBody, wrapper)
+      val styleFromDoc = StyleParser.default().loadFromDocContent(root, styleFromMeta)
+      val bodyNodes = rawBody.child.flatMap(parseBody(_)(styleFromDoc, logger))
+      val body1 = Repr.makeElem(Tags.BODY, bodyNodes)(rawBody, implicitly[NodeFactory.Aux[DocNode]])
 
-      (root, scriptsNode ::: (parseFonts(rawFont) :: styleInBody :: body1 :: Nil))
+      (root, styleFromDoc, scriptsNode ::: (parseFonts(rawFont) :: styleInBody :: body1 :: Nil))
     }
 
     parsed match {
-      case Some((root, rootBody)) =>
-        root.wrap(tag = Tags.ROOT, body = rootBody)
+      case Some((root, style, rootBody)) =>
+        ParsedDocument(root.wrap(tag = Tags.ROOT, body = rootBody), style)
       case None =>
         ???
     }
@@ -78,11 +80,11 @@ class OdtParser() extends Parser {
     ???
 
   // Just leave them as they are
-  private def parseFonts(node: scala.xml.Node): Repr.Aux[Underlying] =
+  private def parseFonts(node: scala.xml.Node): Repr.Aux[DocNode] =
     node.wrapRec(tag = Tag.nodeTag)
 
 
-  def loadDocStyleFromMeta(node: scala.xml.Node)(implicit logger: Logger): Option[(Repr.Aux[Underlying], DocumentStyle.Aux[Underlying])] = {
+  def loadDocStyleFromMeta(node: scala.xml.Node)(implicit logger: Logger): Option[(Repr.Aux[DocNode], DocumentStyle.Aux[DocNode])] = {
     def length(prop: Option[String]): Option[Int] =
       prop.toRight("0cm").fold(inCm, inCm)
 
@@ -91,7 +93,6 @@ class OdtParser() extends Parser {
       rawFooter  <- node \!! (OdtTags.MasterStyle / OdtTags.MasterPage / OdtTags.StyleFooter)
       pgLayout<- node \!! (OdtTags.AutomaticStyle / OdtTags.StylePageLayout)
     } yield {
-      val f = StyleFactory()
       for {
         marginLeft   <- length(pgLayout.attributes.getTag(OdtTags.FoMarginLeft))
         marginRight  <- length(pgLayout.attributes.getTag(OdtTags.FoMarginRight))
@@ -107,7 +108,7 @@ class OdtParser() extends Parser {
 
         val emptyStyleSheet = DocumentStyle(header, footer, w)
 
-        val docWithStyles = f.loadFromStyleDoc(node, emptyStyleSheet)
+        val docWithStyles = StyleParser.default().loadFromDocContent(node, emptyStyleSheet)
 
         logger.debug(s"Loaded style:\n${docWithStyles}")
 
@@ -120,7 +121,7 @@ class OdtParser() extends Parser {
     doc map ((node1, _))
   }
 
-  def parseBody(node: scala.xml.Node)(implicit docStyle: DocumentStyle.Aux[Underlying], logger: Logger): Option[Repr.Aux[Underlying]] = {
+  def parseBody(node: scala.xml.Node)(implicit docStyle: DocumentStyle.Aux[DocNode], logger: Logger): Option[Repr.Aux[DocNode]] = {
     node match {
       case Text(text) =>
         Some(node.wrap(tag = Tag.textTag, body = Nil, contents = Some(text)))
@@ -129,14 +130,14 @@ class OdtParser() extends Parser {
     }
   }
 
-  private def parseBodyElement(node: Underlying)(implicit docStyle: DocumentStyle.Aux[Underlying], logger: Logger): Option[Repr.Aux[Underlying]] = {
+  private def parseBodyElement(node: DocNode)(implicit docStyle: DocumentStyle.Aux[DocNode], logger: Logger): Option[Repr.Aux[DocNode]] = {
     // TODO: handle lists
 
     implicit def toOpt[T](x: Repr.Aux[T]): Option[Repr.Aux[T]] =
       Some(x)
 
     lazy val children = node.child.flatMap(parseBody)
-    implicit val source: Underlying = node
+    implicit val source: DocNode = node
 
     lazy val sty: Style = {
       val styleIdOpt = StyleId.forNonStyleNode(node)
@@ -153,7 +154,7 @@ class OdtParser() extends Parser {
       case OdtTags.Tab =>
         val tabsNum = node.attributes.getTag(OdtTags.C).map(_.toInt).getOrElse(1)
         val tabNodes =
-          Repr.makeTextElem[Underlying](tabEncoded * tabsNum, synthetic = true)
+          Repr.makeTextElem[DocNode](tabEncoded * tabsNum, synthetic = true)
 
         Repr.makeElem(Tag.nodeTag, tabNodes +: children)
 
@@ -162,11 +163,11 @@ class OdtParser() extends Parser {
           node.attributes.getTag(OdtTags.C).map(_.toInt).getOrElse(1)
 
         val whitespaceNodes =
-          Repr.makeTextElem[Underlying](spaceEncoded * spaces, synthetic = true)
+          Repr.makeTextElem[DocNode](spaceEncoded * spaces, synthetic = true)
         Repr.makeElem(Tag.nodeTag, whitespaceNodes +: children)
 
       case OdtTags.Linebreak =>
-        Repr.makeTextElem[Underlying](linebreakEncoded, synthetic = true)
+        Repr.makeTextElem[DocNode](linebreakEncoded, synthetic = true)
 
       case OdtTags.H =>
         // TODO: why on non-blank we wrap it?
@@ -299,7 +300,7 @@ class OdtParser() extends Parser {
 
   // TODO: avoid double pass-through
   // Currently just pass-through
-  private def parseStyleNode(node: scala.xml.Node)(implicit sty: DocumentStyle.Aux[Underlying], logger: Logger): Option[Repr.Aux[Underlying]] = {
+  private def parseStyleNode(node: scala.xml.Node)(implicit sty: DocumentStyle.Aux[DocNode], logger: Logger): Option[Repr.Aux[DocNode]] = {
     lazy val children = node.child.flatMap(parseStyleNode(_))
     node.xmlTag match {
       // Small subset, currently just pass
@@ -322,20 +323,20 @@ class OdtParser() extends Parser {
    * Note: this may translate a single `<span>` node into a
    * cascade of nested nodes.
    */
-  private def translateStyleToTags(body: Seq[Repr.Aux[Underlying]],
+  private def translateStyleToTags(body: Seq[Repr.Aux[DocNode]],
                                    trans: StyleToTags, sty: Style)(
-                                     implicit orig: scala.xml.Node): Seq[Repr.Aux[Underlying]] = {
+                                     implicit orig: scala.xml.Node): Seq[Repr.Aux[DocNode]] = {
 
     class translate(style: Style, orig: scala.xml.Node) extends Poly2 {
       implicit def styletoTagToXml[T <: StylePropKey.Of] =
-        at[Seq[Repr.Aux[Underlying]], StyleToTag[T]] { (acc, sty2Tag) =>
+        at[Seq[Repr.Aux[DocNode]], StyleToTag[T]] { (acc, sty2Tag) =>
           style.unsafeProperty(sty2Tag.styleKey).flatMap(propValue =>
             for {
               val2Tag <- sty2Tag.allowedValues.find(_.value == propValue)
               attributeTag <- sty2Tag.styleKey.name
               // Leave the style attribute, as is.
               //src <- orig.withAttribute(Attribute(attributeTag, val2Tag.value.name), acc)
-            } yield Seq(Repr.makeElem(tag = val2Tag.tag, body = acc)(orig, wrapper))
+            } yield Seq(Repr.makeElem(tag = val2Tag.tag, body = acc)(orig, implicitly[NodeFactory.Aux[DocNode]]))
           ).getOrElse(acc)
         }
     }
@@ -349,6 +350,9 @@ class OdtParser() extends Parser {
 
     trans.foldLeft(body)(translateForStyle)
   }
+
+  implicit lazy val nodeConfig: NodeConfigs.WithNode[scala.xml.Node] =
+    new OdtNodeConfig
 
 }
 
@@ -386,9 +390,6 @@ object OdtParser {
           StyleToTag(StylePropKey.LineThrough)(ValToTag[attributes.LineThrough](attributes.LineThrough.Solid, Tags.S) :: Nil) ::
             StyleToTag[StylePropKey.TextPosition.type](StylePropKey.TextPosition)(ValToTag(attributes.TextPosition.Sub, Tags.SUB) :: ValToTag(attributes.TextPosition.Sup, Tags.SUP) :: Nil) ::
               HNil
-
-  private implicit lazy val odtNodeFactory: NodeFactory[scala.xml.Node] =
-    new OdtNodeFactory
 
   private final val sizeP = """(\d+)cm""".r
 

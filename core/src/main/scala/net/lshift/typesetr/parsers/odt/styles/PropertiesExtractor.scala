@@ -9,21 +9,27 @@ import scalaz.Scalaz._
 
 import scala.language.implicitConversions
 
-// Extracts a node of the given `name` from the appropriate
-// properties node, `props`.
+/**
+ * Extracts a node of the given `name` from the appropriate
+ * properties node, `props`.
+ */
 abstract class PropertiesExtractor(props: Props) {
   def extract(name: XmlAttribute): Option[String]
 }
 
-// There are different kinds of nodes that store properties nodes.
-// Some of them have internal nodes that have the same name, so
-// builders instantiate the extractors where they will be looked up.
+/**
+ * There are different kinds of nodes that store properties nodes.
+ * Some of them have internal nodes that have the same name, so
+ * builders instantiate the extractors where they will be looked up.
+ */
 abstract class PropertiesExtractorFactory {
   def build(ps: Props): PropertiesExtractor
 }
 
-// Currently the properties can be coming either from the styles that
-// define text, paragraphs, tables, or a mixture of the former.
+/**
+ * Currently the properties can be coming either from the styles that
+ * define text, paragraphs, tables, or a mixture of the former.
+ */
 object PropertiesExtractor {
 
   def text: PropertiesExtractorFactory = textB

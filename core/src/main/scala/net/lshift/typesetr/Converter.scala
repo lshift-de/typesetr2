@@ -7,7 +7,7 @@ import java.io.{ FileOutputStream, OutputStream, PrintWriter, File }
 import cmd.InputFormat.Markdown
 import cmd._
 import pandoc.writers.latex.LatexWriter
-import parsers.{ NodeFactory, OdtParser }
+import parsers.OdtParser
 import postprocessors.Optimizer
 import util.Logger
 import writers.odt.OdtWriter
@@ -15,9 +15,10 @@ import org.apache.commons.io.FilenameUtils
 
 import scala.language.postfixOps
 
-/* *
- * The main entry point to triggering the converter
- *
+/**
+ * The main entry point to running typesetr pipeline.
+ * Running the converter without any options set will
+ * actually
  */
 object Converter {
 
@@ -26,9 +27,7 @@ object Converter {
       case Some(config) =>
         implicit val logger = Logger(config.logging)
 
-        // Start the external process
-        val ret = for {
-          _ <- rewriteInput(config).toLeft("").left
+        val result = for {
           styleTempl <- retrieveStyle(config).right
           inputFile <- retrieveInputFile(config).right
           outputFile <- retrieveOutputFile(config).right
@@ -46,14 +45,19 @@ object Converter {
               (???, ???)
           }
 
-          val parsed = parser.parseToRawBody(inputFile, false, false)
+          val parsed = parser.parse(inputFile, makeTransclusions = false)
+          val optimizer = Optimizer.default(parser.nodeConfig)
           val optimized =
             if (config.Yoptimize)
-              Optimizer().process(parsed)(parser.wrapper, logger)
+              optimizer.process(parsed.root)
             else
-              parsed
+              parsed.root
 
-          // temporarily write to file
+          val meta = optimizer.extractMeta(parsed.root)(parsed.style)
+
+          // TODO: write the result to file
+          // In theory it should be just possible to write to
+          // a pipe to avoid doing IO twice
           val resContent = writer.writeToFile(optimized)(
             logger, config)
 
@@ -86,7 +90,7 @@ object Converter {
 
         }
 
-        ret match {
+        result match {
           case Left(errMsg) =>
             logger.fail(errMsg)
           case _ =>

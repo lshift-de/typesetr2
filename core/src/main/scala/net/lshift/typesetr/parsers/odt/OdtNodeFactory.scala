@@ -7,7 +7,9 @@ import xml.{ Attribute, Tag }
 
 import scala.xml.Text
 
-class OdtNodeFactory extends NodeFactory[scala.xml.Node] {
+class OdtNodeFactory extends NodeFactory {
+
+  type DocNode = scala.xml.Node
 
   def create(tag: Tag,
              elem: scala.xml.Node,

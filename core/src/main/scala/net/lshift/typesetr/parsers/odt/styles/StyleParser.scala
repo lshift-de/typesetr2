@@ -3,10 +3,8 @@ package parsers
 package odt
 package styles
 
-import net.lshift.typesetr.parsers.odt.styles.Style.MMap
-import odt.{DocumentStyle, OdtTags}
-import net.lshift.typesetr.xml
-import net.lshift.typesetr.xml.{XmlTag, NameSpaces}
+import odt.OdtTags
+import xml.{XmlTag, NameSpaces}
 import xml.attributes._
 
 import scala.xml.Node
@@ -14,43 +12,54 @@ import shapeless._
 import syntax.singleton._
 import record._
 
-import util.Logger
 
 import scalaz.Tags.First
 import scalaz.Scalaz._
 
+import util.Logger
+
 import scala.language.implicitConversions
 
-abstract class StyleFactory {
+abstract class StyleParser {
 
-  type U = scala.xml.Node
+  type DocNode = scala.xml.Node
 
-  /*
-   * Load all style definition into a `doc` style document
-   * given the initiial `rootStyle` node.
-   */
-  def loadFromStyleDoc(rootStyle: scala.xml.Node, doc: DocumentStyle.Aux[U])(implicit logger: Logger): DocumentStyle.Aux[U]
+  /**
+    * Loads all the additional styles from the ODT's
+    * content document (rather than from a meta document)
+    *
+    * @param rootStyle xml node of the styles aggregator
+    * @param doc an initial representation of the document's styles
+    * @return an updated document's style information
+    */
+  def loadFromDocContent(rootStyle: scala.xml.Node,
+                         doc: DocumentStyle.Aux[DocNode])(implicit logger: Logger): DocumentStyle.Aux[DocNode]
 
-  /*
-   * Parse a single style node and return
-   * a validated and translated representation of it.
-   */
-  protected def parseStyle(node: scala.xml.Node, doc: DocumentStyle)(implicit logger: Logger): Option[Style]
+  /**
+    * Parse a single style node and return
+    * a validated and translated representation of it.
+    *
+    * @param node xml node representing a style property info
+    * @param doc document's style information
+    * @return a validated representation of the style property, if any
+    */
+  protected def parseStyle(node: scala.xml.Node,
+                           doc: DocumentStyle)(implicit logger: Logger): Option[Style]
 
 }
 
-class StyleFactoryImpl extends StyleFactory {
+class StyleParserImpl extends StyleParser {
 
-  import StyleFactoryImpl._
+  import StyleParserImpl._
 
-  def loadFromStyleDoc(rootStyle: Node, doc: DocumentStyle.Aux[U])(implicit logger: Logger): DocumentStyle.Aux[U] = {
+  def loadFromDocContent(rootStyle: Node, doc: DocumentStyle.Aux[DocNode])(implicit logger: Logger): DocumentStyle.Aux[DocNode] = {
     (for {
       docWithStyles <- parseGroupNode(rootStyle \!! OdtTags.Styles, doc)
       docWithAutoStyles <- parseGroupNode(rootStyle \!! OdtTags.AutomaticStyle, docWithStyles)
     } yield docWithAutoStyles) getOrElse (doc)
   }
 
-  private def parseGroupNode(node: Option[Node], doc: DocumentStyle.Aux[U])(implicit logger: Logger): Option[DocumentStyle.Aux[U]] =
+  private def parseGroupNode(node: Option[Node], doc: DocumentStyle.Aux[DocNode])(implicit logger: Logger): Option[DocumentStyle.Aux[DocNode]] =
     node match {
       case None       => Some(doc)
       case Some(node) =>
@@ -101,14 +110,6 @@ class StyleFactoryImpl extends StyleFactory {
           Some(ListStyleTpe)
       }
 
-      val textProps = styleNode \!! OdtTags.StyleTProps
-      val parProps = styleNode \!! OdtTags.StylePProps
-      val tableProps = scalaz.Tag.unwrap(
-                         First(styleNode \!! (OdtTags.StyleTableColProps)) |+|
-                         First(styleNode \!! (OdtTags.StyleTableRowProps)) |+|
-                         First(styleNode \!! (OdtTags.StyleTableCellProps)) |+|
-                         First(styleNode \!! (OdtTags.StyleTableProps)))
-
       /*
        * For each style property:
        *  - extract the appropriate xml node from text, paragraph and/or table xml nodes
@@ -137,11 +138,7 @@ class StyleFactoryImpl extends StyleFactory {
 
       }
 
-      object toMap {
-        def apply(props: Props): toMap = new toMap(props)
-      }
-
-      val mappingFun = toMap((textProps, parProps, tableProps))
+      val mappingFun = new toMap(styleNode)
       import mappingFun._
 
       val styleMap = Style.styleProperties.map(mappingFun)
@@ -154,16 +151,16 @@ class StyleFactoryImpl extends StyleFactory {
 
 }
 
-object StyleFactory {
+object StyleParser {
 
   // Returns a default implementation of the style factory
-  def apply(): StyleFactory = _instance
+  def default(): StyleParser = _instance
 
-  private lazy val _instance = new StyleFactoryImpl
+  private lazy val _instance = new StyleParserImpl
 
 }
 
-object StyleFactoryImpl {
+object StyleParserImpl {
 
   final val invalidNodes =
     Seq(

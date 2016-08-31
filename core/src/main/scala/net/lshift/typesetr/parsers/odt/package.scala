@@ -1,6 +1,8 @@
 package net.lshift.typesetr
 package parsers
 
+import odt.styles.StyleId
+import styles.MetaFromDocument
 import net.lshift.typesetr.xml.NameSpaces
 import scala.xml.Node
 import xml.{ Tag, Attribute }
@@ -47,4 +49,5 @@ package object odt {
       }
 
     }
+
 }

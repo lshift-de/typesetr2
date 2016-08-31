@@ -41,7 +41,7 @@ package object xml {
   final def whack[T](node: Repr.Aux[T],
                      filterBy: Repr => Boolean,
                      removeBody: Boolean = false)(
-                       implicit builder: NodeFactory[T]): Seq[Repr.Aux[T]] = {
+                       implicit builder: NodeFactory.Aux[T]): Seq[Repr.Aux[T]] = {
     node.source match {
       case atom: Atom[_] =>
         Seq(node)

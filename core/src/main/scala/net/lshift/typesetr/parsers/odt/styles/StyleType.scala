@@ -7,18 +7,31 @@ import xml.{ InternalTags => ITags }
 
 import scala.language.implicitConversions
 
-/*
+/**
  * Represents a `type` of the style.
  *
  *  The type is taken from the original ODT format
  *  and translated into a generic output node style.
+ *
+ *  @param name the inferred type of the internal style
  */
 sealed abstract class StyleType(val name: String) {
+
+  /**
+   * An XML tag representing the style
+   * @return
+   */
   def tag: Tag
+
 }
 
 object StyleType {
 
+  /**
+   * All allowed internal style `kinds`
+   *
+   * @return a list of all available styles types
+   */
   def all = List(TitleStyleTpe, SubTitleStyleTpe,
     HeadingStyle.h1, HeadingStyle.h2, HeadingStyle.h3, HeadingStyle.h4,
     HeadingStyle.h5, HeadingStyle.h6,
@@ -119,6 +132,13 @@ case object SubTitleStyleTpe extends TitleStyleType("subtitle", "Subtitle") {
 
 }
 
+/**
+ * Styles affecting the appearance of a table
+ *
+ * @param name the inferred type of the internal style
+ * @param init the name used in the ODT format
+ * @param tag XML tag corresponding to
+ */
 sealed abstract class TableStyleType(name: String, val init: String, val tag: Tag)
   extends StyleType(name) {
 

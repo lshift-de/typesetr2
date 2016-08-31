@@ -1,24 +1,25 @@
 package net.lshift.typesetr
 package postprocessors
 
-import net.lshift.typesetr.xml.Tag
+import parsers.odt.styles._
+import styles.MetaFromDocument
 
-import scala.annotation.tailrec
-import scala.xml.{ Elem, MetaData, Node, Text, UnprefixedAttribute }
 import xml._
 import xml.InternalTags._
 import xml.Attributes._
-import net.lshift.typesetr.parsers.{ NodeFactory, TextRepr, Repr }
+import parsers.{ Repr, NodeFactory, DocumentStyle, NodeConfigs, NodeInfo }
 
 import util.Logger
 
-abstract class PostProcessor {
+import scala.annotation.tailrec
+
+abstract class PostProcessor[T] {
 
   type ElemSig = (Tag, List[Attribute])
 
-  def process[T](node: Repr.Aux[T])(implicit factory: NodeFactory[T], logger: Logger): Repr.Aux[T] = {
-    val nodes = coalesce(node.body.toList)
-    factory.create(
+  def process(node: Repr.Aux[T])(implicit logger: Logger): Repr.Aux[T] = {
+    val nodes = coalesce(node.body.toList)(logger)
+    implicitly[NodeFactory.Aux[T]].create(
       tag = node.tag,
       elem = node.source,
       children = nodes,
@@ -26,17 +27,22 @@ abstract class PostProcessor {
       attrs = node.attr)
   }
 
-  protected def coalesce[T](nodes: List[Repr.Aux[T]])(implicit factory: NodeFactory[T], logger: Logger): List[Repr.Aux[T]]
+  def extractMeta(node: Repr.Aux[T])(
+    implicit docStyle: DocumentStyle.Aux[T]): MetaFromDocument
+
+  protected def coalesce(nodes: List[Repr.Aux[T]])(implicit logger: Logger): List[Repr.Aux[T]]
+
+  implicit protected def nodeConfig: NodeConfigs.WithNode[T]
 
 }
 
-trait PostProcessorUtils extends OpimizerStrategies {
-  self: PostProcessor =>
+trait PostProcessorUtils[T] extends OpimizerStrategies[T] {
+  self: PostProcessor[T] =>
 
   import xml.TagGroups._
 
   // group together potential elements
-  protected def coalesce[T](nodes: List[Repr.Aux[T]])(implicit factory: NodeFactory[T], logger: Logger): List[Repr.Aux[T]] = {
+  protected def coalesce(nodes: List[Repr.Aux[T]])(implicit logger: Logger): List[Repr.Aux[T]] = {
 
     object BogusElement {
       def isBogus(x: Repr): Boolean = unapply(x).isEmpty
@@ -54,7 +60,7 @@ trait PostProcessorUtils extends OpimizerStrategies {
           None
     }
 
-    def groupByTagAndAttr[T](x: Repr.Aux[T]): Int => GroupKey = (idx: Int) =>
+    def groupByTagAndAttr(x: Repr.Aux[T]): Int => GroupKey = (idx: Int) =>
       x.tag match {
         case Tag.textTag => TextKey(idx)
         case t =>
@@ -65,7 +71,7 @@ trait PostProcessorUtils extends OpimizerStrategies {
           }
       }
 
-    def maybeCollapseGroups[T](key: ElemSig, elems: Seq[Repr.Aux[T]])(implicit builder: NodeFactory[T], logger: Logger): Seq[Repr.Aux[T]] = {
+    def maybeCollapseGroups(key: ElemSig, elems: Seq[Repr.Aux[T]])(implicit logger: Logger): Seq[Repr.Aux[T]] = {
       elems match {
         case singleElem :: Nil => elems
         case _ =>
@@ -95,7 +101,7 @@ trait PostProcessorUtils extends OpimizerStrategies {
       }
     }
 
-    val nodes1 = nodes.map(process(_)(factory, logger))
+    val nodes1 = nodes.map(process(_)(logger))
 
     // Group all the child nodes by the tag.
     // Note: when grouping we have to consider if they are not
@@ -123,7 +129,7 @@ trait PostProcessorUtils extends OpimizerStrategies {
       key match {
         case TextKey(_) =>
           val text = elems.flatMap(_.extractPlainText).mkString("")
-          Repr.makeTextElem(text)(factory.textNode(text), factory) :: Nil
+          Repr.makeTextElem(text)(implicitly[NodeFactory.Aux[T]].textNode(text), implicitly[NodeFactory.Aux[T]]) :: Nil
         case SigKey(key, _) =>
           maybeCollapseGroups(key, elems)
         case SkolemKey(_) =>
@@ -145,17 +151,17 @@ trait PostProcessorUtils extends OpimizerStrategies {
 
 }
 
-trait OptimizerCoalesceBlocks {
-  self: PostProcessor =>
+trait OptimizerCoalesceBlocks[T] {
+  self: PostProcessor[T] =>
 
   import xml.TagGroups._
 
   // .block -> pre | blockquote handling
   // hacky and limited ATM; no support for nesting etc.
-  protected def coalesceBlocks[T](sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit factory: NodeFactory[T], logger: Logger): Seq[Repr.Aux[T]] = {
+  protected def coalesceBlocks(sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit logger: Logger): Seq[Repr.Aux[T]] = {
 
     @tailrec
-    def codeBlock[T](elems: Seq[Repr.Aux[T]], txt: List[Option[String]]): (Option[Repr.Aux[T]], Seq[Repr.Aux[T]]) = elems match {
+    def codeBlock(elems: Seq[Repr.Aux[T]], txt: List[Option[String]]): (Option[Repr.Aux[T]], Seq[Repr.Aux[T]]) = elems match {
       case (elem: Repr) :: rest if elem hasTag CODE =>
         // extract text from the code element
         codeBlock(rest, elem.extractPlainText :: txt)
@@ -168,17 +174,17 @@ trait OptimizerCoalesceBlocks {
     }
 
     @tailrec
-    def nonCodeBlock[T](elems: Seq[Repr.Aux[T]], blockq: Seq[Repr.Aux[T]])(implicit builder: NodeFactory[T]): (Seq[Repr.Aux[T]], Seq[Repr.Aux[T]]) = elems match {
+    def nonCodeBlock(elems: Seq[Repr.Aux[T]], blockq: Seq[Repr.Aux[T]]): (Seq[Repr.Aux[T]], Seq[Repr.Aux[T]]) = elems match {
       case (elem: Repr) :: rest if elem hasTag CODE =>
         (Repr.optMakeElem(BLOCKQUOTE, blockq)(
           source = blockq.head.source,
-          factory = implicitly[NodeFactory[T]]).getOrElse(Seq()), elems)
+          factory = implicitly[NodeFactory.Aux[T]]).getOrElse(Seq()), elems)
 
       case (elem: Repr) :: rest =>
         if (elem hasAttrWithVal ("class", "right")) {
           // append footer
           val citation = Seq(Repr.makeElem(CITE, Seq(elem))(???, ???))
-          nonCodeBlock[T](rest,
+          nonCodeBlock(rest,
             Seq(Repr.makeElem(FOOTER, citation)(???, ???)))
         } else {
           val toAppend =
@@ -196,7 +202,7 @@ trait OptimizerCoalesceBlocks {
     }
 
     @tailrec
-    def coalesceBlocks0[T](elems: Seq[Repr.Aux[T]], acc: Seq[Repr.Aux[T]])(implicit builder: NodeFactory[T]): Seq[Repr.Aux[T]] = elems match {
+    def coalesceBlocks0(elems: Seq[Repr.Aux[T]], acc: Seq[Repr.Aux[T]]): Seq[Repr.Aux[T]] = elems match {
       case Nil =>
         acc
       case _ =>
@@ -211,32 +217,33 @@ trait OptimizerCoalesceBlocks {
 
 }
 
-trait OptimizerCoalesceSiblings {
-  self: PostProcessor =>
+trait OptimizerCoalesceSiblings[T] {
+  self: PostProcessor[T] =>
 
-  protected def coalesceSiblings[T](sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit factory: NodeFactory[T], logger: Logger): Seq[Repr.Aux[T]] = {
+  protected def coalesceSiblings(sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit logger: Logger): Seq[Repr.Aux[T]] = {
     // pack together the elements of the group
     // should apply cleaning up recursively
     val compactedElems = coalesce(elems.flatMap(_.body).toList)
+
     logger.info(s"coalesce siblings: $sig > Reduced ${elems.length} to ${compactedElems.length}")
     val r = elems match {
       case Nil => Nil
       case first :: _ =>
         if (sig._1 == SPAN) compactedElems
         // TODO, create a new XML node
-        else Repr.makeElem(sig._1, compactedElems, sig._2)(first.source, factory) :: Nil
+        else Repr.makeElem(sig._1, compactedElems, sig._2)(first.source, implicitly[NodeFactory.Aux[T]]) :: Nil
     }
     r
   }
 }
 
-trait OptimzerCoalesceHeadings {
-  self: PostProcessor =>
+trait OptimzerCoalesceHeadings[T] {
+  self: PostProcessor[T] =>
 
   import xml.TagGroups._
 
   // Is there any actual textual content in the heading?
-  protected def coalesceHeadings[T](body: Repr.Aux[T])(implicit builder: NodeFactory[T], logger: Logger): Option[Seq[Repr.Aux[T]]] = {
+  protected def coalesceHeadings(body: Repr.Aux[T])(implicit logger: Logger): Option[Seq[Repr.Aux[T]]] = {
 
     object IsAnchor {
       def unapply(node: Repr): Option[Repr] = node match {
@@ -250,11 +257,6 @@ trait OptimzerCoalesceHeadings {
     def isAnchor(node: Repr): Boolean =
       IsAnchor.unapply(node).nonEmpty
 
-    def isString(node: Repr): Boolean = node.source match {
-      case _: Text => true
-      case _       => false
-    }
-
     val (cleanedBody, noImgFig) =
       (for {
         bodyElem <- whack(body, n => !(n hasTag CAN_OCCUR_IN_HEADER))
@@ -264,10 +266,10 @@ trait OptimzerCoalesceHeadings {
     if (isBlank(noImgFig)) {
       logger.debug(s"[optimizer] empty img figure $noImgFig in $body")
       Some(Seq(Repr.makeElem(body.tag, cleanedBody,
-        body.attr.filter(_.key != STYLE))(body.source, implicitly[NodeFactory[T]])))
+        body.attr.filter(_.key != STYLE))(body.source, implicitly[NodeFactory.Aux[T]])))
     } else {
       val nodes = (for {
-        elem <- cleanedBody if !isAnchor(elem) && !isString(elem)
+        elem <- cleanedBody if !isAnchor(elem) && !implicitly[NodeInfo.Aux[T]].isText(elem)
       } yield elem)
 
       if (nodes.isEmpty) {
@@ -279,17 +281,17 @@ trait OptimzerCoalesceHeadings {
   }
 }
 
-trait OpimizerStrategies {
-  self: PostProcessor =>
+trait OpimizerStrategies[T] {
+  self: PostProcessor[T] =>
 
-  protected def coalesceBlocks[T](sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit factory: NodeFactory[T], logger: Logger): Seq[Repr.Aux[T]]
-  protected def coalesceSiblings[T](sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit factory: NodeFactory[T], logger: Logger): Seq[Repr.Aux[T]]
-  protected def coalesceHeadings[T](body: Repr.Aux[T])(implicit factory: NodeFactory[T], logger: Logger): Option[Seq[Repr.Aux[T]]]
-  protected def coalesceParentChild[T](sig: ElemSig, elem: Repr.Aux[T])(implicit factory: NodeFactory[T], logger: Logger): Option[Repr.Aux[T]]
+  protected def coalesceBlocks(sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit logger: Logger): Seq[Repr.Aux[T]]
+  protected def coalesceSiblings(sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit logger: Logger): Seq[Repr.Aux[T]]
+  protected def coalesceHeadings(body: Repr.Aux[T])(implicit logger: Logger): Option[Seq[Repr.Aux[T]]]
+  protected def coalesceParentChild(sig: ElemSig, elem: Repr.Aux[T])(implicit logger: Logger): Option[Repr.Aux[T]]
 }
 
-trait OpimizerCoalesceParentChild {
-  self: PostProcessor =>
+trait OpimizerCoalesceParentChild[T] {
+  self: PostProcessor[T] =>
 
   // rationale:
   //     <li>
@@ -301,19 +303,19 @@ trait OpimizerCoalesceParentChild {
   //       a
   //       <ul>...</ul>
   //     </li>
-  protected def coalesceParentChild[T](sig: ElemSig, elem: Repr.Aux[T])(implicit nodeRepr: NodeFactory[T], logger: Logger): Option[Repr.Aux[T]] = {
+  protected def coalesceParentChild(sig: ElemSig, elem: Repr.Aux[T])(implicit logger: Logger): Option[Repr.Aux[T]] = {
 
     object BodyWithBogusP {
       val liftableTags = List(LI, DT, DD, FOOTNOTE)
 
       object DoesNotStartWithP {
-        def unapply[T](elems: List[Repr.Aux[T]]) = {
+        def unapply(elems: List[Repr.Aux[T]]) = {
           if (elems exists (_.hasTag(P))) None
           else Some(elems)
         }
       }
 
-      def unapply[T](elem: Repr.Aux[T]) = {
+      def unapply(elem: Repr.Aux[T]) = {
         if (elem hasTag liftableTags)
           elem.body match {
             case (elem: Repr) :: DoesNotStartWithP(elems) if elem.hasTag(P) =>
@@ -328,7 +330,7 @@ trait OpimizerCoalesceParentChild {
     object LiftableP {
       val allowedInnerTags = List(PAGEBREAK, BLOCKQUOTE)
 
-      def unapply[T](elem: Repr.Aux[T]) = elem match {
+      def unapply(elem: Repr.Aux[T]) = elem match {
         case (elem: Repr) if elem.hasTag(P) &&
           elem.body.forall(_ hasTag allowedInnerTags) =>
           Some(elem)
@@ -340,7 +342,7 @@ trait OpimizerCoalesceParentChild {
     object LiftableSpanStyle {
       val invalidAttributes = List(COLOR, BACKGROUND_COLOR)
 
-      def unapply[T](elem: Repr.Aux[T]): Option[(Seq[Attribute], Seq[Repr.Aux[T]])] =
+      def unapply(elem: Repr.Aux[T]): Option[(Seq[Attribute], Seq[Repr.Aux[T]])] =
         elem match {
           case (elem: Repr) if (elem hasTag SPAN) && (elem hasAttribute STYLE) =>
             val attrs = elem.attr.filter { _.key in invalidAttributes }
@@ -368,15 +370,61 @@ trait OpimizerCoalesceParentChild {
   }
 }
 
+trait GenericMetaExtractor[T] {
+  self: PostProcessor[T] =>
+
+  def extractMeta(root: Repr.Aux[T])(implicit docStyle: DocumentStyle.Aux[T]): MetaFromDocument = {
+    // Apparently additional meta information is only
+    // extracted from the top nodes of the content.
+    val body = implicitly[NodeInfo.Aux[T]].docContent(root)
+    body.foldLeft(self.nodeConfig.metaExtractor) {
+      case (meta0, node) =>
+        extractMetaFromNode(node, meta0)(docStyle)
+    }
+  }
+
+  private def extractMetaFromNode(node: Repr.Aux[T], meta: MetaFromDocument)(
+    implicit docStyle: DocumentStyle.Aux[T]): MetaFromDocument = {
+    val metaInfo = {
+      for {
+        style <- docStyle.styleForNode(node)(self.nodeConfig.styleExtractor)
+        tpe <- style.tpe if hasMetaInfo(tpe)
+      } yield updateMeta(node, tpe)(meta)
+    }
+
+    metaInfo.getOrElse(meta)
+  }
+
+  private def hasMetaInfo(styleKind: StyleType): Boolean =
+    styleKind match {
+      case _: TitleStyleType => true
+      case _                 => false
+    }
+
+  private def updateMeta(node: Repr.Aux[T], kind: StyleType)(implicit meta: MetaFromDocument): MetaFromDocument =
+    kind match {
+      case TitleStyleTpe =>
+        meta.withTitle("fixme-title")
+      case SubTitleStyleTpe =>
+        meta.withSubTitle("fixme-subtitle")
+      case _ =>
+        meta
+    }
+}
+
 object Optimizer {
-  private final lazy val opt: PostProcessor = new Opt
 
-  private class Opt extends PostProcessor
-    with PostProcessorUtils
-    with OpimizerCoalesceParentChild
-    with OptimizerCoalesceBlocks
-    with OptimizerCoalesceSiblings
-    with OptimzerCoalesceHeadings
+  private class Opt[T](config: NodeConfigs.WithNode[T]) extends PostProcessor[T]
+    with PostProcessorUtils[T]
+    with OpimizerCoalesceParentChild[T]
+    with OptimizerCoalesceBlocks[T]
+    with OptimizerCoalesceSiblings[T]
+    with OptimzerCoalesceHeadings[T]
+    with GenericMetaExtractor[T] {
 
-  def apply(): PostProcessor = opt
+    protected def nodeConfig: NodeConfigs.WithNode[T] = config
+  }
+
+  def default[T](config: NodeConfigs.WithNode[T]): PostProcessor[T] =
+    new Opt(config)
 }
