@@ -79,9 +79,10 @@ object IO {
      */
     def moveTo(target: File): Boolean =
       try {
+        if (target.exists && target.isFile) target.delete()
         Files.move(x, target)
         true
-      } catch { case _: IOException => false }
+      } catch { case ex: IOException => ex.printStackTrace(); false }
 
     /**
      * Loads the contents of the file `x` into a string
