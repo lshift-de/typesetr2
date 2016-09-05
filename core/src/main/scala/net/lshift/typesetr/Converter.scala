@@ -6,9 +6,9 @@ import java.io.{ FileOutputStream, OutputStream, PrintWriter, File }
 
 import cmd.InputFormat.Markdown
 import cmd._
+import net.lshift.typesetr.styles.MetaFromDocument
 import pandoc.writers.latex.LatexWriter
 import parsers.OdtParser
-import postprocessors.Optimizer
 import util.Logger
 import writers.odt.OdtWriter
 import org.apache.commons.io.FilenameUtils
@@ -34,9 +34,10 @@ object Converter {
         } yield {
           logger.info(s"Processing for $inputFile")
 
+          // 1. Infer the input-specific parser
           val (parser, writer) = config.inFormat match {
             case InputFormat.Odt =>
-              (new OdtParser(), new OdtWriter())
+              (new OdtParser(), new OdtWriter(inputFile))
             case InputFormat.Docx =>
               (???, ???)
             case InputFormat.Markdown =>
@@ -45,45 +46,32 @@ object Converter {
               (???, ???)
           }
 
+          // 2. Parse the document and produce an internal
+          // representation of the document
           val parsed = parser.parse(inputFile, makeTransclusions = false)
-          val optimizer = Optimizer.default(parser.nodeConfig)
-          val optimized =
+          // 3. Optimize the document
+          val optimizer = postprocessors.DefaultPostProcessor.fromConfig(parser.nodeConfig)
+          val optimizedDoc =
             if (config.Yoptimize)
-              optimizer.process(parsed.root)
+              optimizer.optimize(parsed.root)
             else
               parsed.root
 
-          val meta = optimizer.extractMeta(parsed.root)(parsed.style)
+          val docmeta = optimizer.extractMeta(optimizedDoc)(parsed.style)
 
-          // TODO: write the result to file
-          // In theory it should be just possible to write to
-          // a pipe to avoid doing IO twice
-          val resContent = writer.writeToFile(optimized)(
-            logger, config)
+          // 4. Store the optimized document
+          val optimizedInput =
+            writer.writeToFile(optimizedDoc)(logger, config)
 
-          config.inFormat match {
-            case InputFormat.Odt =>
-              for {
-                odtFile <- inputFile.unpack()
-                tmpFile <- resContent
-              } yield {
-                val stream = new FileOutputStream(outputFile.rewriteInputTo)
-                try {
-                  val packed = tmpFile.pack(stream, odtFile)
-                  if (!packed) logger.info("Failed to create an ODT file")
-                } finally {
-                  stream.close()
-                }
-              }
-            case _ =>
-              ???
-          }
-
+          // 5. Translate the optimized document using pandoc
+          // 6. Apply Typesetr's templates
           val result = for {
+            pandocInputF <- optimizedInput.toRight("No input found").right
             pandocOutput <- pandocTranslation(config.inFormat,
               outputFile.format,
-              outputFile.rewriteInputTo).right
-            generator <- pandocPostprocessor(pandocOutput, outputFile.outputFile, config).right
+              pandocInputF).right
+            generator <- pandocPostprocessor(pandocOutput, outputFile.outputFile,
+              config, docmeta).right
           } yield {
             generator.write(config)
           }
@@ -109,14 +97,14 @@ object Converter {
    * @param inFile - Typesetr's optimized input document
    * @return the temporary file representing the resulting document or an error message.
    */
-  def pandocTranslation(inF: InputFormat, outF0: OutputFormat, inFile: File): Either[String, File] = {
+  def pandocTranslation(inF: InputFormat, outFormat: OutputFormat, inFile: File): Either[String, File] = {
     import sys.process._
 
-    val (opts, outF) = outF0 match {
+    val (opts, outF) = outFormat match {
       case OutputFormat.Pdf =>
         (List[String](), OutputFormat.Tex)
       case _ =>
-        (Nil, outF0)
+        (Nil, outFormat)
     }
 
     val outputFile = File.createTempFile("pandoc-", s"-typesetr.${outF.suffix}")
@@ -130,22 +118,29 @@ object Converter {
   /**
    * Infer postprocessor for the pandoc's result from the input/output format.
    *
-   * @param inFile - input file to the generator
-   * @param outFile - desired output file of the document generation
-   * @param config - converter configuration
+   * @param inFile input file to the generator
+   * @param outFile desired output file of the document generation
+   * @param config converter configuration
+   * @param docMeta meta information inferred from the document
    * @return a generic document generator.
    */
-  def pandocPostprocessor(inFile: File, outFile: File, config: Config): Either[String, pandoc.Writer] =
+  def pandocPostprocessor(inFile: File, outFile: File, config: Config, docMeta: MetaFromDocument): Either[String, pandoc.Writer] = {
+    val template = config.inFormat match {
+      case InputFormat.Odt =>
+        styles.StyleTemplate.odt(config.styleBase, config.style)
+      // TODO: other templating formats
+      case _ =>
+        ???
+    }
     config.outFormat match {
       case OutputFormat.Pdf =>
-        val template = styles.StyleTemplate.odt(config.styleBase, config.style)
-        Right(new LatexWriter(inFile, outFile, template, true))
+        Right(new LatexWriter(inFile, outFile, template, docMeta, true))
       case OutputFormat.Tex =>
-        val template = styles.StyleTemplate.odt(config.styleBase, config.style)
-        Right(new LatexWriter(inFile, outFile, template, false))
+        Right(new LatexWriter(inFile, outFile, template, docMeta, false))
       case format =>
         Left("No postprocessor for the $format format")
     }
+  }
 
   def rewriteInput(config: Config): Option[String] = {
     // TODO
@@ -209,10 +204,10 @@ object Converter {
         }
 
         // TODO: some packaging hacks missing
-        val rewriteF = File.createTempFile("rewritten", extIn)
-        logger.info(s"Rewrite input to ${rewriteF}")
+        //val rewriteF = File.createTempFile("rewritten", extIn)
+        //logger.info(s"Rewrite input to ${rewriteF}")
 
-        Right(ProcessingFileInfo(format, rewriteF, fOut))
+        Right(ProcessingFileInfo(format, fOut))
       case _ =>
         // TODO:
         Left("Implementation limitation - cannot write to stdout/from stdin yet.")
@@ -230,17 +225,16 @@ object Converter {
  */
 abstract class ProcessingFileInfo {
   def format: OutputFormat
-  def rewriteInputTo: File
+  //def rewriteInputTo: File
   def outputFile: File
 }
 
 object ProcessingFileInfo {
 
-  def apply(format: OutputFormat, rewriteInputTo: File, outputFile: File): ProcessingFileInfo =
-    FProcessingFile(format, rewriteInputTo, outputFile)
+  def apply(format: OutputFormat, outputFile: File): ProcessingFileInfo =
+    FProcessingFile(format, outputFile)
 
   private case class FProcessingFile(format: OutputFormat,
-                                     rewriteInputTo: File,
                                      outputFile: File) extends ProcessingFileInfo
 
 }

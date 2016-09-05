@@ -9,12 +9,14 @@ import scala.xml.{ Text, Node, MetaData, Elem }
 
 import scala.language.implicitConversions
 
-/*
- * An internal, platform-independent, representation
- * of a single document node.
- */
+/**
+  * An internal, platform-independent, representation
+  * of a single document node.
+  */
 abstract class Repr {
   self =>
+
+  private final val id = Repr.newNode
 
   // An underlying, initial type of the node
   type R
@@ -35,11 +37,23 @@ abstract class Repr {
   // has beeen created
   def source: R
 
+  /**
+    * Children of the node. Order preserving.
+    */
   def body: Seq[BodyTpe]
 
+  /**
+    * Does this node have any children?
+    */
   def isEmpty: Boolean = body.isEmpty
 
+  /**
+    * Does this node have any text contents?
+    */
   def hasContents: Boolean = contents.nonEmpty
+
+  override def toString: String =
+    s"[$id][$tag]: ${super.toString}"
 
 }
 
@@ -49,20 +63,11 @@ object Repr {
 
   // TODO: cleanup
   def makeElem[T](tag: Tag,
-                  body: Seq[Repr.Aux[T]])(
-    implicit source: T, factory: NodeFactory.Aux[T]): Repr.Aux[T] =
-    factory.create(tag, source, body)
-
-  def makeElem[T](tag: Tag,
-                  contents: String)(
-    implicit source: T, factory: NodeFactory.Aux[T]): Repr.Aux[T] =
-    factory.create(tag, source, Nil)
-
-  def makeElem[T](tag: Tag,
                   body: Seq[Repr.Aux[T]],
-                  attr: List[Attribute])(
+                  contents: Option[String],
+                  attrs: List[Attribute] = Nil)(
     implicit source: T, factory: NodeFactory.Aux[T]): Repr.Aux[T] =
-    factory.createWithAttributes(tag, source, body, attr)
+    factory.create(tag, source, body, attrs = attrs, contents = contents)
 
   def makeTextElem[T](contents0: String, synthetic: Boolean = false)(
     implicit source: T, factory: NodeFactory.Aux[T]): Repr.Aux[T] = {
@@ -73,7 +78,7 @@ object Repr {
 
   def optMakeElem[T](tag: Tag, body: Seq[Repr.Aux[T]])(implicit source: T, factory: NodeFactory.Aux[T]): Option[Seq[Repr.Aux[T]]] =
     if (body.isEmpty) None
-    else Some(makeElem(tag, body) :: Nil)
+    else Some(makeElem(tag, body, contents = None, attrs = Nil) :: Nil)
 
   def empty[T](implicit builder: ReprNullFactory[T]): Repr.Aux[T] =
     builder.empty()
@@ -108,17 +113,43 @@ object Repr {
     def hasAttrWithVal(attrName: String, value: String): Boolean =
       x.attr.find(_.key == attrName).map(_.value == value).getOrElse(false)
 
-    def extractPlainText: Option[String] = x match {
+    def extractPlainText: Option[String] = extractPlainText(deep = false)
+    def extractPlainText(deep: Boolean): Option[String] = x match {
       case TextRepr(text) =>
         Some(text)
+      case _ if deep =>
+
+        val r = x.body flatMap { node => node.tag match {
+          case Tag.textTag =>
+            node.contents.map(TextRepr.decodeText)
+          case _ =>
+            node.extractPlainText(deep)
+        }}
+
+        if (r.isEmpty) None
+        else Some(r.mkString(""))
       case _ =>
         None
     }
 
   }
+
+  private final var id = 0
+
+  private final def newNode: Int = { id = id + 1; id }
+
 }
 
 object TextRepr {
   def unapply(x: Repr): Option[String] =
-    if (x.body.nonEmpty) None else x.contents
+    if (x.body.nonEmpty) None else x.contents.map(decodeText)
+
+  private final val encodingMap: Map[String, String] = Map(
+    " &nbsp;" -> " "
+  )
+
+  def decodeText(s: String): String =
+    encodingMap.keys.foldLeft(s) {
+      case (s0, key) =>  s0.replaceAllLiterally(key, encodingMap(key))
+    }
 }

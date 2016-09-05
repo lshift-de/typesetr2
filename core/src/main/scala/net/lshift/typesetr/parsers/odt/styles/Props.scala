@@ -16,32 +16,32 @@ import scalaz.Scalaz._
 class Props(styleNode: scala.xml.Node) {
 
   /**
-    * Text properties of the style, if any.
-    */
+   * Text properties of the style, if any.
+   */
   def textProps: Option[scala.xml.Node] =
     styleNode \!! odt.OdtTags.StyleTProps
 
   /**
-    * Paragraph properties of the style, if any.
-    * @return
-    */
+   * Paragraph properties of the style, if any.
+   * @return
+   */
   def parProps: Option[scala.xml.Node] =
     styleNode \!! odt.OdtTags.StylePProps
 
   /**
-    * Table properties of the style, if any.
-    * Returns column, row, cell or table properties, whichever
-    * is first, if any.
-    *
-    * // TODO: we might want revisit that approach (taken from
-    *          the original typesetr and merge them together
-    */
+   * Table properties of the style, if any.
+   * Returns column, row, cell or table properties, whichever
+   * is first, if any.
+   *
+   * // TODO: we might want revisit that approach (taken from
+   *          the original typesetr and merge them together
+   */
   def tableProps: Option[scala.xml.Node] =
     scalaz.Tag.unwrap(
       First(styleNode \!! (OdtTags.StyleTableColProps)) |+|
-      First(styleNode \!! (OdtTags.StyleTableRowProps)) |+|
-      First(styleNode \!! (OdtTags.StyleTableCellProps)) |+|
-      First(styleNode \!! (OdtTags.StyleTableProps)))
+        First(styleNode \!! (OdtTags.StyleTableRowProps)) |+|
+        First(styleNode \!! (OdtTags.StyleTableCellProps)) |+|
+        First(styleNode \!! (OdtTags.StyleTableProps)))
 
 }
 

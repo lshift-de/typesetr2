@@ -48,7 +48,7 @@ abstract class DocumentStyle { self =>
   def +:(style: (StyleId, Style))(implicit logger: util.Logger): self.type = {
     if (styles.contains(style._1))
       logger.info((s"Overriding style ${style._1}"))
-    //assert(!styles.contains(style._1))
+    //assert(!styles.contains(style._1), s"overriding style ${style._1}")
     updateStyles(style)
     self
   }
@@ -108,8 +108,8 @@ object DocumentStyle {
         styles.find(_._1.name == id.name).map(_._2)
 
       protected def updateStyles(style: (StyleId, Style)): self.type = {
-        if (!styles.contains(style._1))
-          styles = styles + style
+        //if (!styles.contains(style._1))
+        styles = styles + style
         self
       }
 
@@ -133,8 +133,8 @@ object DocumentStyle {
     protected var styles: Map[StyleId, Style] = Map.empty
 
     protected def updateStyles(style: (StyleId, Style)): self.type = {
-      if (!styles.contains(style._1))
-        styles = styles + style
+      //if (!styles.contains(style._1))
+      styles = styles + style
       self
     }
 

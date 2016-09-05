@@ -10,12 +10,28 @@ package styles
  */
 abstract class MetaFromDocument {
 
-  def title: Option[String]
+  def title: Option[MetaEntry]
 
-  def subtitle: Option[String]
+  def subtitle: Option[MetaEntry]
 
   def withTitle(t: String): MetaFromDocument
 
   def withSubTitle(t: String): MetaFromDocument
+
+  def fromKey(key: MetaKey): Option[MetaEntry]
+
+  def entries: List[(MetaKey, MetaEntry)]
+
+  def isUpdateable: Boolean
+
+}
+
+object MetaFromDocument {
+
+  final val title = MetaKey("title")
+
+  final val subtitle = MetaKey("subtitle")
+
+  lazy val keys: List[MetaKey] = List(title, subtitle)
 
 }

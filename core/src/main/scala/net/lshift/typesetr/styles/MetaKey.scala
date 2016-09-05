@@ -15,6 +15,7 @@ abstract class MetaKey {
    * Raw name of the meta info key that is supposed to be used in the target document
    */
   def rawName: String
+
 }
 
 object MetaKey {

@@ -7,6 +7,9 @@ import scala.collection.{ mutable, GenTraversable }
 import scala.collection.generic.FilterMonadic
 import scala.collection.JavaConversions.mapAsScalaMap
 
+import scalaz.Tags.First
+import scalaz.Scalaz._
+
 /**
  * Provides an iterable meta-schema, loaded from the template's meta info files.
  *
@@ -14,7 +17,7 @@ import scala.collection.JavaConversions.mapAsScalaMap
  * MetaSchema returns (MetaKey, MetaEntry) tuples. The latter can be
  * of different types: plain string values, lists, maps etc.
  */
-abstract class MetaSchema {
+abstract class MetaSchema { self =>
 
   def getKey(key: MetaKey): Option[MetaEntry]
 
@@ -23,6 +26,9 @@ abstract class MetaSchema {
   def flatMap[B](f: ((MetaKey, MetaEntry)) => Option[B]): Iterable[B]
 
   def withFilter(p: ((MetaKey, MetaEntry)) => Boolean): MetaSchema
+
+  def attachDocumentMeta(meta: MetaFromDocument): self.type
+
 }
 
 object MetaSchema {
@@ -34,20 +40,25 @@ object MetaSchema {
         obj <- f.loadFile()
       } yield mapAsScalaMap(yaml.load(obj).asInstanceOf[java.util.LinkedHashMap[String, AnyRef]]).toMap)
 
-      Some(new MetaSchemaFromMap(map.getOrElse(Map.empty)))
+      Some(new MetaSchemaFromMap(map.getOrElse(Map.empty), None))
     } else None
 
-  class MetaSchemaFromMap(map: Map[String, AnyRef]) extends MetaSchema {
+  class MetaSchemaFromMap(map: Map[String, AnyRef], inferredMeta: Option[MetaFromDocument]) extends MetaSchema { self =>
 
     // FIXME: needs to handle fallbacks
     def getKey(key: MetaKey): Option[MetaEntry] =
-      map.get(key.name).flatMap(MetaEntry.apply)
+      map.get(key.name).flatMap(v => MetaEntry.apply(v, inferred = inferredMetaFallback(key)))
+
+    private def allEntries: List[(MetaKey, MetaEntry)] = {
+      val keyset = map.keySet.map(MetaKey.apply) ++ inferredMeta.map(_.entries.map(_._1)).getOrElse(Nil)
+      (for {
+        key <- keyset
+        entry <- getKey(key)
+      } yield (key, entry)).toList
+    }
 
     def flatMap[B](f: ((MetaKey, MetaEntry)) => Option[B]): Iterable[B] =
-      map.flatMap {
-        case (k, v) =>
-          MetaEntry(v).flatMap(v => f((MetaKey(k), v)))
-      }
+      allEntries.flatMap { case (k, v) => f((k, v)) }
 
     def withFilter(p: ((MetaKey, MetaEntry)) => Boolean): MetaSchema = {
       val filtered = map.filter {
@@ -55,24 +66,37 @@ object MetaSchema {
           if (v == null) false
           else MetaEntry(v).map(v => p((MetaKey(k), v))).getOrElse(false)
       }
-      new MetaSchemaFromMap(filtered)
+      new MetaSchemaFromMap(filtered, inferredMeta)
     }
+
+    def attachDocumentMeta(meta: MetaFromDocument): self.type =
+      new MetaSchemaFromMap(map, Some(meta)).asInstanceOf[self.type]
+
+    private def inferredMetaFallback(key: MetaKey): Option[MetaEntry] =
+      for {
+        meta <- inferredMeta
+        entry <- meta.fromKey(key)
+      } yield entry
 
     private lazy val nonLangEntries = {
       map.toList.flatMap({
         case (key, v) =>
           // TODO: get rid of the fixed string
-          if (key != "lang") {
+          if (!MetaSchemaFromMap.nonIterableEntries.contains(key)) {
             MetaEntry(v).map(v => (MetaKey(key), v))
           } else None
       })
     }
 
-    // TODO: better preatty print
+    // TODO: better pretty print
     override def toString: String =
       s"""|MetaSchema:
-          |$map""".stripMargin
+          |${allEntries.mkString("\n")}""".stripMargin
 
+  }
+
+  object MetaSchemaFromMap {
+    private final val nonIterableEntries = List("lang")
   }
 
 }

@@ -35,11 +35,20 @@ abstract class MetaEntry {
 
 object MetaEntry {
   def apply(x: AnyRef): Option[MetaEntry] = (x: @unchecked) match {
+    case x: String =>
+      Some(StringEntry(x))
     case x: java.util.LinkedHashMap[String, AnyRef] =>
       Some(MapEntry(mapAsScalaMap[String, AnyRef](x).toMap))
     case _ =>
-      println(s"Missing meta entry for $x of type ${x.getClass}")
+      if (x != null)
+        println(s"Missing meta entry for $x of type ${x.getClass}")
       ???
+  }
+
+  def apply(x: AnyRef, inferred: Option[MetaEntry]): Option[MetaEntry] = {
+    // todo: check type, required, etc
+    if (inferred.nonEmpty) inferred
+    else apply(x)
   }
 
   private final val defaultValueForMeta = Map(
@@ -80,9 +89,9 @@ case class MapEntry(value: Map[String, AnyRef]) extends MetaEntry {
   def hasMultipleValues: Boolean = value.size > 1
 
   protected def stringify(implicit tools: LatexTools): String =
-    "FIXME"
+    "FIXME1"
 
-  def toLatex: String = "FIXME"
+  def toLatex: String = "FIXME1"
 
   def isRequired: Boolean =
     value.get(MetaEntry.reqField).map(
@@ -110,7 +119,7 @@ case class ListEntry(value: List[String]) extends MetaEntry {
         value.map(_.replace(';', ',')).mkString("")
     }
 
-  def toLatex: String = "FIXME"
+  def toLatex: String = "FIXME2"
 
   def isRequired: Boolean = false
 }

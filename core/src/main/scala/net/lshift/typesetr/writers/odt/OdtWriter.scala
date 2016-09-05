@@ -13,13 +13,12 @@ import xml.{ InternalAttributes, Tag }
 import scala.annotation.tailrec
 import scala.xml._
 
-class OdtWriter extends Writer {
+class OdtWriter(inputFile: File) extends Writer {
   type N = scala.xml.Node
 
   import OdtWriter._
 
   def writeToFile(node: Aux[N])(implicit logger: util.Logger, config: Config): Option[java.io.File] = {
-
     val pp = new PrettyPrinter(80, 2)
 
     val f =
@@ -36,16 +35,30 @@ class OdtWriter extends Writer {
     val outS = new FileOutputStream(f)
     val writer = Channels.newWriter(outS.getChannel(), TextEncoding)
 
+    val rewriteTo = File.createTempFile("rewritten", "-typesetr")
+    val stream = new FileOutputStream(rewriteTo)
+
     try {
       writer.write("<?xml version='1.0' encoding='" + TextEncoding + s"'?>$NewLine")
       writeNode(node, indent = 0)(pp, config, writer, implicitly[Logger])
-      Some(f)
+
+      // 2. Pack into an .odt binary
+      (for {
+        odtFile <- inputFile.unpack()
+      } yield {
+        val packed = f.pack(stream, odtFile)
+        if (!packed) {
+          logger.info("Failed to create an ODT file")
+          None
+        } else Some(rewriteTo)
+      }).flatten
     } catch {
       case ex: Throwable =>
         ex.printStackTrace()
         None
     } finally {
       writer.close()
+      stream.close()
     }
 
   }

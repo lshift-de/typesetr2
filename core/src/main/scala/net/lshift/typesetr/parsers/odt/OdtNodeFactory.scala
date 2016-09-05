@@ -18,18 +18,7 @@ class OdtNodeFactory extends NodeFactory {
              contents: Option[String] = None): Aux[scala.xml.Node] =
     OdtNodeRepr(elem, children, tag, contents, attrs)
 
-  def createWithAttributes(
-    tag: Tag,
-    elem: scala.xml.Node,
-    children: Seq[Aux[scala.xml.Node]],
-    attrs: List[Attribute]): Aux[scala.xml.Node] =
-    OdtNodeRepr(elem, children, tag, None, attrs)
-
-  def createWithContents(tag: Tag,
-                         elem: scala.xml.Node,
-                         contents: String): Aux[scala.xml.Node] =
-    OdtNodeRepr(elem, Nil, tag, Some(contents), Nil)
-
   def textNode(text: String): scala.xml.Node =
     Text(text)
+
 }

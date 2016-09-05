@@ -7,6 +7,9 @@ import scala.annotation.tailrec
 import scala.xml.{ Attribute => SAttribute, _ }
 import xml._
 
+/**
+ * Extension methods for Scala's xml node
+ */
 class NodeOps(val x: scala.xml.Node) extends AnyVal {
 
   def hasTag(tags: List[Tag]): Boolean = x match {
@@ -17,7 +20,7 @@ class NodeOps(val x: scala.xml.Node) extends AnyVal {
   }
 
   def hasTag(target: Tag): Boolean =
-    hasTag(List(target))
+    hasTag(target :: Nil)
 
   def hasAttribute(attrs: List[Attribute]): Boolean = x match {
     case elem: Elem =>
@@ -31,7 +34,7 @@ class NodeOps(val x: scala.xml.Node) extends AnyVal {
   }
 
   def hasAttribute(attr: Attribute): Boolean =
-    hasAttribute(List(attr))
+    hasAttribute(attr :: Nil)
 
   def getAttribute(attrName: String): Option[Seq[Node]] = x match {
     case elem: Elem =>
@@ -69,27 +72,23 @@ class NodeOps(val x: scala.xml.Node) extends AnyVal {
   def wrap(tag: Tag,
            body: Seq[Repr.Aux[scala.xml.Node]],
            attributes: List[Attribute] = Nil,
-           contents: Option[String] = None)(implicit builder: NodeFactory.Aux[scala.xml.Node]): Repr.Aux[scala.xml.Node] =
+           contents: Option[String] = None)(implicit factory: NodeFactory.Aux[scala.xml.Node]): Repr.Aux[scala.xml.Node] =
     if (contents.nonEmpty) {
       assert(body.isEmpty)
-      builder.createWithContents(tag, x, contents.get)
-    } else if (attributes.isEmpty)
-      builder.create(tag, x, body)
-    else
-      builder.createWithAttributes(tag, x, body, attributes)
+      factory.createWithContents(tag, x, contents.get)
+    } else
+      factory.create(tag, x, body, attrs = attributes)
 
-  def wrapRec(tag: Tag)(implicit builder: NodeFactory.Aux[scala.xml.Node]): Repr.Aux[scala.xml.Node] = {
+  def wrapRec(tag: Tag)(implicit factory: NodeFactory.Aux[scala.xml.Node]): Repr.Aux[scala.xml.Node] = {
     val children0 = x.child.map(_.wrapRec(tag))
     x.wrap(tag, children0, Nil)
   }
 
   def isBlank: Boolean =
-    x.child forall isBlank
-
-  def isBlank(node: scala.xml.Node): Boolean = node match {
-    case Text(data) => data.trim == ""
-    case _          => node.child forall isBlank
-  }
+    x.child forall {
+      case Text(data) => data.trim == ""
+      case node       => node.child forall { n => n.isBlank }
+    }
 
   def xmlTag(implicit ns: NameSpaces): XmlTag =
     (ns(x.prefix), x.label)
@@ -112,9 +111,7 @@ class MetaDataOps(val x: scala.xml.MetaData) extends AnyVal {
   def getTag(tag: XmlAttribute): Option[String] =
     genericGetTag(s"${tag.namespace.short}:${tag.tag}")
 
-  private def genericGetTag(entry: String): Option[String] = {
+  private def genericGetTag(entry: String): Option[String] =
     x.asAttrMap.get(entry)
-
-  }
 
 }

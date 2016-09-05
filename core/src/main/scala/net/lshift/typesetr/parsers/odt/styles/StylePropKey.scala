@@ -7,19 +7,28 @@ import xml.attributes.StyleAttribute
 import xml.{ XmlAttribute, Tag}
 import util.Units
 
+/**
+  * Class representing a type information
+  * of a single style property (a style `sheet` may
+  * contain many style properties).
+  */
 sealed abstract class StylePropKey { self =>
 
   // Type of the property's value
   type Result
 
-  /*
-    * The low-level xml attribute
+  /**
+    * The low-level xml attribute name that this style property
+    * encapsulates.
     *
     * The attribute has a string value that needs to be
     * validated and translated into a first-class Scala object
     */
   def name: Option[XmlAttribute]
 
+  // A reference to the self type.
+  // V and Tag are only needed to define proper
+  // heterogenous maps.
   type V = self.type
 
   implicit val Tag: V

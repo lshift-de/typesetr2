@@ -8,7 +8,7 @@ import java.nio.file.Files
 import cmd.{ LogLevel, Config }
 import pandoc.Writer
 import pandoc.writers._
-import styles.{ MetaEntry, MetaSchema, MetaKey, Lang }
+import net.lshift.typesetr.styles._
 import util.Logger
 import org.apache.commons.io.FileUtils
 
@@ -18,12 +18,12 @@ import scala.language.postfixOps
 
 import XMPMeta.lang
 
-class LatexWriter(from: File, target: File, template: styles.StyleTemplate, generatePdf: Boolean) extends Writer {
+class LatexWriter(from: File, target: File, template: styles.StyleTemplate, docMeta: styles.MetaFromDocument, generatePdf: Boolean) extends Writer {
   import LatexWriter._
 
   def write(config: Config)(implicit logger: Logger): Unit = {
     val targetLatexF = for {
-      meta <- template.metaSchema
+      meta <- template.metaSchema.map(_.attachDocumentMeta(docMeta))
       body <- from.loadFile()
       templFile <- template.template
       templBody <- templFile.loadFile()
@@ -57,7 +57,8 @@ class LatexWriter(from: File, target: File, template: styles.StyleTemplate, gene
     for {
       fromF <- targetLatexF if generatePdf
     } yield {
-      // Pdf convert it, if necessary
+      logger.info(s"generating .pdf @ $targetLatexF")
+      // Creates a .pdf or .tex document
       // 1. Create a single directory where all stuff is going to be compiled from
       // 2. Copy over styles, includes etc
       // 3. Compile using xelatex
@@ -73,12 +74,13 @@ class LatexWriter(from: File, target: File, template: styles.StyleTemplate, gene
       val cmd = Process(Seq("bash", "-c", s"""latexmk $latexOpts ${fromF}"""),
         Some(tmpDir), "TEXINPUTS" -> ".:./include:", "BSTINPUTS" -> "./include:")
 
-      cmd !
+      val pdfgenerated = cmd !
 
-      if (target.exists())
+      if (pdfgenerated != 0 || target.exists())
         logger.info(s"Target file already exists. Overriding.")
       val tmpPdf = tmpDir \ (fromF.getName.stripSuffix(".tex") + ".pdf")
-      tmpPdf.moveTo(target)
+      if (!tmpPdf.moveTo(target))
+        logger.info("Failed to create a pdf")
 
       ()
     }

@@ -63,7 +63,7 @@ class OdtParser() extends Parser {
 
       val styleFromDoc = StyleParser.default().loadFromDocContent(root, styleFromMeta)
       val bodyNodes = rawBody.child.flatMap(parseBody(_)(styleFromDoc, logger))
-      val body1 = Repr.makeElem(Tags.BODY, bodyNodes)(rawBody, implicitly[NodeFactory.Aux[DocNode]])
+      val body1 = Repr.makeElem(Tags.BODY, bodyNodes, contents = None)(rawBody, implicitly[NodeFactory.Aux[DocNode]])
 
       (root, styleFromDoc, scriptsNode ::: (parseFonts(rawFont) :: styleInBody :: body1 :: Nil))
     }
@@ -156,7 +156,7 @@ class OdtParser() extends Parser {
         val tabNodes =
           Repr.makeTextElem[DocNode](tabEncoded * tabsNum, synthetic = true)
 
-        Repr.makeElem(Tag.nodeTag, tabNodes +: children)
+        Repr.makeElem(Tag.nodeTag, tabNodes +: children, contents = None)
 
       case OdtTags.S =>
         val spaces =
@@ -164,7 +164,7 @@ class OdtParser() extends Parser {
 
         val whitespaceNodes =
           Repr.makeTextElem[DocNode](spaceEncoded * spaces, synthetic = true)
-        Repr.makeElem(Tag.nodeTag, whitespaceNodes +: children)
+        Repr.makeElem(Tag.nodeTag, whitespaceNodes +: children, contents = None)
 
       case OdtTags.Linebreak =>
         Repr.makeTextElem[DocNode](linebreakEncoded, synthetic = true)
@@ -204,7 +204,7 @@ class OdtParser() extends Parser {
 
       case OdtTags.NoteBody =>
         // TODO: postprocessing should get rid of the whitespaces
-        Repr.makeElem(Tags.FOOTNOTE, children)
+        Repr.makeElem(Tags.FOOTNOTE, children, contents = None)
 
       case OdtTags.P =>
         // infer indentation level from the style
@@ -213,7 +213,7 @@ class OdtParser() extends Parser {
 
         Some(scalaz.Tag.unwrap(indentLvl) map { lvl =>
           val attr1 = Attribute(InternalAttributes.indent, lvl.toString) :: Nil
-          Repr.makeElem(tag = Tags.BLOCK, children, attr1)
+          Repr.makeElem(tag = Tags.BLOCK, children, attrs = attr1, contents = None)
         } getOrElse (node.wrap(tag = Tags.P, body = children)))
 
       case OdtTags.Span =>
@@ -221,19 +221,21 @@ class OdtParser() extends Parser {
         // Translate attributes into individual, nested nodes
         val body1 = translateStyleToTags(children, styleToTagsMap, sty)
         val body2 = sty.fontFamily.map(font =>
-          if (Utils.isCodeFont(font)) Repr.makeElem(Tags.CODE, body1) :: Nil
+          if (Utils.isCodeFont(font)) Repr.makeElem(Tags.CODE, body1, contents = None) :: Nil
           else body1)
 
-        Repr.makeElem(tag = Tags.SPAN, body = body2.getOrElse(body1))
+        Repr.makeElem(tag = Tags.SPAN, body = body2.getOrElse(body1), contents = None)
 
       case OdtTags.A =>
-        val tpeAttr = AttributeKey(OdtTags.HrefType)
+        //val tpeAttr = AttributeKey(OdtTags.HrefType)
         // TODO: re-enable the assert
         //assert((tpeAttr inAttributes (attr)).getOrElse("") == "simple")
 
+        // TODO: store a definition separately
+
         val body = children.flatMap(child =>
           whack(child, _ hasTag (Tags.SPAN | Tags.U)))
-        Repr.makeElem(tag = Tags.A, body)
+        Repr.makeElem(tag = Tags.A, body, contents = None)
 
       case OdtTags.BookmarkStart =>
         // TOOD: Missing guards
@@ -336,7 +338,7 @@ class OdtParser() extends Parser {
               attributeTag <- sty2Tag.styleKey.name
               // Leave the style attribute, as is.
               //src <- orig.withAttribute(Attribute(attributeTag, val2Tag.value.name), acc)
-            } yield Seq(Repr.makeElem(tag = val2Tag.tag, body = acc)(orig, implicitly[NodeFactory.Aux[DocNode]]))
+            } yield Seq(Repr.makeElem(tag = val2Tag.tag, body = acc, contents = None)(orig, implicitly[NodeFactory.Aux[DocNode]]))
           ).getOrElse(acc)
         }
     }
@@ -357,6 +359,7 @@ class OdtParser() extends Parser {
 }
 
 object OdtParser {
+
   // TODO: replace those abstractions with HList of Records.
   abstract class StyleToTag[T <: StylePropKey.Of] {
     val styleKey: T
@@ -402,4 +405,5 @@ object OdtParser {
       case Some(sizeP(size)) => Some(size.toInt)
       case res               => None
     }
+
 }

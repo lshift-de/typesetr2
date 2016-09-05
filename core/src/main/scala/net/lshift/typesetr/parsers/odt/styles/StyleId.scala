@@ -9,7 +9,7 @@ import scalaz.Tags.First
 import scalaz.Scalaz._
 
 /**
- * Identifier of the style sheet
+ * Class representing a unique identifier of a single style.
  *
  * According to the spec, style is always unique when you take into account
  * it's family and name. It should also be searched for this way, except

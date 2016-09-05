@@ -41,7 +41,7 @@ package object xml {
   final def whack[T](node: Repr.Aux[T],
                      filterBy: Repr => Boolean,
                      removeBody: Boolean = false)(
-                       implicit builder: NodeFactory.Aux[T]): Seq[Repr.Aux[T]] = {
+                       implicit factory: NodeFactory.Aux[T]): Seq[Repr.Aux[T]] = {
     node.source match {
       case atom: Atom[_] =>
         Seq(node)
@@ -54,9 +54,9 @@ package object xml {
           // recursively call children
           val children1 = node.body.toList.flatMap(
             n => whack(n, filterBy, removeBody))
-          builder.createWithAttributes(
+          factory.create(
             tag = node.tag,
-            elem = node.source,
+            docNode = node.source,
             attrs = node.attr,
             children = children1) :: Nil
         }
