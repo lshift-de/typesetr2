@@ -75,7 +75,7 @@ trait PostProcessorUtils[T] extends OpimizerStrategies[T] {
       elems match {
         case singleElem :: Nil => elems
         case _ =>
-          logger.info(s"Collapse groups of ${key._1}")
+          logger.debug(s"Collapse groups of ${key._1}")
           key._1 match {
             case inline if inline isIn INLINE_TAG_WITH_BLOCKQUOTE =>
               // weird odt splitting
@@ -88,7 +88,7 @@ trait PostProcessorUtils[T] extends OpimizerStrategies[T] {
             // FIXME: missing LIT and CMD
             // checking
             case _ =>
-              logger.info("Coalesce based on parent-child relation")
+              logger.debug("Coalesce based on parent-child relation")
               (for {
                 elem <- elems
                 elem1 <- coalesceParentChild(key, elem)
@@ -229,7 +229,7 @@ trait OptimizerCoalesceSiblings[T] {
     // should apply cleaning up recursively
     val compactedElems = coalesce(elems.flatMap(_.body).toList)
 
-    logger.info(s"coalesce siblings: $sig > Reduced ${elems.length} to ${compactedElems.length}")
+    logger.debug(s"coalesce siblings: $sig > Reduced ${elems.length} to ${compactedElems.length}")
     val r = elems match {
       case Nil => Nil
       case first :: _ =>

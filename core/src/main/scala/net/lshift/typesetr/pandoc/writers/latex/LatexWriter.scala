@@ -12,7 +12,7 @@ import net.lshift.typesetr.styles._
 import util.Logger
 import org.apache.commons.io.FileUtils
 
-import sys.process.Process
+import scala.sys.process.{ ProcessLogger, Process }
 
 import scala.language.postfixOps
 
@@ -71,10 +71,14 @@ class LatexWriter(from: File, target: File, template: styles.StyleTemplate, docM
         if (config.logging == LogLevel.Debug) "" else "-silent",
         "-xelatex", "-pdf").mkString(" ")
 
+      val processLogger = ProcessLogger(
+        (o: String) => logger.debug(o),
+        (e: String) => logger.info(e))
+
       val cmd = Process(Seq("bash", "-c", s"""latexmk $latexOpts ${fromF}"""),
         Some(tmpDir), "TEXINPUTS" -> ".:./include:", "BSTINPUTS" -> "./include:")
 
-      val pdfgenerated = cmd !
+      val pdfgenerated = cmd ! processLogger
 
       if (pdfgenerated != 0 || target.exists())
         logger.info(s"Target file already exists. Overriding.")
