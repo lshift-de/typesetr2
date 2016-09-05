@@ -2,14 +2,15 @@ package net.lshift.typesetr
 package postprocessors
 
 import parsers.odt.styles._
-import parsers.{ NodeInfo, DocumentStyle, Repr }
+import net.lshift.typesetr.parsers.{ NodeConfigs, NodeInfo, DocumentStyle, Repr }
 import styles.MetaFromDocument
 
 import scalaz.Tags._
 import scalaz.Scalaz._
 
-trait MetaInferencer[T] {
-  self: PostProcessor[T] =>
+trait MetaInferencer[T] { self =>
+
+  implicit protected def nodeConfig: NodeConfigs.WithNode[T]
 
   def extractMeta(root: Repr.Aux[T])(implicit docStyle: DocumentStyle.Aux[T]): MetaFromDocument = {
     // Apparently additional meta information is only
