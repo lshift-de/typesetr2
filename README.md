@@ -7,7 +7,7 @@ to a prettified output, such as PDF or latex.
 ## Comparison to the 1.x version
 
 Instead of writing our own complete converters we decided to a
-well-established Pandoc frameowrk <http://pandoc.org/> to do most
+well-established Pandoc framework <http://pandoc.org/> to do most
 of the heavy lifting of the conversion.
 
 Pandoc is not capable of providing prettified documents out-of-the-box
@@ -25,7 +25,7 @@ Then enter sbt's console
 
     > sbt
 
-(wait for the internet to download if that's the first time you did it)
+(wait for the Internet to download if that's the first time you did it)
 
     sbt> project core
     sbt> run
@@ -39,7 +39,7 @@ following command:
     sbt> run -i odt -o pdf --infile $INPUTFILE.odt --outfile $OUTPUTFILE.pdf -s lshift/pitch --style-base $TYPESETRSTYLES
 
 where
- - $INPUTFILE.odt - is some ODF-compliant file
- - $OUTPUTFILE.pdf - is the desired location where the pdf is to be created
- - lshift/pitch - determines the template/style to use
- - $TYPESETRSTYLES - is the location where all styles are defined
+ - `$INPUTFILE.odt` - is some ODF-compliant file
+ - `$OUTPUTFILE.pdf` - is the desired location where the pdf is to be created
+ - `lshift/pitch` - determines the template/style to use
+ - `$TYPESETRSTYLES` - is the location where all styles are defined
