@@ -28,7 +28,6 @@ object Converter {
         implicit val logger = Logger(config.logging)
 
         val result = for {
-          styleTempl <- retrieveStyle(config).right
           inputFile <- retrieveInputFile(config).right
           outputFile <- retrieveOutputFile(config).right
         } yield {
@@ -145,18 +144,6 @@ object Converter {
   def rewriteInput(config: Config): Option[String] = {
     // TODO
     Some("")
-  }
-
-  def retrieveStyle(config: Config): Either[String, StyleTemplate] = {
-    val template = StyleTemplate(config.style, config.styleBase)
-    if (template.exists)
-      Right(template)
-    else {
-      // TODO: implement the fallback mechanism that checks for
-      //       available styles and tries to match them
-      //       against the provided one.
-      Left(s"Style ${config.style} is invalid")
-    }
   }
 
   def retrieveInputFile(config: Config): Either[String, File] = {
