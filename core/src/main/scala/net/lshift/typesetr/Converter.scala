@@ -57,11 +57,11 @@ object Converter {
             else
               parsed.root
 
-          val docmeta = optimizer.extractMeta(optimizedDoc)(parsed.style)
+          val (cleansedDoc, docMeta) = optimizer.inferMeta(optimizedDoc)(parsed.style)
 
           // 4. Store the optimized document
           val optimizedInput =
-            writer.writeToFile(optimizedDoc)(logger, config)
+            writer.writeToFile(cleansedDoc)(logger, config)
 
           // 5. Translate the optimized document using pandoc
           // 6. Apply Typesetr's templates
@@ -71,7 +71,7 @@ object Converter {
               outputFile.format,
               pandocInputF).right
             generator <- pandocPostprocessor(pandocOutput, outputFile.outputFile,
-              config, docmeta).right
+              config, docMeta).right
           } yield {
             generator.write(config)
           }
@@ -93,7 +93,7 @@ object Converter {
    * Typesetr's templates are not applied yet.
    *
    * @param inF - format of the input document
-   * @param outF0 - desired output format
+   * @param outFormat - desired output format
    * @param inFile - Typesetr's optimized input document
    * @return the temporary file representing the resulting document or an error message.
    */

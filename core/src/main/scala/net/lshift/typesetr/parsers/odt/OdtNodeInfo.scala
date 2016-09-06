@@ -21,4 +21,11 @@ class OdtNodeInfo extends NodeInfo {
     root.body.find(_.tag == InternalTags.BODY).
       map(_.body(0).body).getOrElse(Nil).toList
 
+  def isContentInBody(node: Repr.Aux[DocNode], nestingLevel: Int): Boolean =
+    if (nestingLevel == 0) node.source.xmlTag == OdtTags.Text
+    else false
+
+  def canContainContent(node: Repr.Aux[DocNode], nestingLevel: Int): Boolean =
+    nestingLevel == 0
+
 }

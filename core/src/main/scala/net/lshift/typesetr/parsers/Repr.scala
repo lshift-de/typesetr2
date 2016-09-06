@@ -55,6 +55,9 @@ abstract class Repr {
   override def toString: String =
     s"[$id][$tag]: ${super.toString}"
 
+  def copy(children: Seq[Repr.Aux[R]])(implicit factory: NodeFactory.Aux[R]): self.type =
+    factory.copy(children)(self).asInstanceOf[self.type]
+
 }
 
 object Repr {

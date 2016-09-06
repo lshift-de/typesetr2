@@ -14,6 +14,8 @@ abstract class MetaFromDocument {
 
   def subtitle: Option[MetaEntry]
 
+  def withKey(key: String, value: String): MetaFromDocument
+
   def withTitle(t: String): MetaFromDocument
 
   def withSubTitle(t: String): MetaFromDocument

@@ -23,7 +23,7 @@ class OdtWriter(inputFile: File) extends Writer {
 
     val f =
       if (config.Yns) {
-        File.createTempFile("content", "xml")
+        File.createTempFile("content", ".xml")
       } else {
         val dir = new File("/tmp/styles")
         dir.mkdirs()
@@ -31,6 +31,8 @@ class OdtWriter(inputFile: File) extends Writer {
         f.createNewFile()
         f
       }
+
+    logger.info(s"New content of the .odt file is located @ $f")
 
     val outS = new FileOutputStream(f)
     val writer = Channels.newWriter(outS.getChannel(), TextEncoding)

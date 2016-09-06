@@ -20,6 +20,8 @@ abstract class NodeFactory {
                          contents: String): Repr.Aux[DocNode] =
     create(tag, docNode, Nil, Nil, Some(contents))
 
+  def copy(children: Seq[Repr.Aux[DocNode]])(repr: Repr.Aux[DocNode]): Repr.Aux[DocNode]
+
   def textNode(text: String): DocNode
 }
 
