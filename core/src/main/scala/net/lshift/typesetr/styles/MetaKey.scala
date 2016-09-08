@@ -16,14 +16,30 @@ abstract class MetaKey {
    */
   def rawName: String
 
+  /**
+   * Can the value of the meta entry be comma separated, i.e. can it represent a list of values
+   * @return
+   */
+  def isCommaSeparated: Boolean
+
+  override def hashCode: Int = name.hashCode
+
+  override def equals(o: Any): Boolean = o match {
+    case m: MetaKey => name equals m.name
+  }
+
 }
 
 object MetaKey {
 
   def apply(name: String): MetaKey = BasicMetaKey(name)
 
-  case class BasicMetaKey(name: String) extends MetaKey {
+  private case class BasicMetaKey(name: String) extends MetaKey {
+
     def rawName: String = name
+
+    def isCommaSeparated: Boolean = false
+
   }
 
   implicit class MetaKeyOps(val x: MetaKey) extends AnyVal {

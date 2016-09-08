@@ -11,8 +11,6 @@ abstract class XMPMeta extends styles.MetaKey {
 
   def fallback: Option[String]
 
-  def isCommaSeparated: Boolean
-
 }
 
 object XMPMeta {
@@ -29,7 +27,7 @@ object XMPMeta {
   lazy val keywords = XMPMeta("keywords", list = true)
   lazy val copyright = XMPMeta("copyright")
 
-  def all() = List(lang, title, description, keywords, copyright)
+  def all() = List(lang, title, author, description, keywords, copyright)
 
   def apply(name: String, list: Boolean = false): XMPMeta = XMPMetaImpl(name, list)
   def apply(name: String, fallback: String, key: String): XMPMeta = XMPMetaWithFallback(name, key, Some(fallback))

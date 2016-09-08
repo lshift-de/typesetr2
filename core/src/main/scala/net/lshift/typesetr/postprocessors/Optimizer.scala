@@ -346,6 +346,7 @@ trait OptimizerCoalesceParentChild[T] {
         case _ =>
           None
       }
+
     }
 
     object LiftableSpanStyle {
@@ -359,9 +360,11 @@ trait OptimizerCoalesceParentChild[T] {
           case _ =>
             None
         }
+
     }
 
     object LiftableTextNode {
+
       def unapply(elem: Repr.Aux[T]): Option[String] =
         elem.body match {
           case maybeTextNode :: Nil =>

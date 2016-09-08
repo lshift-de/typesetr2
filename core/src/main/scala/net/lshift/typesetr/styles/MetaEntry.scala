@@ -1,11 +1,12 @@
 package net.lshift.typesetr
 package styles
 
-import java.util.Date
-
 import pandoc.writers.latex.LatexTools
+import org.joda.time.format.DateTimeFormat
+import org.joda.time.DateTime
 
-import scala.collection.JavaConversions._
+import scalaz.Tags.First
+import scalaz.Scalaz._
 
 /**
  * Class representing a meta info entry.
@@ -15,113 +16,111 @@ import scala.collection.JavaConversions._
  *
  */
 abstract class MetaEntry {
+
   type T
 
   def value: T
 
-  def hasMultipleValues: Boolean
-
-  protected def stringify(implicit tools: LatexTools): String
-
   def xmpEncoded(key: MetaKey)(implicit tools: LatexTools): String =
-    s"pdf${key.rawName}={${stringify}}"
+    s"pdf${key.rawName}={${toLatex}}"
 
   def raw: String = value.toString
 
-  def toLatex: String
+  def toLatex(implicit tools: LatexTools): String
 
-  def isRequired: Boolean
 }
 
 object MetaEntry {
-  def apply(x: AnyRef): Option[MetaEntry] = (x: @unchecked) match {
-    case x: String =>
-      Some(StringEntry(x))
-    case x: java.util.LinkedHashMap[String, AnyRef] =>
-      Some(MapEntry(mapAsScalaMap[String, AnyRef](x).toMap))
-    case _ =>
-      if (x != null)
-        println(s"Missing meta entry for $x of type ${x.getClass}")
-      ???
+
+  class MetaEntryWithSchema[T](val entry: LatexFormatter.Aux[T]) extends MetaEntry {
+
+    type T = entry.T
+
+    def value: MetaEntryWithSchema.this.T = entry.value
+
+    def toLatex(implicit tools: LatexTools): String = entry.toLatex
+
   }
 
-  def apply(x: AnyRef, inferred: Option[MetaEntry]): Option[MetaEntry] = {
-    // todo: check type, required, etc
-    if (inferred.nonEmpty) inferred
-    else apply(x)
+  def apply(metaKey: MetaKey, rawMetaEntry: Option[AnyRef],
+            inferredMetaValue: Option[String],
+            nonRequired: Boolean = false): Option[MetaEntry] = {
+    // Retrieve the schema from the metadata entry
+    val schema = meta.EntrySchema.apply(rawMetaEntry)
+    // Retrieve the type of the entry from the schema
+    val entryType = schema.`type`.getOrElse(meta.EntrySchema.defaultType)
+
+    // a) we inferred the value from the document
+    // b) we use the default value from the meta definition
+    // c) we use the default value for the type of the entry
+    val v = scalaz.Tag.unwrap(
+      First(inferredMetaValue) |+|
+        First(schema.default) |+|
+        First(if (nonRequired || schema.isRequired) Some(entryType.default) else None))
+
+    v map { v =>
+      new MetaEntryWithSchema(
+        if (metaKey.isCommaSeparated) ListEntry(v.toString)
+        else NonListEntry[entryType.T](entryType.translate(v), entryType))
+    }
   }
 
-  private final val defaultValueForMeta = Map(
-    "text" -> "",
-    "rich-text" -> "",
-    "bibliography" -> "",
-    "boolean" -> false,
-    "date" -> new Date(),
-    "image" -> "",
-    "multiline" -> "",
-    "lang" -> Lang.default)
+}
 
-  protected final val fieldsTranslation: Map[String, MetaEntryType] = Map(
-    "required" -> MetaEntryType.BooleanEntry)
+/**
+ * Depending on the kind of the value of the entry
+ * (list or not) we might need to do some necessary
+ * text formatting magic in order to make it latex-conformant.
+ */
+sealed abstract class LatexFormatter {
 
-  final val reqField = "required"
+  // The underlying type of the meta entry
+  type T
+
+  // The value of the meta entry
+  def value: T
+
+  /**
+   * Convert the value to latex-conformant text
+   * @param tools typeclass encapsulating the latex-magic formatting
+   */
+  def toLatex(implicit tools: LatexTools): String
 
 }
 
-case class StringEntry(value: String) extends MetaEntry {
+object LatexFormatter {
 
-  type T = String
-
-  def hasMultipleValues: Boolean = false
-
-  protected def stringify(implicit tools: LatexTools): String = value.replace(';', ',')
-
-  def toLatex: String = value
-
-  def isRequired: Boolean = false
+  type Aux[S] = LatexFormatter { type T = S }
 
 }
 
-case class MapEntry(value: Map[String, AnyRef]) extends MetaEntry {
+case class NonListEntry[A](value: A, entryKind: meta.MetaEntryType.Aux[A]) extends LatexFormatter {
 
-  type T = Map[String, AnyRef]
+  type T = A
 
-  def hasMultipleValues: Boolean = value.size > 1
-
-  protected def stringify(implicit tools: LatexTools): String =
-    "FIXME1"
-
-  def toLatex: String = "FIXME1"
-
-  def isRequired: Boolean =
-    value.get(MetaEntry.reqField).map(
-      MetaEntryType.BooleanEntry.translate).getOrElse(false)
+  def toLatex(implicit tools: LatexTools): String = entryKind.latexify(value).replace(';', ',')
 
 }
 
-case class ListEntry(value: List[String]) extends MetaEntry {
+case class ListEntry(value0: String) extends LatexFormatter {
   import ListEntry._
+
+  def value: List[String] = value0.split(',').toList
 
   type T = List[String]
 
-  def hasMultipleValues: Boolean = value match {
-    case _ :: _ :: _ => true
-    case _           => false
-  }
-
-  protected def stringify(implicit tools: LatexTools): String =
+  def stringify(implicit tools: LatexTools): String =
     value match {
-      case _ :: _ :: _ if hasMultipleValues =>
-        val v = value.mkString(",").replace(',', PRIVATE).replace(';', ',')
+      case _ :: _ :: _ =>
+        val v = value0.replace(',', PRIVATE).replace(';', ',')
         val v2 = tools.quote(v).replaceAll(PRIVATE.toString, XMPCOMMA)
         tools.cmd(XMPQUOTE, Nil, List(v2))
       case _ =>
         value.map(_.replace(';', ',')).mkString("")
     }
 
-  def toLatex: String = "FIXME2"
+  def toLatex(implicit tools: LatexTools): String = stringify
 
-  def isRequired: Boolean = false
 }
 
 object ListEntry {
@@ -131,54 +130,5 @@ object ListEntry {
   private final val XMPCOMMA = "\\xmpcomma{}"
 
   private final val XMPQUOTE = "xmpquote"
-
-}
-
-sealed abstract class MetaEntryType {
-
-  type T
-
-  def translate(x: AnyRef): T
-
-  def default: T
-
-}
-
-object MetaEntryType {
-
-  case object BooleanEntry extends MetaEntryType {
-
-    type T = Boolean
-
-    def translate(x: AnyRef): Boolean = x match {
-      case "yes" => true
-      case "no"  => false
-      case _     => ???
-    }
-
-    def default: Boolean = false
-
-  }
-
-  case object StringEntry extends MetaEntryType {
-
-    type T = String
-
-    def translate(x: AnyRef): String = x.toString
-
-    def default: String = ""
-
-  }
-
-  case object ListEntry extends MetaEntryType {
-
-    type T = List[String]
-
-    def translate(x: AnyRef): List[String] =
-      x.toString.split(",").toList.map(_.trim)
-
-    def default: List[String] = List()
-
-  }
 
 }

@@ -5,14 +5,15 @@ package styles
  * Meta information inferred from the body of the
  * document.
  *
- * Unlike the rest of meta data
+ * This representation from the loaded meta info
  * (coming from metadata.yml or meta.xml)
+ * which provides a `schema` for meta-entries.
  */
 abstract class MetaFromDocument {
 
-  def title: Option[MetaEntry]
+  def title: Option[String]
 
-  def subtitle: Option[MetaEntry]
+  def subtitle: Option[String]
 
   def withKey(key: String, value: String): MetaFromDocument
 
@@ -20,9 +21,9 @@ abstract class MetaFromDocument {
 
   def withSubTitle(t: String): MetaFromDocument
 
-  def fromKey(key: MetaKey): Option[MetaEntry]
+  def fromKey(key: MetaKey): Option[String]
 
-  def entries: List[(MetaKey, MetaEntry)]
+  def entries: List[(MetaKey, String)]
 
   def isUpdateable: Boolean
 

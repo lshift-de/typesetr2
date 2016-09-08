@@ -69,7 +69,8 @@ object MyBuild extends Build {
       "org.scalaz" %% "scalaz-core" % "7.2.4",
       "commons-io" % "commons-io" % "2.4",
       "org.jbibtex" % "jbibtex" % "1.0.15",
-      "com.chuusai" %% "shapeless" % "2.3.1"
+      "com.chuusai" %% "shapeless" % "2.3.1",
+      "joda-time" % "joda-time" % "2.9.4"
     )
   )
 

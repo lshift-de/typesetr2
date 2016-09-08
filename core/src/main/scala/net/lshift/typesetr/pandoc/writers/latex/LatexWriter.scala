@@ -120,8 +120,8 @@ class LatexWriter(from: File, target: File, template: styles.StyleTemplate, docM
    */
   private def xmpMeta(meta: MetaSchema): List[String] = {
     val xmps = XMPMeta.all().flatMap { key =>
-      meta.getKey(key).map((key, _))
-    } map { case (key, v) => v.xmpEncoded(key) }
+      meta.getKey(key).map(_.xmpEncoded(key))
+    }
     "pdfcreator={Typesetr}" :: xmps
   }
 

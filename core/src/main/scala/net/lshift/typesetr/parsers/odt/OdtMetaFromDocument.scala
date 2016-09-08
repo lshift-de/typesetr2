@@ -5,15 +5,14 @@ import net.lshift.typesetr.styles.{ MetaKey, MetaEntry, MetaFromDocument }
 
 case class OdtMetaFromDocument(
   title0: Option[String],
-  subtitle0: Option[String])(mapKeys: Map[MetaKey, MetaEntry])
+  subtitle0: Option[String])(mapKeys: Map[MetaKey, String])
   extends MetaFromDocument {
 
   def withKey(key: String, value: String): MetaFromDocument = {
     val metaKey = MetaKey(key)
-    if (!mapKeys.contains(metaKey)) {
-      val mapped = MetaEntry(value).map(entry => mapKeys + (metaKey -> entry)).getOrElse(mapKeys)
-      OdtMetaFromDocument(title0 = this.title0, subtitle0 = this.subtitle0)(mapped)
-    } else this
+    if (!mapKeys.contains(metaKey))
+      OdtMetaFromDocument(title0 = this.title0, subtitle0 = this.subtitle0)(mapKeys + (metaKey -> value))
+    else this
   }
 
   def withTitle(t: String): MetaFromDocument = {
@@ -32,16 +31,16 @@ case class OdtMetaFromDocument(
       this
   }
 
-  def title: Option[MetaEntry] = fromKey(MetaFromDocument.title)
+  def title: Option[String] = fromKey(MetaFromDocument.title)
 
-  def subtitle: Option[MetaEntry] = fromKey(MetaFromDocument.subtitle)
+  def subtitle: Option[String] = fromKey(MetaFromDocument.subtitle)
 
-  def fromKey(key: MetaKey): Option[MetaEntry] =
-    if (key.name == MetaFromDocument.title.name) title0 flatMap (MetaEntry.apply)
-    else if (key.name == MetaFromDocument.subtitle.name) subtitle0 flatMap (MetaEntry.apply)
+  def fromKey(key: MetaKey): Option[String] =
+    if (key.name == MetaFromDocument.title.name) title0
+    else if (key.name == MetaFromDocument.subtitle.name) subtitle0
     else mapKeys.get(key)
 
-  def entries: List[(MetaKey, MetaEntry)] =
+  def entries: List[(MetaKey, String)] =
     for {
       key <- MetaFromDocument.keys ++ mapKeys.keys
       v <- fromKey(key)

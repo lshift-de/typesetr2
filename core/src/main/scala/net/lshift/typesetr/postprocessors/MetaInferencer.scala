@@ -22,6 +22,7 @@ trait MetaInferencer[T] { self =>
     }).unzip
 
     // The order of occurrence matters.
+    // Combine different commands into a single meta-sheet
     val meta =
       childrenAndCmds._2.flatten.foldLeft(nodeConfig.metaExtractor) {
         case (meta, cmd) => cmd.includeIn(meta)

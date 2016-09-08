@@ -45,15 +45,18 @@ object MetaSchema {
 
   class MetaSchemaFromMap(map: Map[String, AnyRef], inferredMeta: Option[MetaFromDocument]) extends MetaSchema { self =>
 
-    // FIXME: needs to handle fallbacks
     def getKey(key: MetaKey): Option[MetaEntry] =
-      map.get(key.name).flatMap(v => MetaEntry.apply(v, inferred = inferredMetaFallback(key)))
+      getKey(key, nonRequired = false)
+
+    // FIXME: needs to handle fallbacks
+    def getKey(key: MetaKey, nonRequired: Boolean): Option[MetaEntry] =
+      MetaEntry.apply(key, map.get(key.name), inferredMetaValue = inferredFromDoc(key), nonRequired)
 
     private def allEntries: List[(MetaKey, MetaEntry)] = {
       val keyset = map.keySet.map(MetaKey.apply) ++ inferredMeta.map(_.entries.map(_._1)).getOrElse(Nil)
       (for {
         key <- keyset
-        entry <- getKey(key)
+        entry <- getKey(key, nonRequired = true)
       } yield (key, entry)).toList
     }
 
@@ -64,7 +67,11 @@ object MetaSchema {
       val filtered = map.filter {
         case (k, v) =>
           if (v == null) false
-          else MetaEntry(v).map(v => p((MetaKey(k), v))).getOrElse(false)
+          else {
+            val mkey = MetaKey(k)
+            MetaEntry(mkey, Some(v), inferredFromDoc(mkey), nonRequired = true).
+              map(v => p((mkey, v))).getOrElse(false)
+          }
       }
       new MetaSchemaFromMap(filtered, inferredMeta)
     }
@@ -72,7 +79,7 @@ object MetaSchema {
     def attachDocumentMeta(meta: MetaFromDocument): self.type =
       new MetaSchemaFromMap(map, Some(meta)).asInstanceOf[self.type]
 
-    private def inferredMetaFallback(key: MetaKey): Option[MetaEntry] =
+    private def inferredFromDoc(key: MetaKey): Option[String] =
       for {
         meta <- inferredMeta
         entry <- meta.fromKey(key)
@@ -83,7 +90,8 @@ object MetaSchema {
         case (key, v) =>
           // TODO: get rid of the fixed string
           if (!MetaSchemaFromMap.nonIterableEntries.contains(key)) {
-            MetaEntry(v).map(v => (MetaKey(key), v))
+            val mKey = MetaKey(key)
+            MetaEntry(mKey, Some(v), inferredFromDoc(mKey)).map(v => (MetaKey(key), v))
           } else None
       })
     }
