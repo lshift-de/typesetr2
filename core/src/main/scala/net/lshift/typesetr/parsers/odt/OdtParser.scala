@@ -176,14 +176,10 @@ class OdtParser() extends Parser {
           styleTpe <- sty.tpe if !(node isBlank)
         } yield node.wrap(tag = styleTpe.tag, body = children)
 
-      case OdtTags.List =>
-        // attr:
-        // - start
-        // - data-continue-list
-
-        // TODO: FIX
-        logger.warn(s"Ignoring List")
-        None
+      case OdtTags.TextList =>
+        val listStyle = docStyle.newListLevelContext
+        val children = node.child.flatMap(parseBody(_)(listStyle, logger))
+        Repr.makeElem(tag = Tags.LIST, body = children, contents = None)
 
       case OdtTags.TextListItem =>
         node.wrap(tag = Tags.LI, body = children)

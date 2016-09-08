@@ -23,7 +23,7 @@ object OdtTags {
   val BookmarkEnd: XmlTag = (implicitly[NameSpaces].apply("text"), "bookmark-end")
   val Bookmark: XmlTag = (implicitly[NameSpaces].apply("text"), "bookmark")
   val H: XmlTag = (implicitly[NameSpaces].apply("text"), "h")
-  val List: XmlTag = (implicitly[NameSpaces].apply("text"), "list")
+  val TextList: XmlTag = (implicitly[NameSpaces].apply("text"), "list")
   val TextListItem: XmlTag = (implicitly[NameSpaces].apply("text"), "list-item")
   val TextListStyle: XmlTag = (implicitly[NameSpaces].apply("text"), "list-style")
   val Note: XmlTag = (implicitly[NameSpaces].apply("text"), "note")

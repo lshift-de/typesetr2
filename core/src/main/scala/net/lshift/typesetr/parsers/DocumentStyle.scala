@@ -29,6 +29,10 @@ abstract class DocumentStyle { self =>
 
   def textWidth: Int
 
+  def listLevelDepth: Int
+
+  def newListLevelContext: DocumentStyle.Aux[Node]
+
   /**
    * Return style information for the given id, if available.
    *
@@ -95,6 +99,11 @@ object DocumentStyle {
 
       def textWidth: Int = textWidth0
 
+      def listLevelDepth: Int = 0
+
+      def newListLevelContext: DocumentStyle.Aux[Node] =
+        new ListDocumentStyle[T](self)
+
       def header: Repr.Aux[this.Node] = header0
 
       def footer: Repr.Aux[this.Node] = footer0
@@ -118,13 +127,37 @@ object DocumentStyle {
   def empty[T](implicit reprBuilder: ReprNullFactory[T]): DocumentStyle.Aux[T] =
     new EmptyDocumentStyle(reprBuilder)
 
+  private class ListDocumentStyle[T](prev: DocumentStyle.Aux[T]) extends DocumentStyle { self =>
+    type Node = T
+
+    def header: Repr.Aux[T] = prev.header
+
+    def newListLevelContext: Aux[T] = new ListDocumentStyle[T](self)
+
+    protected def styles: Map[StyleId, Style] = prev.styles
+
+    def textWidth: Int = prev.textWidth
+
+    def footer: Repr.Aux[T] = prev.footer
+
+    protected def updateStyles(style: (StyleId, Style)): ListDocumentStyle.this.type = ???
+
+    def listLevelDepth: Int = prev.listLevelDepth + 1
+
+    def style(id: StyleId): Option[Style] = prev.style(id)
+  }
+
   private class EmptyDocumentStyle[T](repr: ReprNullFactory[T]) extends DocumentStyle { self =>
 
     type Node = T
 
+    def textWidth: Int = 0
+
     def header: Repr.Aux[T] = repr.empty()
 
-    def textWidth: Int = 0
+    def listLevelDepth: Int = 0
+
+    def newListLevelContext: Aux[T] = new ListDocumentStyle[T](self)
 
     def footer: Repr.Aux[T] = repr.empty()
 

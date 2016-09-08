@@ -3,10 +3,10 @@ package styles
 package meta
 
 /**
-  * Meta schema that is read and interpreted from the metadata.yml files
-  *
-  * @param schema a raw map of fields vs values of the yaml file
-  */
+ * Meta schema that is read and interpreted from the metadata.yml files
+ *
+ * @param schema a raw map of fields vs values of the yaml file
+ */
 class EntrySchema(schema: Map[String, AnyRef]) {
   import EntrySchema._
 
