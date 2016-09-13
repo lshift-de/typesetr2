@@ -143,7 +143,7 @@ class StyleParserImpl extends StyleParser {
 
       val styleMap = Style.styleProperties.map(mappingFun)
       id map (styleId =>
-        Style.typesafeStyle(styleMap, styleId, parentStyle.map(_.id), tpe))
+        Style.typesafeStyle(styleMap, styleId, parentStyle.map(_.id), tpe)(styleNode))
     }
   }
 

@@ -55,6 +55,8 @@ abstract class Style { self =>
 
   def colWidth: Option[Units]
 
+  def source: Option[AnyRef]
+
   override def toString: String = {
     val props = List(printProp("type", tpe),
       printProp("font-family", fontFamily),
@@ -83,6 +85,20 @@ abstract class Style { self =>
 }
 
 object Style {
+
+  implicit class StyleOps(val x: Style) extends AnyVal {
+
+    def propertiesEmpty: Boolean =
+      x.fontSize.isEmpty && x.fontWeight.isEmpty && x.fontStyle.isEmpty &&
+        x.underline.isEmpty && x.lineThrough.isEmpty && x.color.isEmpty &&
+          x.backgrounColor.isEmpty && x.textPosition.isEmpty && x.textAlign.isEmpty &&
+            x.lineHeight.isEmpty && x.marginLeft.isEmpty && x.textIndent.isEmpty &&
+              x.parBreak.isEmpty && x.minHeight.isEmpty && x.colWidth.isEmpty
+
+    def isReducible: Boolean =
+      x.fontFamily.map(_ == FontFamily.apply("text")).getOrElse(true) && x.propertiesEmpty
+
+  }
 
 
   abstract class DefaultStyle extends Style { self =>
@@ -172,13 +188,13 @@ object Style {
       HNil
 
   def typesafeStyle(mmap: MMap, id: StyleId,
-                    parent: Option[StyleId], tpe: Option[StyleType]): Style =
-    new RecordsBackedStyleImpl(mmap, id, parent, tpe)
+                    parent: Option[StyleId], tpe: Option[StyleType])(source: scala.xml.Node): Style =
+    new RecordsBackedStyleImpl(mmap, id, parent, tpe)(source)
 
   private class RecordsBackedStyleImpl(mmap: MMap,
                                val id: StyleId,
                                val parent: Option[StyleId],
-                               val tpe: Option[StyleType])
+                               val tpe: Option[StyleType])(source0: scala.xml.Node)
     extends Style {
 
     def unsafeProperty[T <: StylePropKey](x: T): Option[x.Result] =
@@ -235,6 +251,9 @@ object Style {
     def colWidth: Option[Units] =
       property(StylePropKey.ColWidth)
 
+    def source: Option[AnyRef] =
+      if (source0 != null) Some(source0) else None
+
   }
 
   lazy val empty: Style =
@@ -247,6 +266,8 @@ object Style {
       def parent: Option[StyleId] = None
 
       def id: StyleId = StyleId.none
+
+      def source: Option[AnyRef] = None
 
     }
 

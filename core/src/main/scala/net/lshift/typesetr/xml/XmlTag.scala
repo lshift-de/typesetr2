@@ -1,6 +1,7 @@
 package net.lshift.typesetr.xml
 
 import scala.language.implicitConversions
+import scala.xml.{ UnprefixedAttribute, MetaData }
 
 case class XmlTag(namespace: NameSpace, tag: String) {
 

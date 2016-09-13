@@ -17,7 +17,7 @@ import shapeless.{Poly, Poly2, HList, HNil, :: => !:, Witness}
 import util.Logger
 import xml.{InternalTags => Tags}
 
-import scala.language.{ postfixOps, implicitConversions }
+import scala.language.{ postfixOps, implicitConversions, existentials }
 
 class OdtParser() extends Parser {
 
@@ -64,8 +64,9 @@ class OdtParser() extends Parser {
       val styleFromDoc = StyleParser.default().loadFromDocContent(root, styleFromMeta)
       val bodyNodes = rawBody.child.flatMap(parseBody(_)(styleFromDoc, logger))
       val body1 = Repr.makeElem(Tags.BODY, bodyNodes, contents = None)(rawBody, implicitly[NodeFactory.Aux[DocNode]])
+      val reifiedStyles = styleInBody.copy(styleInBody.body ++ newStyles)
 
-      (root, styleFromDoc, scriptsNode ::: (parseFonts(rawFont) :: styleInBody :: body1 :: Nil))
+      (root, styleFromDoc, scriptsNode ::: (parseFonts(rawFont) :: reifiedStyles :: body1 :: Nil))
     }
 
     parsed match {
@@ -82,6 +83,9 @@ class OdtParser() extends Parser {
   // Just leave them as they are
   private def parseFonts(node: scala.xml.Node): Repr.Aux[DocNode] =
     node.wrapRec(tag = Tag.nodeTag)
+
+  // FIXME:
+  private var newStyles: List[Repr.Aux[scala.xml.Node]] = List.empty
 
 
   def loadDocStyleFromMeta(node: scala.xml.Node)(implicit logger: Logger): Option[(Repr.Aux[DocNode], DocumentStyle.Aux[DocNode])] = {
@@ -208,8 +212,18 @@ class OdtParser() extends Parser {
           First(sty.marginLeft) |+| First(sty.textIndent)
 
         Some(scalaz.Tag.unwrap(indentLvl) map { lvl =>
-          val attr1 = Attribute(InternalAttributes.indent, lvl.toString) :: Nil
-          Repr.makeElem(tag = Tags.BLOCK, children, attrs = attr1, contents = None)
+          // Augment the style of the paragraph to
+          // introduce blockquote.
+
+          val (newStyleId, fact) = StylePropertyFactory.odtQuoting(parent = sty)
+          val source1 = source.copy(meta =
+            source.attributes.copyWith(OdtTags.StyleNameAttr, newStyleId.name))
+          newStyles = fact.create(newStyleId) :: newStyles
+
+          val attr1 = Attribute(InternalAttributes.indent, lvl.value.toString) ::
+                      Attribute(InternalAttributes.style, newStyleId.name) :: Nil
+          Repr.makeElem(tag = Tags.BLOCK, children, attrs = attr1, contents = None)(
+            source1, implicitly[NodeFactory.Aux[DocNode]])
         } getOrElse (node.wrap(tag = Tags.P, body = children)))
 
       case OdtTags.Span =>

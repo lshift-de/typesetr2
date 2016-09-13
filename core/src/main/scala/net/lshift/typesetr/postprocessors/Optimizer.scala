@@ -20,8 +20,8 @@ trait Optimizer[T] {
 
   type ElemSig = (Tag, List[Attribute])
 
-  def optimize(node: Repr.Aux[T])(implicit logger: Logger): Repr.Aux[T] = {
-    val nodes = coalesce(node.body.toList)(logger)
+  def optimize(node: Repr.Aux[T])(implicit logger: Logger, sty: DocumentStyle.Aux[T]): Repr.Aux[T] = {
+    val nodes = coalesce(node.body.toList)
     implicitly[NodeFactory.Aux[T]].create(
       tag = node.tag,
       docNode = node.source,
@@ -30,7 +30,7 @@ trait Optimizer[T] {
       attrs = node.attr)
   }
 
-  protected def coalesce(nodes: List[Repr.Aux[T]])(implicit logger: Logger): List[Repr.Aux[T]]
+  protected def coalesce(nodes: List[Repr.Aux[T]])(implicit logger: Logger, sty: DocumentStyle.Aux[T]): List[Repr.Aux[T]]
 
   implicit protected def nodeConfig: NodeConfigs.WithNode[T]
 
@@ -42,7 +42,7 @@ trait PostProcessorUtils[T] extends OpimizerStrategies[T] {
   import xml.TagGroups._
 
   // group together potential elements
-  protected def coalesce(nodes: List[Repr.Aux[T]])(implicit logger: Logger): List[Repr.Aux[T]] = {
+  protected def coalesce(nodes: List[Repr.Aux[T]])(implicit logger: Logger, sty: DocumentStyle.Aux[T]): List[Repr.Aux[T]] = {
 
     object BogusElement {
       def isBogus(x: Repr): Boolean = unapply(x).isEmpty
@@ -101,7 +101,7 @@ trait PostProcessorUtils[T] extends OpimizerStrategies[T] {
       }
     }
 
-    val nodes1 = nodes.map(optimize(_)(logger))
+    val nodes1 = nodes.map(optimize(_))
 
     // Group all the child nodes by the tag.
     // Note: when grouping we have to consider if they are not
@@ -172,7 +172,7 @@ trait OptimizerCoalesceBlocks[T] {
         // TODO: collapse blocks into one xml node
         // that represents the ODT equivalent
         (Some(Repr.makeElem(PRE, body = Nil,
-          attrs = Nil, contents = Some(txt.flatten.mkString("\n")))(???, ???)), elems)
+          attrs = Nil, contents = Some(txt.flatten.reverse.mkString("\n")))(???, ???)), elems)
       case _ =>
         (None, elems)
     }
@@ -182,10 +182,11 @@ trait OptimizerCoalesceBlocks[T] {
       case (elem: Repr) :: rest if elem hasTag CODE =>
         (Repr.optMakeElem(BLOCKQUOTE, blockq)(
           source = blockq.head.source,
-          factory = implicitly[NodeFactory.Aux[T]]).getOrElse(Seq()), elems)
+          factory = implicitly[NodeFactory.Aux[T]]).getOrElse(Seq()), rest)
 
       case (elem: Repr) :: rest =>
         if (elem hasAttrWithVal ("class", "right")) {
+          // this is a citation.
           // append footer
           val citation = Seq(Repr.makeElem(CITE, Seq(elem), contents = None)(???, ???))
           nonCodeBlock(rest,
@@ -213,7 +214,7 @@ trait OptimizerCoalesceBlocks[T] {
         val (codeNode0, rest1) = codeBlock(elems, Nil)
         val codeNode = codeNode0.map(n => Seq(n)).getOrElse(Seq())
         val (nonCodeNodes, rest2) = nonCodeBlock(rest1, Nil)
-        coalesceBlocks0(rest2, codeNode ++ acc)
+        coalesceBlocks0(rest2, acc ++ codeNode ++ nonCodeNodes.reverse)
     }
 
     coalesceBlocks0(elems, Seq())
@@ -224,7 +225,7 @@ trait OptimizerCoalesceBlocks[T] {
 trait OptimizerCoalesceSiblings[T] {
   self: Optimizer[T] =>
 
-  protected def coalesceSiblings(sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit logger: Logger): Seq[Repr.Aux[T]] = {
+  protected def coalesceSiblings(sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit logger: Logger, sty: DocumentStyle.Aux[T]): Seq[Repr.Aux[T]] = {
     // pack together the elements of the group
     // should apply cleaning up recursively
     val compactedElems = coalesce(elems.flatMap(_.body).toList)
@@ -247,46 +248,47 @@ trait OptimzerCoalesceHeadings[T] {
 
   import xml.TagGroups._
 
+  object IsAnchor {
+    def unapply(node: Repr): Option[Repr] = node match {
+      case (elem: Repr) if (elem hasTag A) && (elem hasAttribute NAME) =>
+        Some(elem)
+      case _ =>
+        None
+    }
+  }
+
   // Is there any actual textual content in the heading?
   protected def coalesceHeadings(body: Repr.Aux[T])(implicit logger: Logger): Option[Seq[Repr.Aux[T]]] = {
     implicit def source: T = body.source
-    object IsAnchor {
-      def unapply(node: Repr): Option[Repr] = node match {
-        case (elem: Repr) if (elem hasTag A) && (elem hasAttribute NAME) =>
-          Some(elem)
-        case _ =>
+
+    if (H_TAGS.contains(body.tag)) {
+
+      val (cleanedBody, noImgFig) =
+        (for {
+          bodyElem <- whack(body, n => !(n hasTag CAN_OCCUR_IN_HEADER))
+          noImgElem <- whack(bodyElem, n => n hasTag List(IMG, FIGURE))
+        } yield (bodyElem, noImgElem)).unzip
+
+      if (isBlank(noImgFig)) {
+        logger.debug(s"[optimizer] empty img figure $noImgFig in $body of ${body.source}")
+        val elem = Repr.makeElem(
+          tag = body.tag,
+          body = cleanedBody,
+          contents = body.contents,
+          attrs = body.attr.filter(_.key != STYLE))
+        Some(elem :: Nil)
+      } else {
+        /*val nodes = (for {
+          elem <- cleanedBody if !isAnchor(elem) && !implicitly[NodeInfo.Aux[T]].isText(elem)
+        } yield elem)
+
+        if (nodes.isEmpty) {
+          logger.debug(s"[optimizer] headings: non-anchor and non-string in $cleanedBody")
           None
+        } else Some(nodes)*/
+        Some(body :: Nil)
       }
-    }
-
-    def isAnchor(node: Repr): Boolean =
-      IsAnchor.unapply(node).nonEmpty
-
-    val (cleanedBody, noImgFig) =
-      (for {
-        bodyElem <- whack(body, n => !(n hasTag CAN_OCCUR_IN_HEADER))
-        noImgElem <- whack(bodyElem, n => n hasTag List(IMG, FIGURE))
-      } yield (bodyElem, noImgElem)).unzip
-
-    if (isBlank(noImgFig)) {
-      logger.debug(s"[optimizer] empty img figure $noImgFig in $body")
-      val elem = Repr.makeElem(
-        tag = body.tag,
-        body = cleanedBody,
-        contents = body.contents,
-        attrs = body.attr.filter(_.key != STYLE))
-      Some(elem :: Nil)
-    } else {
-      /*val nodes = (for {
-        elem <- cleanedBody if !isAnchor(elem) && !implicitly[NodeInfo.Aux[T]].isText(elem)
-      } yield elem)
-
-      if (nodes.isEmpty) {
-        logger.debug(s"[optimizer] headings: non-anchor and non-string in $cleanedBody")
-        None
-      } else Some(nodes)*/
-      Some(body :: Nil)
-    }
+    } else Some(body :: Nil)
   }
 }
 
@@ -294,9 +296,9 @@ trait OpimizerStrategies[T] {
   self: Optimizer[T] =>
 
   protected def coalesceBlocks(sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit logger: Logger): Seq[Repr.Aux[T]]
-  protected def coalesceSiblings(sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit logger: Logger): Seq[Repr.Aux[T]]
+  protected def coalesceSiblings(sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit logger: Logger, sty: DocumentStyle.Aux[T]): Seq[Repr.Aux[T]]
   protected def coalesceHeadings(body: Repr.Aux[T])(implicit logger: Logger): Option[Seq[Repr.Aux[T]]]
-  protected def coalesceParentChild(sig: ElemSig, elem: Repr.Aux[T])(implicit logger: Logger): Option[Repr.Aux[T]]
+  protected def coalesceParentChild(sig: ElemSig, elem: Repr.Aux[T])(implicit logger: Logger, sty: DocumentStyle.Aux[T]): Option[Repr.Aux[T]]
 }
 
 trait OptimizerCoalesceParentChild[T] {
@@ -312,7 +314,7 @@ trait OptimizerCoalesceParentChild[T] {
   //       a
   //       <ul>...</ul>
   //     </li>
-  protected def coalesceParentChild(sig: ElemSig, elem: Repr.Aux[T])(implicit logger: Logger): Option[Repr.Aux[T]] = {
+  protected def coalesceParentChild(sig: ElemSig, elem: Repr.Aux[T])(implicit logger: Logger, sty: DocumentStyle.Aux[T]): Option[Repr.Aux[T]] = {
 
     object BodyWithBogusP {
       val liftableTags = List(LI, DT, DD, FOOTNOTE)
@@ -363,6 +365,24 @@ trait OptimizerCoalesceParentChild[T] {
 
     }
 
+    // If the span applies no interesting formatting
+    // it can essentially by the body inside it
+    object LiftableTextSpan {
+
+      def unapply(elem: Repr.Aux[T]): Option[Seq[Repr.Aux[T]]] = {
+        val id = nodeConfig.styleExtractor.extractId(elem)
+        id flatMap (sty.style) flatMap { style =>
+          elem match {
+            case (elem: Repr) if (elem hasTag SPAN) && style.isReducible =>
+              Some(elem.body)
+            case _ =>
+              None
+          }
+        }
+      }
+
+    }
+
     object LiftableTextNode {
 
       def unapply(elem: Repr.Aux[T]): Option[String] =
@@ -390,7 +410,6 @@ trait OptimizerCoalesceParentChild[T] {
         logger.debug("[parent-child] liftable span")
         val meta = elem.attr.filter(_.key != STYLE) ++
           List(Attribute(STYLE, attrs.mkString(" ")))
-        //val meta = new UnprefixedAttribute(STYLE, attrs, meta0)
         Repr.makeElem(elem.tag, body, attrs = meta, contents = None)(???, ???)
       case _ =>
         elem

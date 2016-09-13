@@ -101,6 +101,12 @@ class NodeOps(val x: scala.xml.Node) extends AnyVal {
       None
   }
 
+  def copy(prefix: String = x.prefix, label: String = x.label,
+           scope: NamespaceBinding = x.scope, meta: MetaData = x.attributes,
+           body: Seq[scala.xml.Node] = x.child): x.type = {
+    new Elem(prefix, label, meta, scope, x.asInstanceOf[Elem].minimizeEmpty, body: _*).asInstanceOf[x.type]
+  }
+
 }
 
 class MetaDataOps(val x: scala.xml.MetaData) extends AnyVal {
@@ -113,5 +119,17 @@ class MetaDataOps(val x: scala.xml.MetaData) extends AnyVal {
 
   private def genericGetTag(entry: String): Option[String] =
     x.asAttrMap.get(entry)
+
+  def fromTags(tags: List[(XmlAttribute, String)]): scala.xml.MetaData =
+    tags.foldRight(x) { case ((attr, v), acc) => attr attributeWithValue (v, acc) }
+
+  def copyWith(tagName: XmlAttribute, value: String): scala.xml.MetaData = {
+    if (x == scala.xml.Null)
+      new PrefixedAttribute(tagName.namespace.short.value, tagName.tag, value, scala.xml.Null)
+    else if (x.key == tagName.tag)
+      new PrefixedAttribute(tagName.namespace.short.value, tagName.tag, value, x.next)
+    else
+      x.copy(x.copyWith(tagName, value))
+  }
 
 }

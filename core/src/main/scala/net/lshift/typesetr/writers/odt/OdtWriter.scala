@@ -37,8 +37,10 @@ class OdtWriter(inputFile: File) extends Writer {
     val outS = new FileOutputStream(f)
     val writer = Channels.newWriter(outS.getChannel(), TextEncoding)
 
-    val rewriteTo = File.createTempFile("rewritten", "-typesetr")
+    val rewriteTo = File.createTempFile("rewritten", "-typesetr.odt")
     val stream = new FileOutputStream(rewriteTo)
+
+    logger.info(s"Rewritten .odt file @ $rewriteTo")
 
     try {
       writer.write("<?xml version='1.0' encoding='" + TextEncoding + s"'?>$NewLine")
@@ -73,7 +75,6 @@ class OdtWriter(inputFile: File) extends Writer {
 
     val space = BlankSpace * (Indent * indent)
     node.tag match {
-      // Ignore synthetic tags, they are only create
       case Tag.syntheticTextTag =>
         true
       case Tag.textTag =>
@@ -101,6 +102,7 @@ class OdtWriter(inputFile: File) extends Writer {
         val scope =
           if (config.Yns) filterNamespaceBinding(n.scope) else NoSpace
         val attrbs = translateMeta(n.attributes)
+
         node.body match {
           case Nil if node.contents.isEmpty =>
             writer.write(s"$space<${n.prefix}:${n.label}$attrbs $scope/>$NewLine")
@@ -142,6 +144,7 @@ class OdtWriter(inputFile: File) extends Writer {
     @tailrec
     def translateMeta0(m: scala.xml.MetaData, pre: List[String]): List[String] =
       if (m == null) pre
+      else if (m == scala.xml.Null) pre
       else m match {
         case PrefixedAttribute("loext", "contextual-spacing", v, next) =>
           translateMeta0(next, pre)

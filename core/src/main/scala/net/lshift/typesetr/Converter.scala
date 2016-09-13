@@ -52,7 +52,7 @@ object Converter {
           val optimizer = postprocessors.DefaultPostProcessor.fromConfig(parser.nodeConfig)
           val optimizedDoc =
             if (config.Yoptimize)
-              optimizer.optimize(parsed.root)
+              optimizer.optimize(parsed.root)(implicitly[Logger], parsed.style)
             else
               parsed.root
 

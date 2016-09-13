@@ -12,7 +12,7 @@ import styles.MetaFromDocument
  */
 abstract class PostProcessor[T] {
 
-  def optimize(node: Repr.Aux[T])(implicit logger: util.Logger): Repr.Aux[T]
+  def optimize(node: Repr.Aux[T])(implicit logger: util.Logger, sty: DocumentStyle.Aux[T]): Repr.Aux[T]
 
   def inferMeta(node: Repr.Aux[T])(implicit docStyle: DocumentStyle.Aux[T]): (Repr.Aux[T], MetaFromDocument)
 

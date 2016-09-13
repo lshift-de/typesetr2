@@ -39,8 +39,7 @@ object StylePropKey {
 
   type Aux[T] = StylePropKey { type Result = T }
 
-  trait RegexConverter {
-    self: StylePropKey =>
+  trait RegexConverter { self: StylePropKey =>
 
     def regex: scala.util.matching.Regex
 
@@ -50,7 +49,10 @@ object StylePropKey {
       regex.findFirstMatchIn(x).map(x => toResult(x.matched))
 
     protected def firstGroup(x: String): Option[Units] =
-      regex.findFirstMatchIn(x).flatMap(v => Units.parse((v.group(1).toInt, v.group(3))))
+      regex.findFirstMatchIn(x).flatMap { v =>
+        val num = if (v.group(2) == null) s"${v.group(1)}" else s"${v.group(1)}${v.group(2)}"
+        Units.parse((num.toDouble, v.group(3)))
+      }
 
   }
 
@@ -68,7 +70,7 @@ object StylePropKey {
   case object FontFamily extends StylePropKey {
     type Result = xml.attributes.FontFamily
     implicit val Tag: this.type = this
-    def name: Option[XmlAttribute] = Some(OdtTags.StyleFFamilyName)
+    def name: Option[XmlAttribute] = Some(OdtTags.StyleFontName)
   }
 
   case object FontSeize extends StylePropKey with RegexConverter {

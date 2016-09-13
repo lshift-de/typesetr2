@@ -75,12 +75,17 @@ object OdtTags {
   val StyleTableRowProps: XmlTag = (implicitly[NameSpaces].apply("style"), "table-row-properties")
   val StyleTableCellProps: XmlTag = (implicitly[NameSpaces].apply("style"), "table-cell-properties")
   val StyleTableProps: XmlTag = (implicitly[NameSpaces].apply("style"), "table-properties")
-  val StyleFFamilyName: XmlAttribute = (implicitly[NameSpaces].apply("style"), "font-name")
+  val StyleFontName: XmlAttribute = (implicitly[NameSpaces].apply("style"), "font-name")
   val StyleTextUnderline: XmlAttribute = (implicitly[NameSpaces].apply("style"), "text-underline-style")
   val StyleTextLinethrough: XmlAttribute = (implicitly[NameSpaces].apply("style"), "text-line-through-style")
   val StyleTextPosition: XmlAttribute = (implicitly[NameSpaces].apply("style"), "text-position")
   val StyleColumnWidth: XmlAttribute = (implicitly[NameSpaces].apply("style"), "column-width")
   val StyleMinHeigh: XmlAttribute = (implicitly[NameSpaces].apply("style"), "min-row-height")
+  val StyleFStyleAsian: XmlAttribute = (implicitly[NameSpaces].apply("style"), "font-style-asian")
+  val StyleFStyleComplex: XmlAttribute = (implicitly[NameSpaces].apply("style"), "font-style-complex")
+  val StyleJustifySingleWord: XmlAttribute = (implicitly[NameSpaces].apply("style"), "justify-single-word")
+  val StyleAutoTextIndent: XmlAttribute = (implicitly[NameSpaces].apply("style"), "auto-text-indent")
+  val StyleWritingMode: XmlAttribute = (implicitly[NameSpaces].apply("style"), "writing-mode")
 
   val FoFSize: XmlAttribute = (implicitly[NameSpaces].apply("fo"), "font-size")
   val FoFWeight: XmlAttribute = (implicitly[NameSpaces].apply("fo"), "font-weight")
@@ -95,6 +100,7 @@ object OdtTags {
   val FoPaddingLeft: XmlAttribute = (implicitly[NameSpaces].apply("fo"), "padding-left")
   val FoPaddingRight: XmlAttribute = (implicitly[NameSpaces].apply("fo"), "padding-right")
   val FoParBreak: XmlAttribute = (implicitly[NameSpaces].apply("fo"), "break-before")
+  val FoParBreakAfter: XmlAttribute = (implicitly[NameSpaces].apply("fo"), "break-after")
   val FoTextIndent: XmlAttribute = (implicitly[NameSpaces].apply("fo"), "text-indent")
 
 }

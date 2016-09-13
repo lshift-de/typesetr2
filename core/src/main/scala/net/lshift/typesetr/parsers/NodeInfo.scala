@@ -26,6 +26,7 @@ abstract class NodeInfo {
 
   /**
    * Does the current node represent the document's content?
+   *
    * @param node node of the document
    * @param nestingLevel the level of nesting from the `root`
    * @return true if the node contains content's body, false otherwise.
@@ -34,6 +35,7 @@ abstract class NodeInfo {
 
   /**
    * Can one of the children of the `node` contain the content body?
+   *
    * @param node node of the document
    * @param nestingLevel the level of nesting from the `root`
    * @return true if one of the children can potentially have content's body, false otherwise

@@ -12,6 +12,12 @@ abstract class StyleExtractor {
 
   type DocNode
 
+  /**
+   * Extract style identifier from the node, if any
+   *
+   * @param node node which we want to analyze
+   * @return a style identifier associated with the given document's node
+   */
   def extractId(node: Repr.Aux[DocNode]): Option[StyleId]
 
 }
