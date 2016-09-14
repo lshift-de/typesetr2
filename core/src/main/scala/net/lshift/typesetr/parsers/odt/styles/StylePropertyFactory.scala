@@ -9,8 +9,11 @@ import net.lshift.typesetr.xml.attributes.FontStyle
 
 import scala.xml.{ TopScope, Elem, MetaData }
 
+import scala.language.implicitConversions
+
 abstract class StylePropertyFactory[T] {
   def create(styleId: StyleId)(implicit factory: NodeFactory.Aux[T]): Repr.Aux[T]
+  def modifyBody(styleId: StyleId, children: Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T]): Seq[Repr.Aux[T]]
 }
 
 object StylePropertyFactory {
@@ -25,6 +28,7 @@ object StylePropertyFactory {
   //   <style:text-properties fo:font-style="italic" style:font-style-asian="italic" style:font-style-complex="italic"/>
   // </style:style>
   private case class QuotingStyleParagraph(parentStyle: Style, indent: ValOfUnit) extends StylePropertyFactory[scala.xml.Node] {
+
     def create(styleId: StyleId)(implicit factory: NodeFactory.Aux[scala.xml.Node]): Repr.Aux[scala.xml.Node] = {
       val paragraphProps = paragraphWithLeftMargin(margin = indent)
       val textProps = textPropertyWithFontStyle(FontStyle.Italic)
@@ -45,6 +49,19 @@ object StylePropertyFactory {
           minimizeEmpty = false, (props.map(_.source)): _*),
         nodes = props)
     }
+
+    def modifyBody(styleId: StyleId, children: Seq[Repr.Aux[scala.xml.Node]])(implicit factory: NodeFactory.Aux[scala.xml.Node]): Seq[Repr.Aux[scala.xml.Node]] = {
+
+      basicReprNode(new Elem(
+        prefix = OdtTags.Span.namespace.short.value,
+        label = OdtTags.Span.tag,
+        attributes1 = (scala.xml.Null).fromTags(List((OdtTags.StyleName, styleId.name))),
+        scope = parentStyle.source.map(_.asInstanceOf[Elem].scope).getOrElse(TopScope),
+        minimizeEmpty = false,
+        children.map(_.source): _*),
+        nodes = children) :: Nil
+    }
+
     private def paragraphWithLeftMargin(margin: ValOfUnit)(implicit factory: NodeFactory.Aux[scala.xml.Node]): Repr.Aux[scala.xml.Node] = {
       val meta: List[(XmlAttribute, String)] =
         List(

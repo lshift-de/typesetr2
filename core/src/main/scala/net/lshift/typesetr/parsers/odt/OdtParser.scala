@@ -222,7 +222,8 @@ class OdtParser() extends Parser {
 
           val attr1 = Attribute(InternalAttributes.indent, lvl.value.toString) ::
                       Attribute(InternalAttributes.style, newStyleId.name) :: Nil
-          Repr.makeElem(tag = Tags.BLOCK, children, attrs = attr1, contents = None)(
+          val italicizedBody = fact.modifyBody(newStyleId, children)
+          Repr.makeElem(tag = Tags.BLOCK, italicizedBody, attrs = attr1, contents = None)(
             source1, implicitly[NodeFactory.Aux[DocNode]])
         } getOrElse (node.wrap(tag = Tags.P, body = children)))
 

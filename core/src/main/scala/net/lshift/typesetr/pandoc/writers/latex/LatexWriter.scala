@@ -21,6 +21,8 @@ import XMPMeta.lang
 class LatexWriter(from: File, target: File, template: styles.StyleTemplate, docMeta: styles.MetaFromDocument, generatePdf: Boolean) extends Writer {
   import LatexWriter._
 
+  type BodyTpe = String
+
   def write(config: Config)(implicit logger: Logger): Unit = {
     val targetLatexF = for {
       meta <- template.metaSchema.map(_.attachDocumentMeta(docMeta))
@@ -43,7 +45,8 @@ class LatexWriter(from: File, target: File, template: styles.StyleTemplate, docM
           replaceFirst(SectionMeta, xmpFields.mkString("\n"))
       logger.info(s"Template without a body: $finalContent0")
 
-      val finalContent = finalContent0.replaceAllLiterally(SectionBody, body)
+      val finalContent =
+        finalContent0.replaceAllLiterally(SectionBody, bodyFixes(body))
       // TODO: include bibliography
 
       val f =
@@ -90,6 +93,11 @@ class LatexWriter(from: File, target: File, template: styles.StyleTemplate, docM
     }
 
   }
+
+  // 1. Pandoc is not aware of the Typesetr's quoting environment
+  def bodyFixes(body: BodyTpe): BodyTpe =
+    // Are there legitimate situations when `quote` should be left as-is.
+    body.replaceAllLiterally("{quote}", "{quoting}")
 
   /**
    *  Create XMP metadata for pdf (via hyperxmp.sty).
