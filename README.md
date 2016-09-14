@@ -18,9 +18,14 @@ the documents before and after Pandoc.
 
 ## Instructions for running (command line tool atm ONLY)
 
-Typesetr 2.x is written in Scala. We use Simple Build Tool (sbt)
-for compiling and running the tool.
-Install the latest version of [sbt](http://www.scala-sbt.org/).
+### Dependencies
+
+ - Simple Build Tool - install the latest version of [sbt](http://www.scala-sbt.org/)
+ - Pandoc - install version [1.17.2](http://pandoc.org/installing.html)
+ - Scala - (optional) `sbt` handles all the compilation process and provides a console but you may still find it useful
+
+### Compiling and running
+
 Then enter sbt's console
 
     > sbt
