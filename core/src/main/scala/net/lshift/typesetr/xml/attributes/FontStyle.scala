@@ -15,5 +15,7 @@ object FontStyle {
     case _           => None
   }
 
+  implicit def toStringVal(x: FontStyle): String = x.name
+
 }
 

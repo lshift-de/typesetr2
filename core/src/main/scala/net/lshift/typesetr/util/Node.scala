@@ -121,7 +121,7 @@ class MetaDataOps(val x: scala.xml.MetaData) extends AnyVal {
     x.asAttrMap.get(entry)
 
   def fromTags(tags: List[(XmlAttribute, String)]): scala.xml.MetaData =
-    tags.foldRight(x) { case ((attr, v), acc) => attr attributeWithValue (v, acc) }
+    tags.foldLeft(x) { case (acc, (attr, v)) => attr attributeWithValue (v, acc) }
 
   def copyWith(tagName: XmlAttribute, value: String): scala.xml.MetaData = {
     if (x == scala.xml.Null)

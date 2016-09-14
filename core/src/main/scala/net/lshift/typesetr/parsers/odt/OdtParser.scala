@@ -93,8 +93,8 @@ class OdtParser() extends Parser {
       prop.toRight("0cm").fold(inCm, inCm)
 
     val doc = (for {
-      rawHeader  <- node \!! (OdtTags.MasterStyle / OdtTags.MasterPage / OdtTags.StyleHeader)
-      rawFooter  <- node \!! (OdtTags.MasterStyle / OdtTags.MasterPage / OdtTags.StyleFooter)
+      rawHeader  <- node \!! (OdtTags.MasterStyle / OdtTags.StyleMasterPage / OdtTags.StyleHeader)
+      rawFooter  <- node \!! (OdtTags.MasterStyle / OdtTags.StyleMasterPage / OdtTags.StyleFooter)
       pgLayout<- node \!! (OdtTags.AutomaticStyle / OdtTags.StylePageLayout)
     } yield {
       for {

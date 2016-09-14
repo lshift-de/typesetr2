@@ -3,7 +3,9 @@ package parsers
 package odt
 package styles
 
-import util.{ Inches, Units, Milimeters }
+import net.lshift.typesetr.util.{ Percentage, Inches, ValOfUnit }
+import net.lshift.typesetr.xml.XmlAttribute
+import net.lshift.typesetr.xml.attributes.FontStyle
 
 import scala.xml.{ TopScope, Elem, MetaData }
 
@@ -14,7 +16,7 @@ abstract class StylePropertyFactory[T] {
 object StylePropertyFactory {
   def odtQuoting(parent: Style): (StyleId, StylePropertyFactory[scala.xml.Node]) = {
     val randomName = StyleId(parent.id.family, parent.id.name + "_1")
-    (randomName, QuotingStyleParagraph(parent, Inches(0.5)))
+    (randomName, QuotingStyleParagraph(parent, Inches(2)))
   }
 
   // Desired output along the lines of
@@ -22,14 +24,15 @@ object StylePropertyFactory {
   //   <style:paragraph-properties fo:margin-left="0.5in" fo:margin-right="0in" fo:line-height="115%" fo:text-align="justify" style:justify-single-word="false" fo:text-indent="0in" style:auto-text-indent="false" fo:break-before="auto" fo:break-after="auto" style:writing-mode="lr-tb"/>
   //   <style:text-properties fo:font-style="italic" style:font-style-asian="italic" style:font-style-complex="italic"/>
   // </style:style>
-  private case class QuotingStyleParagraph(parentStyle: Style, indent: Units) extends StylePropertyFactory[scala.xml.Node] {
+  private case class QuotingStyleParagraph(parentStyle: Style, indent: ValOfUnit) extends StylePropertyFactory[scala.xml.Node] {
     def create(styleId: StyleId)(implicit factory: NodeFactory.Aux[scala.xml.Node]): Repr.Aux[scala.xml.Node] = {
       val paragraphProps = paragraphWithLeftMargin(margin = indent)
-      val textProps = textPropertyWithFontStyle("italic")
+      val textProps = textPropertyWithFontStyle(FontStyle.Italic)
       val props = Seq(paragraphProps, textProps)
 
       val meta =
-        List((OdtTags.StyleName, styleId.name),
+        List(
+          (OdtTags.StyleName, styleId.name),
           (OdtTags.StyleFamily, "paragraph"),
           (OdtTags.StyleParentStyle, "Standard"))
 
@@ -42,19 +45,19 @@ object StylePropertyFactory {
           minimizeEmpty = false, (props.map(_.source)): _*),
         nodes = props)
     }
-
-    private def paragraphWithLeftMargin(margin: Units)(implicit factory: NodeFactory.Aux[scala.xml.Node]): Repr.Aux[scala.xml.Node] = {
-      val meta =
+    private def paragraphWithLeftMargin(margin: ValOfUnit)(implicit factory: NodeFactory.Aux[scala.xml.Node]): Repr.Aux[scala.xml.Node] = {
+      val meta: List[(XmlAttribute, String)] =
         List(
-          (OdtTags.FoMarginLeft, margin.toString),
-          (OdtTags.FoMarginRight, "0in"),
-          (OdtTags.FoLineHeight, "115%"),
+          (OdtTags.FoMarginLeft, margin),
+          (OdtTags.FoFStyle, FontStyle.Italic),
+          (OdtTags.FoMarginRight, Inches(0)),
+          (OdtTags.FoMarginTop, Inches(0)),
+          (OdtTags.FoMarginBottom, Inches(0)),
+          (OdtTags.FoLineHeight, Percentage(115)),
           (OdtTags.FoTextAlign, "justify"),
           (OdtTags.StyleJustifySingleWord, "false"),
-          (OdtTags.FoTextIndent, "0in"),
+          (OdtTags.FoTextIndent, Inches(0)),
           (OdtTags.StyleAutoTextIndent, "false"),
-          (OdtTags.FoParBreak, "auto"),
-          (OdtTags.FoParBreakAfter, "auto"),
           (OdtTags.StyleWritingMode, "lr-tb"))
 
       basicReprNode(new Elem(prefix = OdtTags.StylePProps.namespace.toString,
@@ -63,8 +66,8 @@ object StylePropertyFactory {
         minimizeEmpty = false, Nil: _*), nodes = Nil)
     }
 
-    private def textPropertyWithFontStyle[T](name: String)(implicit factory: NodeFactory.Aux[scala.xml.Node]): Repr.Aux[scala.xml.Node] = {
-      val meta = List(
+    private def textPropertyWithFontStyle[T](name: FontStyle)(implicit factory: NodeFactory.Aux[scala.xml.Node]): Repr.Aux[scala.xml.Node] = {
+      val meta: List[(XmlAttribute, String)] = List(
         (OdtTags.FoFStyle, name),
         (OdtTags.StyleFStyleAsian, name),
         (OdtTags.StyleFStyleComplex, name))
@@ -79,6 +82,9 @@ object StylePropertyFactory {
       Repr.makeElem(xml.Tag.nodeTag, body = nodes, contents = None)(
         source, factory)
     }
+
+    implicit def entry[T](v: (XmlAttribute, T))(implicit conv: T => String): (XmlAttribute, String) =
+      (v._1, conv(v._2))
 
   }
 

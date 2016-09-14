@@ -57,7 +57,7 @@ object OdtTags {
   val Creator: XmlTag = (implicitly[NameSpaces].apply("dc"), "creator")
 
   // style tags
-  val MasterPage: XmlTag = (implicitly[NameSpaces].apply("style"), "master-page")
+  val StyleMasterPage: XmlTag = (implicitly[NameSpaces].apply("style"), "master-page")
   val StyleDefault: XmlTag = (implicitly[NameSpaces].apply("style"), "default-style")
   val StyleHeader: XmlTag = (implicitly[NameSpaces].apply("style"), "header")
   val StyleFooter: XmlTag = (implicitly[NameSpaces].apply("style"), "footer")
@@ -97,6 +97,8 @@ object OdtTags {
   val FoPageWidth: XmlAttribute = (implicitly[NameSpaces].apply("fo"), "page-width")
   val FoMarginLeft: XmlAttribute = (implicitly[NameSpaces].apply("fo"), "margin-left")
   val FoMarginRight: XmlAttribute = (implicitly[NameSpaces].apply("fo"), "margin-right")
+  val FoMarginTop: XmlAttribute = (implicitly[NameSpaces].apply("fo"), "margin-top")
+  val FoMarginBottom: XmlAttribute = (implicitly[NameSpaces].apply("fo"), "margin-bottom")
   val FoPaddingLeft: XmlAttribute = (implicitly[NameSpaces].apply("fo"), "padding-left")
   val FoPaddingRight: XmlAttribute = (implicitly[NameSpaces].apply("fo"), "padding-right")
   val FoParBreak: XmlAttribute = (implicitly[NameSpaces].apply("fo"), "break-before")
