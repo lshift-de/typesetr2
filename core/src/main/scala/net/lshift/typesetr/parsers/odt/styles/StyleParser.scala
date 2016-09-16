@@ -36,6 +36,18 @@ abstract class StyleParser {
                          doc: DocumentStyle.Aux[DocNode])(implicit logger: Logger): DocumentStyle.Aux[DocNode]
 
   /**
+    * Load style information from the node and append it to the existing
+    * style dictionary.
+    *
+    * @param node the underlying node to be analyzed
+    * @param doc the existing style dictionary
+    * @param logger typesetr's logging utility
+    * @return a (potentially updated) document's style dictionary
+    */
+  def appendStyleNode(node: scala.xml.Node,
+                      doc: DocumentStyle.Aux[DocNode])(implicit logger: Logger): DocumentStyle.Aux[DocNode]
+
+  /**
     * Parse a single style node and return
     * a validated and translated representation of it.
     *
@@ -57,6 +69,14 @@ class StyleParserImpl extends StyleParser {
       docWithStyles <- parseGroupNode(rootStyle \!! OdtTags.Styles, doc)
       docWithAutoStyles <- parseGroupNode(rootStyle \!! OdtTags.AutomaticStyle, docWithStyles)
     } yield docWithAutoStyles) getOrElse (doc)
+  }
+
+  def appendStyleNode(node: scala.xml.Node, doc: DocumentStyle.Aux[DocNode])(implicit logger: Logger): DocumentStyle.Aux[DocNode] = {
+    (for {
+      name <- node.attributes.getTag(OdtTags.StyleName)
+      styleInfo <- parseStyle(node, doc)
+      styleId <- StyleId.fromNode(node)
+    } yield (styleId, styleInfo) +: doc) getOrElse doc
   }
 
   private def parseGroupNode(node: Option[Node], doc: DocumentStyle.Aux[DocNode])(implicit logger: Logger): Option[DocumentStyle.Aux[DocNode]] =

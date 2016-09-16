@@ -1,6 +1,8 @@
 package net.lshift.typesetr
 package postprocessors
 
+import net.lshift.typesetr.pandoc.Markers
+import net.lshift.typesetr.xml.attributes.TextAlign
 import parsers.odt.styles._
 import styles.MetaFromDocument
 
@@ -161,7 +163,7 @@ trait OptimizerCoalesceBlocks[T] {
 
   // .block -> pre | blockquote handling
   // hacky and limited ATM; no support for nesting etc.
-  protected def coalesceBlocks(sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit logger: Logger): Seq[Repr.Aux[T]] = {
+  protected def coalesceBlocks(sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit logger: Logger, sty: DocumentStyle.Aux[T]): Seq[Repr.Aux[T]] = {
 
     @tailrec
     def codeBlock(elems: Seq[Repr.Aux[T]], txt: List[Option[String]]): (Option[Repr.Aux[T]], Seq[Repr.Aux[T]]) = elems match {
@@ -180,17 +182,22 @@ trait OptimizerCoalesceBlocks[T] {
     @tailrec
     def nonCodeBlock(elems: Seq[Repr.Aux[T]], blockq: Seq[Repr.Aux[T]]): (Seq[Repr.Aux[T]], Seq[Repr.Aux[T]]) = elems match {
       case (elem: Repr) :: rest if elem hasTag CODE =>
-        (Repr.optMakeElem(BLOCKQUOTE, blockq)(
-          source = blockq.head.source,
-          factory = implicitly[NodeFactory.Aux[T]]).getOrElse(Seq()), rest)
+        (combineBlocks(blockq.reverse).getOrElse(Seq()), elems)
 
       case (elem: Repr) :: rest =>
-        if (elem hasAttrWithVal ("class", "right")) {
+        val styleId = nodeConfig.styleExtractor.extractId(elem)
+        val align =
+          for {
+            id <- styleId
+            style <- sty.style(id)
+            textStyle <- style.textAlign
+          } yield textStyle
+
+        if (align.map(_ == TextAlign.Right).getOrElse(false)) {
           // this is a citation.
           // append footer
-          val citation = Seq(Repr.makeElem(CITE, Seq(elem), contents = None)(???, ???))
-          nonCodeBlock(rest,
-            Seq(Repr.makeElem(FOOTER, citation, contents = None)(???, ???)))
+          val cited = Markers.citationInBlockQuotation { elem.body }
+          nonCodeBlock(rest, elem.copy(cited) +: blockq)
         } else {
           val toAppend =
             if ((elem hasTag BLOCK_TAGS) || (elem hasTag FOOTNOTE))
@@ -203,7 +210,19 @@ trait OptimizerCoalesceBlocks[T] {
 
       case _ =>
         // No more blocks
-        (blockq, elems)
+        (combineBlocks(blockq.reverse).getOrElse(Seq()), elems)
+    }
+
+    def combineBlocks(elems: Seq[Repr.Aux[T]]): Option[Seq[Repr.Aux[T]]] = elems match {
+      case Nil =>
+        None
+
+      case rest =>
+        Some(Seq(
+          Repr.makeElem(
+            tag = BLOCKQUOTE,
+            body = elems.flatMap(_.body),
+            contents = None)(rest.head.source, implicitly[NodeFactory.Aux[T]])))
     }
 
     @tailrec
@@ -214,7 +233,7 @@ trait OptimizerCoalesceBlocks[T] {
         val (codeNode0, rest1) = codeBlock(elems, Nil)
         val codeNode = codeNode0.map(n => Seq(n)).getOrElse(Seq())
         val (nonCodeNodes, rest2) = nonCodeBlock(rest1, Nil)
-        coalesceBlocks0(rest2, acc ++ codeNode ++ nonCodeNodes.reverse)
+        coalesceBlocks0(rest2, acc ++ codeNode ++ nonCodeNodes)
     }
 
     coalesceBlocks0(elems, Seq())
@@ -258,7 +277,7 @@ trait OptimzerCoalesceHeadings[T] {
   }
 
   // Is there any actual textual content in the heading?
-  protected def coalesceHeadings(body: Repr.Aux[T])(implicit logger: Logger): Option[Seq[Repr.Aux[T]]] = {
+  protected def coalesceHeadings(body: Repr.Aux[T])(implicit logger: Logger, sty: DocumentStyle.Aux[T]): Option[Seq[Repr.Aux[T]]] = {
     implicit def source: T = body.source
 
     if (H_TAGS.contains(body.tag)) {
@@ -295,9 +314,9 @@ trait OptimzerCoalesceHeadings[T] {
 trait OpimizerStrategies[T] {
   self: Optimizer[T] =>
 
-  protected def coalesceBlocks(sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit logger: Logger): Seq[Repr.Aux[T]]
+  protected def coalesceBlocks(sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit logger: Logger, sty: DocumentStyle.Aux[T]): Seq[Repr.Aux[T]]
   protected def coalesceSiblings(sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit logger: Logger, sty: DocumentStyle.Aux[T]): Seq[Repr.Aux[T]]
-  protected def coalesceHeadings(body: Repr.Aux[T])(implicit logger: Logger): Option[Seq[Repr.Aux[T]]]
+  protected def coalesceHeadings(body: Repr.Aux[T])(implicit logger: Logger, sty: DocumentStyle.Aux[T]): Option[Seq[Repr.Aux[T]]]
   protected def coalesceParentChild(sig: ElemSig, elem: Repr.Aux[T])(implicit logger: Logger, sty: DocumentStyle.Aux[T]): Option[Repr.Aux[T]]
 }
 

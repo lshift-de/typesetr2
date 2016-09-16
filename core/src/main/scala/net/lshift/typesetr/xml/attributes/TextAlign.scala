@@ -29,4 +29,6 @@ object TextAlign {
 
   def all = List(Start, End, Left, Right, Center, Justify)
 
+  implicit def toString(x: TextAlign): String = x.name
+
 }

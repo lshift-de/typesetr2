@@ -3,11 +3,12 @@ package parsers
 package odt
 package styles
 
+import net.lshift.typesetr.pandoc.Markers
 import net.lshift.typesetr.util.{ Percentage, Inches, ValOfUnit }
 import net.lshift.typesetr.xml.XmlAttribute
-import net.lshift.typesetr.xml.attributes.FontStyle
+import net.lshift.typesetr.xml.attributes.{ TextAlign, FontStyle }
 
-import scala.xml.{ TopScope, Elem, MetaData }
+import scala.xml.{ TopScope, Elem, MetaData, Text }
 
 import scala.language.implicitConversions
 
@@ -19,7 +20,7 @@ abstract class StylePropertyFactory[T] {
 object StylePropertyFactory {
   def odtQuoting(parent: Style): (StyleId, StylePropertyFactory[scala.xml.Node]) = {
     val randomName = StyleId(parent.id.family, parent.id.name + "_1")
-    (randomName, QuotingStyleParagraph(parent, Inches(2)))
+    (randomName, QuotingStyleParagraph(parent, PandocQuoteLeftMargin))
   }
 
   // Desired output along the lines of
@@ -30,7 +31,7 @@ object StylePropertyFactory {
   private case class QuotingStyleParagraph(parentStyle: Style, indent: ValOfUnit) extends StylePropertyFactory[scala.xml.Node] {
 
     def create(styleId: StyleId)(implicit factory: NodeFactory.Aux[scala.xml.Node]): Repr.Aux[scala.xml.Node] = {
-      val paragraphProps = paragraphWithLeftMargin(margin = indent)
+      val paragraphProps = paragraphWithLeftMargin(margin = indent, parentStyle.textAlign)
       val textProps = textPropertyWithFontStyle(FontStyle.Italic)
       val props = Seq(paragraphProps, textProps)
 
@@ -51,7 +52,6 @@ object StylePropertyFactory {
     }
 
     def modifyBody(styleId: StyleId, children: Seq[Repr.Aux[scala.xml.Node]])(implicit factory: NodeFactory.Aux[scala.xml.Node]): Seq[Repr.Aux[scala.xml.Node]] = {
-
       basicReprNode(new Elem(
         prefix = OdtTags.Span.namespace.short.value,
         label = OdtTags.Span.tag,
@@ -62,7 +62,7 @@ object StylePropertyFactory {
         nodes = children) :: Nil
     }
 
-    private def paragraphWithLeftMargin(margin: ValOfUnit)(implicit factory: NodeFactory.Aux[scala.xml.Node]): Repr.Aux[scala.xml.Node] = {
+    private def paragraphWithLeftMargin(margin: ValOfUnit, textAlign: Option[TextAlign])(implicit factory: NodeFactory.Aux[scala.xml.Node]): Repr.Aux[scala.xml.Node] = {
       val meta: List[(XmlAttribute, String)] =
         List(
           (OdtTags.FoMarginLeft, margin),
@@ -71,7 +71,7 @@ object StylePropertyFactory {
           (OdtTags.FoMarginTop, Inches(0)),
           (OdtTags.FoMarginBottom, Inches(0)),
           (OdtTags.FoLineHeight, Percentage(115)),
-          (OdtTags.FoTextAlign, "justify"),
+          (OdtTags.FoTextAlign, textAlign.map(_.name).getOrElse(TextAlign.Justify.name)),
           (OdtTags.StyleJustifySingleWord, "false"),
           (OdtTags.FoTextIndent, Inches(0)),
           (OdtTags.StyleAutoTextIndent, "false"),
@@ -104,5 +104,7 @@ object StylePropertyFactory {
       (v._1, conv(v._2))
 
   }
+
+  private final val PandocQuoteLeftMargin = Inches(2)
 
 }

@@ -1,12 +1,12 @@
 package net.lshift.typesetr
-package pandoc.writers.latex
+package pandoc
+package writers.latex
 
 import java.io.{ Writer => IOWriter, _ }
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 
 import cmd.{ LogLevel, Config }
-import pandoc.Writer
 import pandoc.writers._
 import net.lshift.typesetr.styles._
 import util.Logger
@@ -21,7 +21,15 @@ import XMPMeta.lang
 class LatexWriter(from: File, target: File, template: styles.StyleTemplate, docMeta: styles.MetaFromDocument, generatePdf: Boolean) extends Writer {
   import LatexWriter._
 
+  type Out = cmd.OutputFormat.Tex.type
+
   type BodyTpe = String
+
+  private val customCmds =
+    // TODO: Are there legitimate situations when `quote` should be left as-is?
+    s"""|\\\\renewenvironment\\{quote\\}\\{\\\\begin\\{quoting\\}\\}\\{\\\\end\\{quoting\\}\\}
+        |\\\\newenvironment\\{rightalign\\}\\{\\\\begin\\{flushright\\}\\\\itshape\\}\\{\\\\end\\{flushright\\}\\}
+     """.stripMargin
 
   def write(config: Config)(implicit logger: Logger): Unit = {
     val targetLatexF = for {
@@ -41,7 +49,7 @@ class LatexWriter(from: File, target: File, template: styles.StyleTemplate, docM
       val finalContent0 =
         templBody.
           replaceFirst(SectionBabel, babelHeader).
-          replaceFirst(SectionHead, latexHead.mkString("\n")).
+          replaceFirst(SectionHead, latexHead.mkString("\n") + "\n" + customCmds).
           replaceFirst(SectionMeta, xmpFields.mkString("\n"))
       logger.info(s"Template without a body: $finalContent0")
 
@@ -94,10 +102,12 @@ class LatexWriter(from: File, target: File, template: styles.StyleTemplate, docM
 
   }
 
-  // 1. Pandoc is not aware of the Typesetr's quoting environment
-  def bodyFixes(body: BodyTpe): BodyTpe =
-    // Are there legitimate situations when `quote` should be left as-is.
-    body.replaceAllLiterally("{quote}", "{quoting}")
+  def bodyFixes(body: BodyTpe)(implicit ppp: postprocessors.PandocPostProcessor.Aux[Out, BodyTpe]): BodyTpe = {
+    val v1 = ppp.replaceEnvStart(body)
+    val v2 = ppp.replaceEnvEnd(v1)
+    val v3 = ppp.replaceCmdStart(v2)
+    ppp.replaceCmdEnd(v3)
+  }
 
   /**
    *  Create XMP metadata for pdf (via hyperxmp.sty).

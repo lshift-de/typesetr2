@@ -61,12 +61,15 @@ class OdtParser() extends Parser {
           scriptsNode <- parseBody(rawScripts)(styleFromMeta, logger)
         } yield scriptsNode :: Nil).getOrElse(List())
 
-      val styleFromDoc = StyleParser.default().loadFromDocContent(root, styleFromMeta)
-      val bodyNodes = rawBody.child.flatMap(parseBody(_)(styleFromDoc, logger))
+      val styleParser = StyleParser.default()
+      val stylesFromDoc = styleParser.loadFromDocContent(root, styleFromMeta)
+      val bodyNodes = rawBody.child.flatMap(parseBody(_)(stylesFromDoc, logger))
       val body1 = Repr.makeElem(Tags.BODY, bodyNodes, contents = None)(rawBody, implicitly[NodeFactory.Aux[DocNode]])
-      val reifiedStyles = styleInBody.copy(styleInBody.body ++ newStyles)
+      val reifiedStyleNodes = styleInBody.copy(styleInBody.body ++ newStyles)
+      val reifiedStylesDict = newStyles.foldLeft(stylesFromDoc) {
+        case (doc, styleNode) => styleParser.appendStyleNode(styleNode.source, doc) }
 
-      (root, styleFromDoc, scriptsNode ::: (parseFonts(rawFont) :: reifiedStyles :: body1 :: Nil))
+      (root, reifiedStylesDict, scriptsNode ::: (parseFonts(rawFont) :: reifiedStyleNodes :: body1 :: Nil))
     }
 
     parsed match {
@@ -228,7 +231,6 @@ class OdtParser() extends Parser {
         } getOrElse (node.wrap(tag = Tags.P, body = children)))
 
       case OdtTags.Span =>
-
         // Translate attributes into individual, nested nodes
         val body1 = translateStyleToTags(children, styleToTagsMap, sty)
         val body2 = sty.fontFamily.map(font =>

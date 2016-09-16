@@ -78,11 +78,6 @@ object Repr {
     factory.createWithContents(t, source, contents0)
   }
 
-
-  def optMakeElem[T](tag: Tag, body: Seq[Repr.Aux[T]])(implicit source: T, factory: NodeFactory.Aux[T]): Option[Seq[Repr.Aux[T]]] =
-    if (body.isEmpty) None
-    else Some(makeElem(tag, body, contents = None, attrs = Nil) :: Nil)
-
   def empty[T](implicit builder: ReprNullFactory[T]): Repr.Aux[T] =
     builder.empty()
 
@@ -113,7 +108,7 @@ object Repr {
     def getAttribute(attrName: String): Option[Attribute] =
       x.attr.find(_.key == attrName)
 
-    def hasAttrWithVal(attrName: String, value: String): Boolean =
+    def hasAttrWithVal(attrName: AttributeKey, value: String): Boolean =
       x.attr.find(_.key == attrName).map(_.value == value).getOrElse(false)
 
     def extractPlainText: Option[String] = extractPlainText(deep = false)
