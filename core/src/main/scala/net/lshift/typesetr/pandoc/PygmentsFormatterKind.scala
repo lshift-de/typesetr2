@@ -1,0 +1,6 @@
+package net.lshift.typesetr
+package pandoc
+
+sealed abstract class PygmentsFormatterKind
+case object LatexFormatter extends PygmentsFormatterKind
+case object HtmlFormatter extends PygmentsFormatterKind
