@@ -22,7 +22,7 @@ trait MetaInferencer[T] { self =>
     }).unzip
 
     // The order of occurrence matters.
-    // Combine different commands into a single meta-sheet
+    // 2. Combine different commands into a single meta dictionary
     val meta =
       childrenAndCmds._2.flatten.foldLeft(nodeConfig.metaExtractor) {
         case (meta, cmd) => cmd.includeIn(meta)
@@ -32,15 +32,20 @@ trait MetaInferencer[T] { self =>
   }
 
   /**
-   * Does the paragraph has the important meta-document information?
+   * Does the paragraph have the important meta-document information?
    * Those are represented at the top level of the file by the underlined headers.
+   * Note: this is roughly represented as
+    * <p>
+    *  <span><u>Some meta tag</u></span>
+    *  Value associated with the meta tag
+    * </p>
    */
   private object CommandParagraph {
 
     def unapply(elem: Repr.Aux[T]): Option[CommandNode] = elem.tag match {
       case InternalTags.P =>
         elem.body match {
-          case CommandSpan(cmd) if cmd.cmd.nonEmpty && cmd.cmd.get != "caption" =>
+          case SpanWithValue(cmd) if cmd.cmd.nonEmpty && cmd.cmd.get != "caption" =>
             Some(cmd)
           case others =>
             None
@@ -49,9 +54,16 @@ trait MetaInferencer[T] { self =>
     }
 
     object CommandSpan {
+      def unapply(elem: Repr.Aux[T]): Option[Repr.Aux[T]] = elem.tag match {
+        case InternalTags.SPAN => elem.body.headOption
+        case _                 => None
+      }
+    }
+
+    object SpanWithValue {
       def unapply(elems: Seq[Repr.Aux[T]]): Option[CommandNode] =
         elems match {
-          case cmd :: rest if cmd.tag == InternalTags.U =>
+          case CommandSpan(cmd) :: rest if cmd.tag == InternalTags.U =>
             Some(new RegularCommandNode(cmd, rest))
           case _ =>
             None
@@ -67,7 +79,7 @@ trait MetaInferencer[T] { self =>
   private object StyleCommandHeader {
 
     def unapply(elem: Repr.Aux[T])(implicit docStyle: DocumentStyle.Aux[T]): Option[CommandNode] = {
-      val style = docStyle.styleForNode(elem)(self.nodeConfig.styleExtractor)
+      val style = docStyle.styleForNode(elem)(self.nodeConfig.styleExtractor, self.nodeConfig.nodeInfo)
       style.flatMap(hasMetaInfo).map(kind => new StyleCommandNode(kind, elem))
     }
 
