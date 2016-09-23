@@ -27,6 +27,12 @@ abstract class MetaFromDocument {
 
   def isUpdateable: Boolean
 
+  override def toString: String =
+    s"""|Title: ${title.getOrElse("None")}
+        |SubTitle: ${subtitle.getOrElse("None")}
+        |Keys:
+        |  ${entries.mkString("\n-")}"""
+
 }
 
 object MetaFromDocument {
