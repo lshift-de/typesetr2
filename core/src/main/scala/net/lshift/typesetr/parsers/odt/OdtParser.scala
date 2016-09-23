@@ -64,7 +64,7 @@ class OdtParser() extends Parser {
       val styleParser = StyleParser.default()
       val stylesFromDoc = styleParser.loadFromDocContent(root, styleFromMeta)
       val bodyNodes = rawBody.child.flatMap(parseBody(_)(stylesFromDoc, logger))
-      val body1 = Repr.makeElem(Tags.BODY, bodyNodes, contents = None)(rawBody, implicitly[NodeFactory.Aux[DocNode]])
+      val body1 = Repr.makeElem(Tags.BODY, bodyNodes, contents = None, attrs = Nil)(rawBody, implicitly[NodeFactory.Aux[DocNode]])
       val reifiedStyleNodes = styleInBody.copy(styleInBody.body ++ newStyles)
       val reifiedStylesDict = newStyles.foldLeft(stylesFromDoc) {
         case (doc, styleNode) => styleParser.appendStyleNode(styleNode.source, doc) }
@@ -163,7 +163,7 @@ class OdtParser() extends Parser {
         val tabNodes =
           Repr.makeTextElem[DocNode](tabEncoded * tabsNum, synthetic = true)
 
-        Repr.makeElem(Tag.nodeTag, tabNodes +: children, contents = None)
+        Repr.makeElem(Tag.nodeTag, tabNodes +: children, contents = None, attrs = Nil)
 
       case OdtTags.S =>
         val spaces =
@@ -171,7 +171,7 @@ class OdtParser() extends Parser {
 
         val whitespaceNodes =
           Repr.makeTextElem[DocNode](spaceEncoded * spaces, synthetic = true)
-        Repr.makeElem(Tag.nodeTag, whitespaceNodes +: children, contents = None)
+        Repr.makeElem(Tag.nodeTag, whitespaceNodes +: children, contents = Some(spaceEncoded*spaces), attrs = Nil)
 
       case OdtTags.Linebreak =>
         Repr.makeTextElem[DocNode](linebreakEncoded, synthetic = true)
@@ -186,7 +186,7 @@ class OdtParser() extends Parser {
       case OdtTags.TextList =>
         val listStyle = docStyle.newListLevelContext
         val children = node.child.flatMap(parseBody(_)(listStyle, logger))
-        Repr.makeElem(tag = Tags.LIST, body = children, contents = None)
+        Repr.makeElem(tag = Tags.LIST, body = children, contents = None, attrs = Nil)
 
       case OdtTags.TextListItem =>
         node.wrap(tag = Tags.LI, body = children)
@@ -207,7 +207,7 @@ class OdtParser() extends Parser {
 
       case OdtTags.NoteBody =>
         // TODO: postprocessing should get rid of the whitespaces
-        Repr.makeElem(Tags.FOOTNOTE, children, contents = None)
+        Repr.makeElem(Tags.FOOTNOTE, children, contents = None, attrs = Nil)
 
       case OdtTags.P =>
         // infer indentation level from the style
@@ -218,26 +218,33 @@ class OdtParser() extends Parser {
           // Augment the style of the paragraph to
           // introduce blockquote.
 
+          // Note: we only add a new style here, but do not modify the node
+          // directly here.
+          // The change of style is reflected in the Typesetr's internal
+          // attribute list that carries over the new style info name.
+          // The latter will be modified, if necessary, in the Odt writer.
           val (newStyleId, fact) = StylePropertyFactory.odtQuoting(parent = sty)
-          val source1 = source.copy(meta =
-            source.attributes.copyWith(OdtTags.StyleNameAttr, newStyleId.name))
           newStyles = fact.create(newStyleId) :: newStyles
 
-          val attr1 = Attribute(InternalAttributes.indent, lvl.value.toString) ::
-                      Attribute(InternalAttributes.style, newStyleId.name) :: Nil
-          val italicizedBody = fact.modifyBody(newStyleId, children)
-          Repr.makeElem(tag = Tags.BLOCK, italicizedBody, attrs = attr1, contents = None)(
-            source1, implicitly[NodeFactory.Aux[DocNode]])
+
+          val attr1 = Attribute(InternalAttributes.style, newStyleId.name) :: Nil
+          Repr.makeElem(tag = Tags.BLOCK, children, attrs = attr1, contents = None)(
+            source, implicitly[NodeFactory.Aux[DocNode]])
         } getOrElse (node.wrap(tag = Tags.P, body = children)))
 
       case OdtTags.Span =>
         // Translate attributes into individual, nested nodes
-        val body1 = translateStyleToTags(children, styleToTagsMap, sty)
-        val body2 = sty.fontFamily.map(font =>
-          if (Utils.isCodeFont(font)) Repr.makeElem(Tags.CODE, body1, contents = None) :: Nil
-          else body1)
 
-        Repr.makeElem(tag = Tags.SPAN, body = body2.getOrElse(body1), contents = None)
+        lazy val body1 = translateStyleToTags(children, styleToTagsMap, sty)
+        val body2 = sty.fontFamily.filter(_.isCodeFont).map(_ =>
+            Repr.makeElem(
+              tag = Tags.CODE,
+              body = children,
+              contents = None,
+              attrs = Attribute(InternalAttributes.style, "Standard") :: Nil))
+
+        scalaz.Tag.unwrap(
+          First(body2) |+| First(Repr.makeElem(tag = Tags.SPAN, body = body1, contents = None, attrs = Nil)))
 
       case OdtTags.A =>
         //val tpeAttr = AttributeKey(OdtTags.HrefType)
@@ -248,7 +255,7 @@ class OdtParser() extends Parser {
 
         val body = children.flatMap(child =>
           whack(child, _ hasTag (Tags.SPAN | Tags.U)))
-        Repr.makeElem(tag = Tags.A, body, contents = None)
+        Repr.makeElem(tag = Tags.A, body, contents = None, attrs = Nil)
 
       case OdtTags.BookmarkStart =>
         // TOOD: Missing guards
@@ -349,9 +356,7 @@ class OdtParser() extends Parser {
             for {
               val2Tag <- sty2Tag.allowedValues.find(_.value == propValue)
               attributeTag <- sty2Tag.styleKey.name
-              // Leave the style attribute, as is.
-              //src <- orig.withAttribute(Attribute(attributeTag, val2Tag.value.name), acc)
-            } yield Seq(Repr.makeElem(tag = val2Tag.tag, body = acc, contents = None)(orig, implicitly[NodeFactory.Aux[DocNode]]))
+            } yield Seq(Repr.makeElem(tag = val2Tag.tag, body = acc, contents = None, attrs = Nil)(orig, implicitly[NodeFactory.Aux[DocNode]]))
           ).getOrElse(acc)
         }
     }

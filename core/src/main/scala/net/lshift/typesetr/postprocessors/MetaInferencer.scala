@@ -35,10 +35,10 @@ trait MetaInferencer[T] { self =>
    * Does the paragraph have the important meta-document information?
    * Those are represented at the top level of the file by the underlined headers.
    * Note: this is roughly represented as
-    * <p>
-    *  <span><u>Some meta tag</u></span>
-    *  Value associated with the meta tag
-    * </p>
+   * <p>
+   *  <span><u>Some meta tag</u></span>
+   *  Value associated with the meta tag
+   * </p>
    */
   private object CommandParagraph {
 

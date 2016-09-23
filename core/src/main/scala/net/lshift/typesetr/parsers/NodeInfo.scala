@@ -42,6 +42,14 @@ abstract class NodeInfo {
    */
   def canContainContent(node: Repr.Aux[DocNode], nestingLevel: Int): Boolean
 
+  /**
+   * Text representation
+   *
+   * @param node node of the document
+   * @return empty, if impossible to retrieve a string representation, non-empty string otherwise
+   */
+  def textRepresentation(node: Repr.Aux[DocNode]): Option[String]
+
 }
 
 object NodeInfo {

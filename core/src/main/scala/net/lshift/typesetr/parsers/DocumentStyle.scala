@@ -66,12 +66,15 @@ abstract class DocumentStyle { self =>
    * @param extr a generic style extractor for a document's node
    * @return a style that is being applied to the given node, if any
    */
-  def styleForNode(node: Repr.Aux[Node])(implicit extr: StyleExtractor.Aux[Node]): Option[Style] = {
-    val styleIdOpt = extr.extractId(node)
-    for {
-      styleId <- styleIdOpt
-      style <- this.style(styleId)
-    } yield style
+  def styleForNode(node: Repr.Aux[Node])(implicit extr: StyleExtractor.Aux[Node], info: NodeInfo.Aux[Node]): Option[Style] = {
+    if (implicitly[NodeInfo.Aux[Node]].isText(node)) None
+    else {
+      val styleIdOpt = extr.extractId(node)
+      for {
+        styleId <- styleIdOpt
+        style <- this.style(styleId)
+      } yield style
+    }
   }
 
   protected def styles: Map[StyleId, Style]

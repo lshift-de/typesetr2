@@ -70,7 +70,9 @@ object MyBuild extends Build {
       "commons-io" % "commons-io" % "2.4",
       "org.jbibtex" % "jbibtex" % "1.0.15",
       "com.chuusai" %% "shapeless" % "2.3.1",
-      "joda-time" % "joda-time" % "2.9.4"
+      "joda-time" % "joda-time" % "2.9.4",
+      "org.python" % "jython-standalone" % "2.7.0",
+      "org.pygments" % "pygments" % "1.5" % "runtime"
     )
   )
 

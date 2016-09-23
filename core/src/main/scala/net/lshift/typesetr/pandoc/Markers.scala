@@ -2,24 +2,42 @@ package net.lshift.typesetr.pandoc
 
 import net.lshift.typesetr.parsers.{ NodeFactory, Repr }
 
+import scala.xml.Text
+
 object Markers {
 
-  private def env[T](name: String)(txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T]): Seq[Repr.Aux[T]] = {
-    (Repr.makeTextElem(s"$BeginEnv!$name!", synthetic = false)(factory.textNode(s"$BeginEnv!$name!"), factory) +:
-      txt) :+
-      Repr.makeTextElem(s"$EndEnv!$name!", synthetic = false)(factory.textNode(s"$EndEnv!$name!"), factory)
+  private[this] var counter = 0
+
+  private[this] def increment(): Int = {
+    val res = counter
+    counter = counter + 1
+    res
   }
 
-  private def cmd[T](name: String)(txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T]): Seq[Repr.Aux[T]] = {
-    (Repr.makeTextElem(s"$BeginCmd!$name!", synthetic = false)(factory.textNode(s"$BeginCmd!$name!"), factory) +:
+  private def wrap[T](name: String, beginName: String, endName: String)(txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T]): Seq[Repr.Aux[T]] = {
+    val name1 = name + "-" + increment()
+    (Repr.makeTextElem(s"$beginName!$name1!", synthetic = false)(factory.textNode(s"$beginName!$name1!"), factory) +:
       txt) :+
-      Repr.makeTextElem(s"$EndCmd!$name!", synthetic = false)(factory.textNode(s"$EndCmd!$name!"), factory)
+      Repr.makeTextElem(s"$endName!$name1!", synthetic = false)(factory.textNode(s"$endName!$name1!"), factory)
   }
+
+  private def env[T](name: String)(txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T]): Seq[Repr.Aux[T]] =
+    wrap(name, BeginEnv, EndEnv)(txt)
+
+  private def cmd[T](name: String)(txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T]): Seq[Repr.Aux[T]] =
+    wrap(name, BeginCmd, EndCmd)(txt)
+
+  private def verbatim[T](name: String)(txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T]): Seq[Repr.Aux[T]] =
+    wrap(name, BeginFormat, EndFormat)(txt)
 
   def citationInBlockQuotation[T](txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T]): Seq[Repr.Aux[T]] =
     cmd(RightAlign)(txt)
 
+  def formatBlock[T](txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T]): Seq[Repr.Aux[T]] =
+    verbatim(Verbatim)(txt)
+
   final val RightAlign = "attrib"
+  final val Verbatim = "verbatim"
 
   private final val BeginEnv = "TYPESETRENVSTART"
 
@@ -29,12 +47,18 @@ object Markers {
 
   private final val EndCmd = "TYPESETRCMDEND"
 
-  final val BeginEnvR = new scala.util.matching.Regex(s"$BeginEnv!(.*)!")
+  private final val BeginFormat = "TYPESETRPRESTART"
 
-  final val EndEnvR = new scala.util.matching.Regex(s"$EndEnv!(.*)!")
+  private final val EndFormat = "TYPESETRPREEND"
 
-  final val BeginCmdR = new scala.util.matching.Regex(s"$BeginCmd!(.*)!")
+  final val groupStartName = "group-start"
+  final val groupName = "content"
+  final val groupEndName = "group-end"
 
-  final val EndCmdR = new scala.util.matching.Regex(s"$EndCmd!(.*)!")
+  final val EnvR = new scala.util.matching.Regex(s"(?s)$BeginEnv!(.*)-(\\d*)!(.*)$EndEnv!(.*)-\\2!", groupStartName, "id", groupName, groupEndName)
+
+  final val CmdR = new scala.util.matching.Regex(s"(?s)$BeginCmd!(.*)-(\\d*)!(.*)$EndCmd!(.*)-\\2!", groupStartName, "id", groupName, groupEndName)
+
+  final val PreR = new scala.util.matching.Regex(s"(?s)${BeginFormat}!$Verbatim-(\\d*)!(.*)${EndFormat}!$Verbatim-\\1!", "id", groupName)
 
 }

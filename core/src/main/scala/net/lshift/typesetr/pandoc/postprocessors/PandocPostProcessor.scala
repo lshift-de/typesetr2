@@ -19,48 +19,36 @@ abstract class PandocPostProcessor {
   type Out <: cmd.OutputFormat
 
   /**
-    * Replace the environment's starting tag with the
-    * target's equivalent
+    * Replace the environment's starting/ending tag,
+    * and the contents within into the target's equivalent
     *
     * @param body content to translate
     * @return `body` with all the occurrences of the
     *        environment's starting tag
     *        replaced by the target's equivalent
     */
-  def replaceEnvStart(body: BodyTpe): BodyTpe
+  def replaceEnvBlock(body: BodyTpe): BodyTpe
 
   /**
-    * Replace the environment's ending tag with the
-    * target's equivalent
+    * Replace the command's starting/ending tag, and the contents
+    * within into the target's equivalent
     *
     * @param body content to translate
     * @return `body` with all the occurrences of the
-    *        environment's starting tag
-    *        replaced by the target's equivalent
+    *        commands replaced by the target's equivalent
     */
-  def replaceEnvEnd(body: BodyTpe): BodyTpe
+  def replaceCmdBlock(body: BodyTpe): BodyTpe
 
   /**
-    * Replace the command's starting tag with the
-    * target's equivalent
+    * Replace all pre-formatted fragments with the target's
+    * equivalent
     *
     * @param body content to translate
     * @return `body` with all the occurrences of the
-    *        commands's starting tag
-    *        replaced by the target's equivalent
+    *        pre-formatted fragments replaced by the
+    *        target's equivalent
     */
-  def replaceCmdStart(body: BodyTpe): BodyTpe
-
-  /**
-    * Replace the commands's starting tag with the
-    * target's equivalent
-    *
-    * @param body content to translate
-    * @return `body` with all the occurrences of the
-    *        commands's starting tag
-    *        replaced by the target's equivalent
-    */
-  def replaceCmdEnd(body: BodyTpe): BodyTpe
+  def replaceFormattedBlock(body: BodyTpe): BodyTpe
 
 }
 

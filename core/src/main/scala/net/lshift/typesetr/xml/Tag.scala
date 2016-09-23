@@ -71,6 +71,7 @@ object Tag {
     def state: TagState = Replace
   }
 
+  // TODO: Document those
   sealed abstract class TagState
 
   case object Optimize extends TagState

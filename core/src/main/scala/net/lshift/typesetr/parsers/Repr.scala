@@ -68,7 +68,7 @@ object Repr {
   def makeElem[T](tag: Tag,
                   body: Seq[Repr.Aux[T]],
                   contents: Option[String],
-                  attrs: List[Attribute] = Nil)(
+                  attrs: List[Attribute])(
     implicit source: T, factory: NodeFactory.Aux[T]): Repr.Aux[T] =
     factory.create(tag, source, body, attrs = attrs, contents = contents)
 
@@ -81,11 +81,10 @@ object Repr {
   def empty[T](implicit builder: ReprNullFactory[T]): Repr.Aux[T] =
     builder.empty()
 
-
-  implicit class ReprOps(val x: Repr) extends AnyVal {
+  implicit class ReprOps[T](val x: Repr.Aux[T]) extends AnyVal {
 
     def hasTag(tags: List[Tag]): Boolean =
-      tags.contains(x)
+      tags.contains(x.tag)
 
     def hasTag(target: Tag): Boolean =
       hasTag(List(target))
@@ -111,21 +110,25 @@ object Repr {
     def hasAttrWithVal(attrName: AttributeKey, value: String): Boolean =
       x.attr.find(_.key == attrName).map(_.value == value).getOrElse(false)
 
-    def extractPlainText: Option[String] = extractPlainText(deep = false)
-    def extractPlainText(deep: Boolean): Option[String] = x match {
+    def extractPlainText(implicit info: NodeInfo.Aux[T]): Option[String] = extractPlainText(deep = false)
+    def extractPlainText(deep: Boolean)(implicit info: NodeInfo.Aux[T]): Option[String] = x match {
       case TextRepr(text) =>
         Some(text)
       case _ if deep =>
+        val txtRepr: Option[String] = info.textRepresentation(x)
+        if (txtRepr.isEmpty) {
+          val r = x.body flatMap { node => node.tag match {
+              case Tag.textTag =>
+                node.contents.map(TextRepr.decodeText)
+              case _ =>
+                // Note: casting to shut up the compiler
+                node.extractPlainText(deep)(info.asInstanceOf[NodeInfo.Aux[node.R]])
+            }
+          }
 
-        val r = x.body flatMap { node => node.tag match {
-          case Tag.textTag =>
-            node.contents.map(TextRepr.decodeText)
-          case _ =>
-            node.extractPlainText(deep)
-        }}
-
-        if (r.isEmpty) None
-        else Some(r.mkString(""))
+          if (r.isEmpty) None
+          else Some(r.mkString(""))
+        } else txtRepr
       case _ =>
         None
     }

@@ -84,7 +84,6 @@ trait PostProcessorUtils[T] extends OpimizerStrategies[T] {
               // TODO: enable filtering once styles are back
               coalesceSiblings(key, elems) //.filterNot(BogusElement.isBogus)
             case BLOCK =>
-              // TODO: enable filtering once styles are back
               // collapse blocks into one
               coalesceBlocks(key, elems) //.filterNot(BogusElement.isBogus)
             // FIXME: missing LIT and CMD
@@ -163,29 +162,26 @@ trait OptimizerCoalesceBlocks[T] {
 
   // .block -> pre | blockquote handling
   // hacky and limited ATM; no support for nesting etc.
+
+  // Note that we have to consider blocks and their children at the same time.
+  //
   protected def coalesceBlocks(sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit logger: Logger, sty: DocumentStyle.Aux[T]): Seq[Repr.Aux[T]] = {
 
     @tailrec
-    def codeBlock(elems: Seq[Repr.Aux[T]], txt: List[Option[String]]): (Option[Repr.Aux[T]], Seq[Repr.Aux[T]]) = elems match {
-      case (elem: Repr) :: rest if elem hasTag CODE =>
-        // extract text from the code element
-        codeBlock(rest, elem.extractPlainText :: txt)
-      case _ if txt.nonEmpty =>
-        // TODO: collapse blocks into one xml node
-        // that represents the ODT equivalent
-        (Some(Repr.makeElem(PRE, body = Nil,
-          attrs = Nil, contents = Some(txt.flatten.reverse.mkString("\n")))(???, ???)), elems)
+    def codeBlock(elems: Seq[Repr.Aux[T]], codeElems: Seq[Repr.Aux[T]]): (Seq[Repr.Aux[T]], Seq[Repr.Aux[T]]) = elems match {
+      case (elem) :: rest if elem hasTag CODE =>
+        codeBlock(rest, elem +: codeElems)
       case _ =>
-        (None, elems)
+        (codeElems, elems)
     }
 
     @tailrec
-    def nonCodeBlock(elems: Seq[Repr.Aux[T]], blockq: Seq[Repr.Aux[T]]): (Seq[Repr.Aux[T]], Seq[Repr.Aux[T]]) = elems match {
+    def extractNonCodeNodes(elems: Seq[Repr.Aux[T]], blockq: Seq[Repr.Aux[T]])(implicit blockParent: Repr.Aux[T]): (Seq[Repr.Aux[T]], Seq[Repr.Aux[T]]) = elems match {
       case (elem: Repr) :: rest if elem hasTag CODE =>
-        (combineBlocks(blockq.reverse).getOrElse(Seq()), elems)
+        (blockq, elems)
 
       case (elem: Repr) :: rest =>
-        val styleId = nodeConfig.styleExtractor.extractId(elem)
+        val styleId = nodeConfig.styleExtractor.extractId(blockParent)
         val align =
           for {
             id <- styleId
@@ -196,47 +192,124 @@ trait OptimizerCoalesceBlocks[T] {
         if (align.map(_ == TextAlign.Right).getOrElse(false)) {
           // this is a citation.
           // append footer
-          val cited = Markers.citationInBlockQuotation { elem.body }
-          nonCodeBlock(rest, elem.copy(cited) +: blockq)
+          extractNonCodeNodes(rest, elem +: blockq)
         } else {
           val toAppend =
             if ((elem hasTag BLOCK_TAGS) || (elem hasTag FOOTNOTE))
               // wrap in P
-              Repr.makeElem(P, Seq(elem), contents = None)(???, ???)
+              Repr.makeElem(P, Seq(elem), contents = None, attrs = ???)(???, ???)
             else
               elem
-          nonCodeBlock(rest, toAppend +: blockq)
+          extractNonCodeNodes(rest, toAppend +: blockq)
         }
 
       case _ =>
         // No more blocks
-        (combineBlocks(blockq.reverse).getOrElse(Seq()), elems)
-    }
-
-    def combineBlocks(elems: Seq[Repr.Aux[T]]): Option[Seq[Repr.Aux[T]]] = elems match {
-      case Nil =>
-        None
-
-      case rest =>
-        Some(Seq(
-          Repr.makeElem(
-            tag = BLOCKQUOTE,
-            body = elems.flatMap(_.body),
-            contents = None)(rest.head.source, implicitly[NodeFactory.Aux[T]])))
+        (blockq, elems)
     }
 
     @tailrec
-    def coalesceBlocks0(elems: Seq[Repr.Aux[T]], acc: Seq[Repr.Aux[T]]): Seq[Repr.Aux[T]] = elems match {
-      case Nil =>
-        acc
-      case _ =>
-        val (codeNode0, rest1) = codeBlock(elems, Nil)
-        val codeNode = codeNode0.map(n => Seq(n)).getOrElse(Seq())
-        val (nonCodeNodes, rest2) = nonCodeBlock(rest1, Nil)
-        coalesceBlocks0(rest2, acc ++ codeNode ++ nonCodeNodes)
+    def coalesceBodiesOfBlocks(remainingElemsOfBody: Seq[Repr.Aux[T]],
+                               blocks: Seq[Repr.Aux[T]],
+                               currentBlock: Repr.Aux[T],
+                               acc: Seq[Repr.Aux[T]], subAcc: Seq[Repr.Aux[T]]): Seq[Repr.Aux[T]] = {
+
+      remainingElemsOfBody match {
+        case Nil =>
+          blocks match {
+            case Nil =>
+              // completely done
+              val codeBlock = createCodeBlock(subAcc)(currentBlock).map(Seq(_)).getOrElse(Seq.empty)
+              acc.reverse
+            case head :: rest =>
+              coalesceBodiesOfBlocks(head.body, rest, head, acc, subAcc)
+          }
+
+        case _ =>
+
+          val subAcc1 = if (subAcc.isEmpty) subAcc else insertNewLine() +: subAcc
+          val (codeNodes, rest1) = codeBlock(remainingElemsOfBody, subAcc1)
+          if (rest1.isEmpty) {
+            // Used up nodes when collecting code blocks.
+            // Try the next paragraph (and its children), if possible.
+            blocks match {
+              case Nil =>
+                // completely done.
+                val codeBlock = createCodeBlock(codeNodes)(currentBlock).map(Seq(_)).getOrElse(Seq.empty)
+                acc.reverse ++ codeBlock
+              case head :: rest =>
+                coalesceBodiesOfBlocks(head.body, rest, head, acc, codeNodes)
+            }
+          } else {
+
+            // 1. Create a code block, since the analysis finished with some non-code block leftovers
+            // 2. Create a non-code block (blockquote) from the remaining non-code blocks
+            // 3. Append the two and recursively call the main analysis again
+
+            val codeBlock = createCodeBlock(codeNodes)(currentBlock).map(Seq(_)).getOrElse(Seq.empty)
+            val (nonCodeNodes, rest2) = extractNonCodeNodes(rest1, blockq = Nil)(currentBlock)
+            val nonCodeBlock = createNonCodeBlock(nonCodeNodes)(currentBlock)
+            coalesceBodiesOfBlocks(rest2, blocks, currentBlock, nonCodeBlock ++ codeBlock ++ acc, Nil)
+          }
+      }
     }
 
-    coalesceBlocks0(elems, Seq())
+    def insertNewLine(): Repr.Aux[T] =
+      Repr.makeElem(
+        tag = Tag.nodeTag,
+        body = Seq(),
+        contents = None,
+        attrs = Nil)(nodeConfig.nodeFactory.newLineNode(), nodeConfig.nodeFactory)
+
+    def createCodeBlock(codeElems0: Seq[Repr.Aux[T]])(paragraphBlock: Repr.Aux[T]): Option[Repr.Aux[T]] = {
+      if (codeElems0.isEmpty) None
+      else
+        Some(
+          Repr.makeElem(
+            tag = PRE,
+            body = Markers.formatBlock(codeElems0.reverse),
+            contents = None,
+            attrs = Nil)(paragraphBlock.source, implicitly[NodeFactory.Aux[T]]))
+    }
+
+    def createNonCodeBlock(nonCodeElems0: Seq[Repr.Aux[T]])(paragraphBlock: Repr.Aux[T]): Seq[Repr.Aux[T]] = {
+      val nonCodeElems = nonCodeElems0.reverse
+
+      nonCodeElems match {
+        case Nil =>
+          Nil
+        case all @ (head :: rest) =>
+          val styleId = nodeConfig.styleExtractor.extractId(paragraphBlock)
+          val align =
+            for {
+              id <- styleId
+              style <- sty.style(id)
+              textStyle <- style.textAlign
+            } yield textStyle
+
+          val formatted =
+            if (align.map(_ == TextAlign.Right).getOrElse(false))
+              // this is a citation.
+              // append footer
+              Markers.citationInBlockQuotation { all }
+            else
+              all
+
+          Seq(
+            Repr.makeElem(
+              tag = BLOCKQUOTE,
+              body = formatted,
+              contents = None,
+              attrs = paragraphBlock.attr)(paragraphBlock.source, implicitly[NodeFactory.Aux[T]]))
+      }
+    }
+
+    coalesceBodiesOfBlocks(
+      remainingElemsOfBody = Nil,
+      blocks = elems,
+      currentBlock = elems.head,
+      acc = Nil,
+      subAcc = Nil)
   }
 
 }
@@ -250,15 +323,17 @@ trait OptimizerCoalesceSiblings[T] {
     val compactedElems = coalesce(elems.flatMap(_.body).toList)
 
     logger.debug(s"coalesce siblings: $sig > Reduced ${elems.length} to ${compactedElems.length}")
-    val r = elems match {
+    elems match {
       case Nil => Nil
-      case first :: _ =>
+      case first :: rest =>
         if (sig._1 == SPAN) compactedElems
         // TODO, create a new XML node
-        else Repr.makeElem(sig._1, compactedElems, contents = None,
-          attrs = sig._2)(first.source, implicitly[NodeFactory.Aux[T]]) :: Nil
+        else {
+          Repr.makeElem(sig._1, compactedElems, contents = None,
+            attrs = sig._2)(first.source, implicitly[NodeFactory.Aux[T]]) :: Nil
+        }
+
     }
-    r
   }
 }
 
@@ -358,12 +433,11 @@ trait OptimizerCoalesceParentChild[T] {
     }
 
     object LiftableP {
-      val allowedInnerTags = List(PAGEBREAK, BLOCKQUOTE)
+      val allowedInnerTags = List(PAGEBREAK, BLOCKQUOTE, PRE)
 
-      def unapply(elem: Repr.Aux[T]) = elem match {
-        case (elem: Repr) if elem.hasTag(P) &&
-          elem.body.forall(_ hasTag allowedInnerTags) =>
-          Some(elem)
+      def unapply(elem: Repr.Aux[T]) = (elem, elem.body) match {
+        case (elem: Repr, child :: Nil) if elem.hasTag(P) && (child hasTag allowedInnerTags) =>
+          Some(child)
         case _ =>
           None
       }
@@ -402,29 +476,13 @@ trait OptimizerCoalesceParentChild[T] {
 
     }
 
-    object LiftableTextNode {
-
-      def unapply(elem: Repr.Aux[T]): Option[String] =
-        elem.body match {
-          case maybeTextNode :: Nil =>
-            maybeTextNode.extractPlainText
-          case _ => None
-        }
-
-    }
-
     Some(elem match {
       case BodyWithBogusP(children) =>
         logger.debug("[parent-child] body with bogus p")
-        Repr.makeElem(elem.tag, children, attrs = elem.attr, contents = None)(???, ???)
-      case LiftableP(_) =>
-        ???
-        elem
-      case LiftableTextNode(txt) =>
-        Repr.makeElem(
-          elem.tag,
-          body = Nil,
-          contents = Some(txt))(elem.source, implicitly[NodeFactory.Aux[T]])
+        Repr.makeElem(elem.tag, children, attrs = elem.attr, contents = None)(
+          elem.source, implicitly[NodeFactory.Aux[T]])
+      case LiftableP(child) =>
+        child
       case LiftableSpanStyle(attrs, body) =>
         logger.debug("[parent-child] liftable span")
         val meta = elem.attr.filter(_.key != STYLE) ++

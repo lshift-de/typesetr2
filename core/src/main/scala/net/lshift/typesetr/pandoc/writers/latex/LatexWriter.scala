@@ -78,6 +78,8 @@ class LatexWriter(from: File, target: File, template: styles.StyleTemplate, docM
       tmpDir.mkdirs()
       template.copyFilesTo(tmpDir)
 
+      logger.info(s"Temporary directory with all sources: $tmpDir")
+
       val latexOpts = List(
         if (config.logging == LogLevel.Debug) "" else "-silent",
         "-xelatex", "-pdf").mkString(" ")
@@ -103,10 +105,9 @@ class LatexWriter(from: File, target: File, template: styles.StyleTemplate, docM
   }
 
   def bodyFixes(body: BodyTpe)(implicit ppp: postprocessors.PandocPostProcessor.Aux[Out, BodyTpe]): BodyTpe = {
-    val v1 = ppp.replaceEnvStart(body)
-    val v2 = ppp.replaceEnvEnd(v1)
-    val v3 = ppp.replaceCmdStart(v2)
-    ppp.replaceCmdEnd(v3)
+    val v1 = ppp.replaceEnvBlock(body)
+    val v2 = ppp.replaceCmdBlock(v1)
+    ppp.replaceFormattedBlock(v2)
   }
 
   /**

@@ -23,6 +23,9 @@ abstract class NodeFactory {
   def copy(children: Seq[Repr.Aux[DocNode]])(repr: Repr.Aux[DocNode]): Repr.Aux[DocNode]
 
   def textNode(text: String): DocNode
+
+  def newLineNode(): DocNode
+
 }
 
 object NodeFactory {

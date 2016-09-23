@@ -5,7 +5,7 @@ package odt
 import Repr._
 import xml.{ Attribute, Tag }
 
-import scala.xml.Text
+import scala.xml.{ TopScope, Elem, Text }
 
 class OdtNodeFactory extends NodeFactory {
 
@@ -23,5 +23,14 @@ class OdtNodeFactory extends NodeFactory {
 
   def textNode(text: String): scala.xml.Node =
     Text(text)
+
+  def newLineNode(): scala.xml.Node = {
+    new Elem(
+      prefix = OdtTags.Linebreak.namespace.short.value,
+      label = OdtTags.Linebreak.tag,
+      attributes1 = scala.xml.Null,
+      scope = TopScope,
+      minimizeEmpty = true)
+  }
 
 }

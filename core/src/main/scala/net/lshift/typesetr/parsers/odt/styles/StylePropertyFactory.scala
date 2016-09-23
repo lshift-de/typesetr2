@@ -52,14 +52,7 @@ object StylePropertyFactory {
     }
 
     def modifyBody(styleId: StyleId, children: Seq[Repr.Aux[scala.xml.Node]])(implicit factory: NodeFactory.Aux[scala.xml.Node]): Seq[Repr.Aux[scala.xml.Node]] = {
-      basicReprNode(new Elem(
-        prefix = OdtTags.Span.namespace.short.value,
-        label = OdtTags.Span.tag,
-        attributes1 = (scala.xml.Null).fromTags(List((OdtTags.StyleName, styleId.name))),
-        scope = parentStyle.source.map(_.asInstanceOf[Elem].scope).getOrElse(TopScope),
-        minimizeEmpty = false,
-        children.map(_.source): _*),
-        nodes = children) :: Nil
+      children
     }
 
     private def paragraphWithLeftMargin(margin: ValOfUnit, textAlign: Option[TextAlign])(implicit factory: NodeFactory.Aux[scala.xml.Node]): Repr.Aux[scala.xml.Node] = {
@@ -96,7 +89,7 @@ object StylePropertyFactory {
     }
 
     private def basicReprNode[T](source: T, nodes: Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T]): Repr.Aux[T] = {
-      Repr.makeElem(xml.Tag.nodeTag, body = nodes, contents = None)(
+      Repr.makeElem(xml.Tag.nodeTag, body = nodes, contents = None, attrs = Nil)(
         source, factory)
     }
 
