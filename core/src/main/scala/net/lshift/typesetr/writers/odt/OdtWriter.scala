@@ -6,6 +6,7 @@ import java.io.{ File, FileOutputStream }
 import java.nio.channels.Channels
 
 import cmd.Config
+import net.lshift.typesetr.parsers.odt.OdtTags
 import parsers.Repr.Aux
 import util.Logger
 import xml.{ InternalAttributes, Tag }
@@ -19,7 +20,6 @@ class OdtWriter(inputFile: File) extends Writer {
   import OdtWriter._
 
   def writeToFile(node: Aux[N])(implicit logger: util.Logger, config: Config): Option[java.io.File] = {
-    val pp = new PrettyPrinter(80, 2)
 
     val f =
       if (config.Yns) {
@@ -44,7 +44,7 @@ class OdtWriter(inputFile: File) extends Writer {
 
     try {
       writer.write("<?xml version='1.0' encoding='" + TextEncoding + s"'?>$NewLine")
-      writeNode(node, indent = 0)(pp, config, writer, implicitly[Logger])
+      writeNode(node, indent = 0)(config, writer, implicitly[Logger])
 
       // 2. Pack into an .odt binary
       (for {
@@ -68,8 +68,7 @@ class OdtWriter(inputFile: File) extends Writer {
   }
 
   private def writeNode(node: Aux[N], indent: Int)(
-    implicit pp: PrettyPrinter,
-    config: Config,
+    implicit config: Config,
     writer: java.io.Writer,
     logger: Logger): Boolean = {
 
@@ -95,10 +94,7 @@ class OdtWriter(inputFile: File) extends Writer {
 
       case _ =>
 
-        translateAttributes(node, indent)
-        // TODO: Analyze the attributes of our node
-        // this may lead to some style changes
-        val n = node.source
+        val n = translateAttributes(node, indent)
         val scope =
           if (config.Yns) filterNamespaceBinding(n.scope) else NoSpace
         val attrbs = translateMeta(n.attributes)
@@ -116,24 +112,26 @@ class OdtWriter(inputFile: File) extends Writer {
   }
 
   private def translateAttributes(node: Aux[N], indent: Int)(
-    implicit pp: PrettyPrinter, config: Config,
-    writer: java.io.Writer, logger: Logger): Boolean = {
+    implicit config: Config, writer: java.io.Writer, logger: Logger): N = {
 
-    def translateAttribute(attr: List[xml.Attribute]): Unit = attr match {
-      case Nil =>
+    def translateAttribute(node: N, attr: List[xml.Attribute]): N = attr match {
+      case Nil => node
       case xml.Attribute(InternalAttributes.indent, v) :: rest =>
         // TODO: create an indentation if style does not have it.
-        translateAttribute(rest)
-      case _ :: rest => // other internal attributes
+        translateAttribute(node, rest)
+      case xml.Attribute(InternalAttributes.style, styleId) :: rest =>
+        translateAttribute(node.copy(meta =
+          node.attributes.copyWith(OdtTags.StyleNameAttr, styleId)), rest)
+      case _ :: rest =>
+        translateAttribute(node, rest)
     }
 
-    translateAttribute(node.attr)
-    true
+    translateAttribute(node.source, node.attr)
   }
 
   private def filterNamespaceBinding(scope: NamespaceBinding,
                                      filtered: List[String] = Nil): NamespaceBinding =
-    if (scope.parent == null) null
+    if (scope.parent == null) TopScope
     else if (scope.prefix == "loext:contextual-spacing")
       filterNamespaceBinding(scope.parent, filtered)
     else
