@@ -34,6 +34,6 @@ abstract class Writer {
    *            specific envs and cmds in the target document format
    * @return the (potentially modified) body of the new document
    */
-  def bodyFixes(body: BodyTpe)(implicit ppp: PandocPostProcessor.Aux[Out, BodyTpe]): BodyTpe
+  def bodyFixes(body: BodyTpe)(implicit ppp: PandocPostProcessor.Aux[Out, BodyTpe], log: util.Logger): BodyTpe
 
 }

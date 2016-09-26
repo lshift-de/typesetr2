@@ -1,4 +1,5 @@
-package net.lshift.typesetr.parsers.odt
+package net.lshift.typesetr
+package parsers.odt
 
 import java.io._
 import java.nio.file.Files.copy
@@ -97,13 +98,13 @@ object OdtFile {
       } else None
     }
 
-    def pack(target: FileOutputStream, origFile: OdtFile): Boolean = {
+    def pack(target: FileOutputStream, origFile: OdtFile)(implicit config: cmd.Config): Boolean = {
       // 1) copy all files from the origFile to target
       // 2) rename contentXML to content.xml
       // 3) zip and wrap in odt
       if (f.exists()) {
+        val dir = File.createTempFile("typesetr-optimized", "odts")
         try {
-          val dir = File.createTempFile("typesetr-optimized", "odts")
           dir.delete()
           dir.mkdir()
 
@@ -168,6 +169,9 @@ object OdtFile {
           case ex: IOException =>
             ex.printStackTrace()
             false
+        } finally {
+          if (!config.Ytmp)
+            dir.delete()
         }
       } else false
     }

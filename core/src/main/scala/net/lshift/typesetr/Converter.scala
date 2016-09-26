@@ -73,6 +73,10 @@ object Converter {
               config, docMeta).right
           } yield {
             generator.write(config)
+            if (!config.Ytmp) {
+              pandocInputF.delete()
+              pandocOutput.delete()
+            }
           }
 
         }

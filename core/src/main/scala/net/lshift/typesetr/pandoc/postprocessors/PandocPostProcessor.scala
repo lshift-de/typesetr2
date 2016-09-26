@@ -27,7 +27,7 @@ abstract class PandocPostProcessor {
     *        environment's starting tag
     *        replaced by the target's equivalent
     */
-  def replaceEnvBlock(body: BodyTpe): BodyTpe
+  def replaceEnvBlock(body: BodyTpe)(implicit log: util.Logger): BodyTpe
 
   /**
     * Replace the command's starting/ending tag, and the contents
@@ -37,7 +37,7 @@ abstract class PandocPostProcessor {
     * @return `body` with all the occurrences of the
     *        commands replaced by the target's equivalent
     */
-  def replaceCmdBlock(body: BodyTpe): BodyTpe
+  def replaceCmdBlock(body: BodyTpe)(implicit log: util.Logger): BodyTpe
 
   /**
     * Replace all pre-formatted fragments with the target's
@@ -48,7 +48,7 @@ abstract class PandocPostProcessor {
     *        pre-formatted fragments replaced by the
     *        target's equivalent
     */
-  def replaceFormattedBlock(body: BodyTpe): BodyTpe
+  def replaceFormattedBlock(body: BodyTpe)(implicit log: util.Logger): BodyTpe
 
 }
 

@@ -6,13 +6,14 @@ import scala.util.matching.Regex
 
 private class PygmentsFormatter {
 
-  def format(from: String, kind: PygmentsFormatterKind): String = {
+  def format(from: String, kind: PygmentsFormatterKind)(implicit log: util.Logger): String = {
     val interpreter = new PythonInterpreter()
     val codeVar = "code"
     val resultVar = "result"
     val decodedText = preformattedText(from)
+    log.info("Decoded pre-formatted text: " + decodedText)
     interpreter.set(codeVar, decodedText)
-    interpreter.exec(pythonCode(codeVar, resultVar, guess_lang(decodedText), kind))
+    interpreter.exec(pythonCode(codeVar, resultVar, guessLang(decodedText), kind))
     interpreter.get(resultVar, classOf[String])
   }
 
@@ -116,6 +117,6 @@ private class PygmentsFormatter {
 }
 
 object PygmentsFormatter {
-  def apply(from: String, kind: PygmentsFormatterKind): String =
+  def apply(from: String, kind: PygmentsFormatterKind)(implicit log: util.Logger): String =
     new PygmentsFormatter().format(from, kind)
 }

@@ -99,12 +99,17 @@ class LatexWriter(from: File, target: File, template: styles.StyleTemplate, docM
       if (!tmpPdf.moveTo(target))
         logger.info("Failed to create a pdf")
 
+      if (!config.Ytmp) {
+        fromF.delete()
+        tmpDir.delete()
+      }
+
       ()
     }
 
   }
 
-  def bodyFixes(body: BodyTpe)(implicit ppp: postprocessors.PandocPostProcessor.Aux[Out, BodyTpe]): BodyTpe = {
+  def bodyFixes(body: BodyTpe)(implicit ppp: postprocessors.PandocPostProcessor.Aux[Out, BodyTpe], log: util.Logger): BodyTpe = {
     val v1 = ppp.replaceEnvBlock(body)
     val v2 = ppp.replaceCmdBlock(v1)
     ppp.replaceFormattedBlock(v2)

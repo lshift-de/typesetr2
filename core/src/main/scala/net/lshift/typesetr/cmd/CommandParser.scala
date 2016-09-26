@@ -68,6 +68,10 @@ object CommandParser extends OptReaders {
       c.copy(Yns = x))
       .text("Include namespace info")
 
+    opt[Boolean]("Yleave-temporary").optional().action((x, c) =>
+      c.copy(Ytmp = x))
+      .text("Leave temporary files")
+
     opt[Boolean]("no-clean").optional().action((x, c) =>
       c.copy(noClean = x))
       .text("Do not remove temporary files after success")

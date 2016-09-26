@@ -61,6 +61,8 @@ class OdtWriter(inputFile: File) extends Writer {
         ex.printStackTrace()
         None
     } finally {
+      if (!config.Ytmp)
+        f.delete()
       writer.close()
       stream.close()
     }
