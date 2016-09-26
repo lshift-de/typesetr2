@@ -7,14 +7,18 @@ import scala.util.matching.Regex
 private class PygmentsFormatter {
 
   def format(from: String, kind: PygmentsFormatterKind)(implicit log: util.Logger): String = {
-    val interpreter = new PythonInterpreter()
     val codeVar = "code"
     val resultVar = "result"
     val decodedText = preformattedText(from)
     log.info("Decoded pre-formatted text: " + decodedText)
+
+    val interpreter = new PythonInterpreter()
     interpreter.set(codeVar, decodedText)
     interpreter.exec(pythonCode(codeVar, resultVar, guessLang(decodedText), kind))
-    interpreter.get(resultVar, classOf[String])
+    val result = interpreter.get(resultVar, classOf[String])
+    interpreter.cleanup()
+
+    result
   }
 
   // Pandoc introduces some weird formatting, since it does not know
