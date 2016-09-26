@@ -263,13 +263,15 @@ trait OptimizerCoalesceBlocks[T] {
 
     def createCodeBlock(codeElems0: Seq[Repr.Aux[T]])(paragraphBlock: Repr.Aux[T]): Option[Repr.Aux[T]] = {
       if (codeElems0.isEmpty) None
-      else
+      else {
+        val code = codeElems0.reverse
         Some(
           Repr.makeElem(
             tag = PRE,
-            body = Markers.formatBlock(codeElems0.reverse),
+            body = Markers.formatBlock(code),
             contents = None,
             attrs = Nil)(paragraphBlock.source, implicitly[NodeFactory.Aux[T]]))
+      }
     }
 
     def createNonCodeBlock(nonCodeElems0: Seq[Repr.Aux[T]])(paragraphBlock: Repr.Aux[T]): Seq[Repr.Aux[T]] = {

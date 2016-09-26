@@ -30,7 +30,10 @@ private class PygmentsFormatter {
   //       of characters encoded by Pandoc.
   //       Will need to be adapted on a per-need basis.
   val VerbatimDecoding = Map(
-    "\\" -> "",
+    "\\_" -> "_",
+    "\\%" -> "%",
+    "\\\\" -> "",
+    Writer.TypesetrPreSpace -> " ",
     "{[}" -> "[",
     "{]}" -> "]")
 

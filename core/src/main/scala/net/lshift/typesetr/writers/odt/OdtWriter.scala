@@ -9,7 +9,7 @@ import cmd.Config
 import net.lshift.typesetr.parsers.odt.OdtTags
 import parsers.Repr.Aux
 import util.Logger
-import xml.{ InternalAttributes, Tag }
+import net.lshift.typesetr.xml.{ InternalTags, InternalAttributes, Tag }
 
 import scala.annotation.tailrec
 import scala.xml._
@@ -76,8 +76,10 @@ class OdtWriter(inputFile: File) extends Writer {
 
     val space = BlankSpace * (Indent * indent)
     node.tag match {
+
       case Tag.syntheticTextTag =>
         true
+
       case Tag.textTag =>
 
         node.contents match {
@@ -86,6 +88,10 @@ class OdtWriter(inputFile: File) extends Writer {
               case (t, (from, to)) =>
                 t.replaceAll(from, to)
             }
+            //            val x = node.getAttribute(InternalAttributes.indent.toString).flatMap(_.value).map(_.toInt).getOrElse(0)
+            //            if (x > 1)
+            //              writer.write(s"$space${("\\ " * x).toString}$encoded$NewLine")
+            //            else
             writer.write(s"$space$encoded$NewLine")
             true
           case _ =>
@@ -106,7 +112,17 @@ class OdtWriter(inputFile: File) extends Writer {
             writer.write(s"$space<${n.prefix}:${n.label}$attrbs $scope/>$NewLine")
           case _ =>
             writer.write(s"$space<${n.prefix}:${n.label}$attrbs $scope>$NewLine")
-            node.body.forall(writeNode(_, indent + 1))
+            node.tag match {
+              case InternalTags.CODE =>
+                val x = node.getAttribute(InternalAttributes.indent).flatMap(_.value).map(_.toInt).getOrElse(0)
+                if (x > 1) {
+                  writer.write(s"$space${(pandoc.Writer.TypesetrPreSpace * x).toString}")
+                  node.body.forall(writeNode(_, 0))
+                } else
+                  node.body.forall(writeNode(_, indent + 1))
+              case _ =>
+                node.body.forall(writeNode(_, indent + 1))
+            }
             writer.write(s"$space</${n.prefix}:${n.label}>$NewLine")
         }
         true

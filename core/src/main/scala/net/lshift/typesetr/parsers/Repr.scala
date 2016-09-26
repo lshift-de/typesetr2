@@ -104,7 +104,7 @@ object Repr {
     def hasAttribute(attrKey: AttributeKey): Boolean =
       x.attr.find(_.key == attrKey).nonEmpty
 
-    def getAttribute(attrName: String): Option[Attribute] =
+    def getAttribute(attrName: AttributeKey): Option[Attribute] =
       x.attr.find(_.key == attrName)
 
     def hasAttrWithVal(attrName: AttributeKey, value: String): Boolean =

@@ -171,7 +171,12 @@ class OdtParser() extends Parser {
 
         val whitespaceNodes =
           Repr.makeTextElem[DocNode](spaceEncoded * spaces, synthetic = true)
-        Repr.makeElem(Tag.nodeTag, whitespaceNodes +: children, contents = Some(spaceEncoded*spaces), attrs = Nil)
+
+        Repr.makeElem(
+          Tag.nodeTag,
+          whitespaceNodes +: children,
+          contents = Some(spaceEncoded*spaces),
+          attrs = Attribute(InternalAttributes.indent, spaces.toString) :: Nil)
 
       case OdtTags.Linebreak =>
         Repr.makeTextElem[DocNode](linebreakEncoded, synthetic = true)
@@ -234,14 +239,18 @@ class OdtParser() extends Parser {
 
       case OdtTags.Span =>
         // Translate attributes into individual, nested nodes
-
         lazy val body1 = translateStyleToTags(children, styleToTagsMap, sty)
+
+        // Note: Here we dictate how the code block (potentially) will be displayed.
+        //       Spaces have to be preserved in the code blocks, and they inherit
+        //       the indentation from their first child that has that info, if any.
+        val attrs2 = children.flatMap(_.getAttribute(InternalAttributes.indent)).headOption
         val body2 = sty.fontFamily.filter(_.isCodeFont).map(_ =>
             Repr.makeElem(
               tag = Tags.CODE,
               body = children,
               contents = None,
-              attrs = Attribute(InternalAttributes.style, "Standard") :: Nil))
+              attrs = Attribute(InternalAttributes.style, "Standard") :: attrs2.map(_ :: Nil).getOrElse(Nil)))
 
         scalaz.Tag.unwrap(
           First(body2) |+| First(Repr.makeElem(tag = Tags.SPAN, body = body1, contents = None, attrs = Nil)))

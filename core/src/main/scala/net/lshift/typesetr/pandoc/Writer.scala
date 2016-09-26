@@ -37,3 +37,13 @@ abstract class Writer {
   def bodyFixes(body: BodyTpe)(implicit ppp: PandocPostProcessor.Aux[Out, BodyTpe], log: util.Logger): BodyTpe
 
 }
+
+object Writer {
+
+  // Constant that marks a space introduced in the pre-formatted text by the
+  // Typesetr's pre-processor.
+  // Pandoc does not understand the concept of spaces in our code blocks
+  // so we have to manually workaround those.
+  final val TypesetrPreSpace = "!!"
+
+}
