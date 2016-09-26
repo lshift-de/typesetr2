@@ -48,13 +48,17 @@ class OdtWriter(inputFile: File) extends Writer {
 
       // 2. Pack into an .odt binary
       (for {
-        odtFile <- inputFile.unpack()
+        (odtFileMap, odtDir) <- inputFile.unpack()
       } yield {
-        val packed = f.pack(stream, odtFile)
+        val packed = f.pack(stream, odtFileMap)
+        if (!config.Ytmp)
+          odtDir.deleteDirectory()
+
         if (!packed) {
           logger.info("Failed to create an ODT file")
           None
         } else Some(rewriteTo)
+
       }).flatten
     } catch {
       case ex: Throwable =>

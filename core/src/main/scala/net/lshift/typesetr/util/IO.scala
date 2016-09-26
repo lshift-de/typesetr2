@@ -107,6 +107,11 @@ object IO {
       } catch { case _: IOException => false }
     }
 
+    def deleteDirectory(): Boolean = {
+      FileUtils.deleteDirectory(x)
+      true
+    }
+
     private[util] implicit def toPath(f: File): Path = get(f.getAbsolutePath)
 
   }

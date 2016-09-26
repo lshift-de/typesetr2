@@ -27,14 +27,14 @@ class OdtParser() extends Parser {
 
   def parse(input: File,
             makeTransclusions: Boolean)(
-    implicit logger: Logger): ParsedDocument[DocNode] = {
+    implicit logger: Logger, config: cmd.Config): ParsedDocument[DocNode] = {
 
     logger.info(s"Parsing $input")
 
     val parsed = for {
       // 1. Take an input file, and attempt to unpack it
       //    since it is an ODT binary
-      inFile <- input.unpack()
+      (inFile, odtDir) <- input.unpack()
       root <- inFile.content.map(XML.loadFile)
       rootStyle <- inFile.style.map(XML.loadFile)
 
@@ -68,6 +68,9 @@ class OdtParser() extends Parser {
       val reifiedStyleNodes = styleInBody.copy(styleInBody.body ++ newStyles)
       val reifiedStylesDict = newStyles.foldLeft(stylesFromDoc) {
         case (doc, styleNode) => styleParser.appendStyleNode(styleNode.source, doc) }
+
+      if (!config.Ytmp)
+        odtDir.deleteDirectory()
 
       (root, reifiedStylesDict, scriptsNode ::: (parseFonts(rawFont) :: reifiedStyleNodes :: body1 :: Nil))
     }

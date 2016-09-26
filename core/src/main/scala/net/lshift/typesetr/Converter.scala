@@ -26,6 +26,7 @@ object Converter {
     CommandParser().parse(args) match {
       case Some(config) =>
         implicit val logger = Logger(config.logging)
+        implicit val c = config
 
         val result = for {
           inputFile <- retrieveInputFile(config).right
@@ -64,7 +65,7 @@ object Converter {
 
           // 5. Translate the optimized document using pandoc
           // 6. Apply Typesetr's templates
-          val result = for {
+          for {
             pandocInputF <- optimizedInput.toRight("No input found").right
             pandocOutput <- pandocTranslation(config.inFormat,
               outputFile.format,
@@ -74,6 +75,7 @@ object Converter {
           } yield {
             generator.write(config)
             if (!config.Ytmp) {
+              optimizedInput.map(_.delete())
               pandocInputF.delete()
               pandocOutput.delete()
             }

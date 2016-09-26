@@ -73,7 +73,7 @@ class LatexWriter(from: File, target: File, template: styles.StyleTemplate, docM
       // 1. Create a single directory where all stuff is going to be compiled from
       // 2. Copy over styles, includes etc
       // 3. Compile using xelatex
-      val tmpDir = File.createTempFile("pdf", "typesetr")
+      val tmpDir = File.createTempFile("pdf", ".typesetr")
       tmpDir.delete()
       tmpDir.mkdirs()
       template.copyFilesTo(tmpDir)
@@ -101,7 +101,7 @@ class LatexWriter(from: File, target: File, template: styles.StyleTemplate, docM
 
       if (!config.Ytmp) {
         fromF.delete()
-        tmpDir.delete()
+        tmpDir.deleteDirectory()
       }
 
       ()

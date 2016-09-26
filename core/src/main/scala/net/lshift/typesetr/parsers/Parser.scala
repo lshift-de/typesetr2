@@ -23,7 +23,7 @@ abstract class Parser {
    */
   def parse(input: File,
             makeTransclusions: Boolean)(
-              implicit logger: Logger): ParsedDocument[DocNode]
+              implicit logger: Logger, config: cmd.Config): ParsedDocument[DocNode]
 
   /**
    * Return document-specific functions for analyzing

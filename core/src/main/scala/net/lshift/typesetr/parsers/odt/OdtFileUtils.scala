@@ -48,7 +48,7 @@ object OdtFile {
     } yield new OdtFile(mmap)
 
   class OdtFileOps(val f: File) extends AnyVal {
-    def unpack(): Option[OdtFile] = {
+    def unpack(): Option[(OdtFile, File)] = {
       if (f.exists() && f.getName.endsWith(".odt")) {
         val dir = File.createTempFile("typesetr", "odts")
         dir.delete()
@@ -94,7 +94,7 @@ object OdtFile {
         zis.closeEntry()
         zis.close()
 
-        OdtFile.fromMap(mmap)
+        OdtFile.fromMap(mmap).map((_, dir))
       } else None
     }
 
@@ -171,7 +171,7 @@ object OdtFile {
             false
         } finally {
           if (!config.Ytmp)
-            dir.delete()
+            dir.deleteDirectory()
         }
       } else false
     }
