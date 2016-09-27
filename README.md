@@ -48,3 +48,12 @@ where
  - `$OUTPUTFILE.pdf` - is the desired location where the pdf is to be created
  - `lshift/pitch` - determines the template/style to use
  - `$TYPESETRSTYLES` - is the location where all styles are defined
+
+
+## Limitations
+
+### Headers
+
+Unlike the old oversion of Typesetr, Pandoc does not handle heading styles
+above the level 5. While a workaround can be integrated, currently no styling
+is applied above level 5.
