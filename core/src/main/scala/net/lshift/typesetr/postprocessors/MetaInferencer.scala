@@ -3,7 +3,7 @@ package postprocessors
 
 import net.lshift.typesetr.parsers.styles._
 import net.lshift.typesetr.xml.InternalTags
-import net.lshift.typesetr.parsers.{ NodeConfigs, NodeInfo, DocumentStyle, Repr }
+import net.lshift.typesetr.parsers.{ NodeConfigs, NodeInfo, Repr }
 import styles.MetaFromDocument
 
 import scalaz.Tags._

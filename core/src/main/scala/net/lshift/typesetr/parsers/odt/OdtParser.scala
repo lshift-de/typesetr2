@@ -1,7 +1,7 @@
 package net.lshift.typesetr
 package parsers
 
-import net.lshift.typesetr.parsers.styles.{StylePropKey, Style}
+import net.lshift.typesetr.parsers.styles.{DocumentStyle, StylePropKey, Style}
 import odt.styles._
 import net.lshift.typesetr.xml.attributes.StyleAttribute
 import xml._

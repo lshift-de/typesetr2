@@ -1,12 +1,14 @@
 package net.lshift.typesetr
 package postprocessors
 
-import net.lshift.typesetr.parsers.{ NodeConfigs, Repr, DocumentStyle }
+import parsers.styles.DocumentStyle
+import parsers.{ NodeConfigs, Repr }
 import styles.MetaFromDocument
 
 /**
  * An interface to typesetr's first phase of
  * document post processing.
+ *
  * @tparam T the underlying type of the representation
  *           of the document (xml node, markdown node etc)
  */

@@ -1,7 +1,8 @@
 package net.lshift.typesetr
 package postprocessors
 
-import net.lshift.typesetr.pandoc.Markers
+import pandoc.Markers
+import parsers.styles.DocumentStyle
 import net.lshift.typesetr.xml.attributes.TextAlign
 import parsers.odt.styles._
 import styles.MetaFromDocument
@@ -9,7 +10,7 @@ import styles.MetaFromDocument
 import xml._
 import xml.InternalTags._
 import xml.Attributes._
-import parsers.{ Repr, NodeFactory, DocumentStyle, NodeConfigs, NodeInfo }
+import parsers.{ Repr, NodeFactory, NodeConfigs, NodeInfo }
 
 import util.Logger
 

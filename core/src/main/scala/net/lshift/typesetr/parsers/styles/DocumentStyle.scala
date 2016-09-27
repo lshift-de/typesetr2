@@ -1,7 +1,7 @@
-package net.lshift.typesetr
-package parsers
+package net.lshift.typesetr.parsers.styles
 
-import net.lshift.typesetr.parsers.styles.{ StyleExtractor, Style, StyleId }
+import net.lshift.typesetr.parsers.{ NodeInfo, Repr, ReprNullFactory }
+import net.lshift.typesetr.util
 
 import scalaz.Scalaz._
 import scalaz.Tags.First

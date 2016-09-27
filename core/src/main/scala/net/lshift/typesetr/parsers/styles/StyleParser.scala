@@ -1,8 +1,6 @@
-package net.lshift.typesetr
-package parsers
+package net.lshift.typesetr.parsers.styles
 
-import net.lshift.typesetr.parsers.styles.Style
-import util.Logger
+import net.lshift.typesetr.util.Logger
 
 abstract class StyleParser {
 
