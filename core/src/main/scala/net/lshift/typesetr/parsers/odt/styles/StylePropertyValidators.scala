@@ -1,6 +1,7 @@
 package net.lshift.typesetr
 package parsers.odt.styles
 
+import net.lshift.typesetr.parsers.styles.{StylePropKey, StyleValidator}
 import net.lshift.typesetr.xml.attributes._
 
 /*
@@ -20,23 +21,23 @@ object StylePropertyValidators extends StylePropertyValidators {
 
   final val map = shapeless.HMap[TagValidators](
     /*StylePropKey.Tpe -> StyleValidator.list(StyleType.all)*/
-    StylePropKey.FontFamily       -> StyleValidator.all[FontFamily](opt(_)),
-    StylePropKey.FontSeize        -> StyleValidator.r(StylePropKey.FontSeize.regex, StylePropKey.FontSeize.convert, required = false),
-    StylePropKey.FontWeight       -> StyleValidator.list[FontWeight](List(FontWeight.Bold, FontWeight.Normal), defaultToV[FontWeight] _, required = false),
-    StylePropKey.FontStyleProp    -> StyleValidator.list[FontStyle](List(FontStyle.Italic, FontStyle.Normal), defaultToV[FontStyle] _, required = false),
-    StylePropKey.Underline        -> StyleValidator.list[Underline](List(Underline.Solid, Underline.None), eqTo[Underline](Underline.Solid) _, required = false),
-    StylePropKey.LineThrough      -> StyleValidator.list[LineThrough](List(LineThrough.Solid, LineThrough.None), eqTo[LineThrough](LineThrough.Solid) _, required = false),
-    StylePropKey.Color            -> StyleValidator.r(Color.rgbR, defaultTo[xml.attributes.Color](Color("#000000")), required = false),
-    StylePropKey.BackgroundColor  -> StyleValidator.r(Color.rgbR, defaultTo[xml.attributes.Color](Color("#ffffff")), required = false),
-    StylePropKey.TextPosition     -> StyleValidator.r[TextPosition]("(sub|super)\b".r, (x: String) => Some(x.split('\b')(0)), required = false),
-    StylePropKey.TextAlign        -> StyleValidator.list(TextAlign.all, StylePropKey.TextAlign.toResult, required = false),
-    StylePropKey.LineHeight       -> StyleValidator.r(StylePropKey.LineHeight.regex, StylePropKey.LineHeight.convert, required = false),
-    StylePropKey.MarginLeft       -> StyleValidator.r(StylePropKey.MarginLeft.regex, StylePropKey.MarginLeft.convert, required = false),
-    StylePropKey.TextIndent       -> StyleValidator.r(StylePropKey.TextIndent.regex, StylePropKey.TextIndent.convert, required = false),
-    StylePropKey.ParBreak         -> StyleValidator.list(ParBreak.all, defaultTo[ParBreak](ParBreak.Auto), required = false),
-    StylePropKey.SubListStyles    -> StyleValidator.all[String](_ => None),
-    StylePropKey.MinHeight        -> StyleValidator.r(StylePropKey.MinHeight.regex, StylePropKey.MinHeight.convert, required = false),
-    StylePropKey.ColWidth         -> StyleValidator.r(StylePropKey.ColWidth.regex, StylePropKey.ColWidth.convert, required = false)
+    OdtStylePropKeys.FontFamily       -> StyleValidator.all[FontFamily](opt(_)),
+    OdtStylePropKeys.FontSeize        -> StyleValidator.r(OdtStylePropKeys.FontSeize.regex, OdtStylePropKeys.FontSeize.convert, required = false),
+    OdtStylePropKeys.FontWeight       -> StyleValidator.list[FontWeight](List(FontWeight.Bold, FontWeight.Normal), defaultToV[FontWeight] _, required = false),
+    OdtStylePropKeys.FontStyleProp    -> StyleValidator.list[FontStyle](List(FontStyle.Italic, FontStyle.Normal), defaultToV[FontStyle] _, required = false),
+    OdtStylePropKeys.Underline        -> StyleValidator.list[Underline](List(Underline.Solid, Underline.None), eqTo[Underline](Underline.Solid) _, required = false),
+    OdtStylePropKeys.LineThrough      -> StyleValidator.list[LineThrough](List(LineThrough.Solid, LineThrough.None), eqTo[LineThrough](LineThrough.Solid) _, required = false),
+    OdtStylePropKeys.Color            -> StyleValidator.r(Color.rgbR, defaultTo[xml.attributes.Color](Color("#000000")), required = false),
+    OdtStylePropKeys.BackgroundColor  -> StyleValidator.r(Color.rgbR, defaultTo[xml.attributes.Color](Color("#ffffff")), required = false),
+    OdtStylePropKeys.TextPosition     -> StyleValidator.r[TextPosition]("(sub|super)\b".r, (x: String) => Some(x.split('\b')(0)), required = false),
+    OdtStylePropKeys.TextAlign        -> StyleValidator.list(TextAlign.all, OdtStylePropKeys.TextAlign.toResult, required = false),
+    OdtStylePropKeys.LineHeight       -> StyleValidator.r(OdtStylePropKeys.LineHeight.regex, OdtStylePropKeys.LineHeight.convert, required = false),
+    OdtStylePropKeys.MarginLeft       -> StyleValidator.r(OdtStylePropKeys.MarginLeft.regex, OdtStylePropKeys.MarginLeft.convert, required = false),
+    OdtStylePropKeys.TextIndent       -> StyleValidator.r(OdtStylePropKeys.TextIndent.regex, OdtStylePropKeys.TextIndent.convert, required = false),
+    OdtStylePropKeys.ParBreak         -> StyleValidator.list(ParBreak.all, defaultTo[ParBreak](ParBreak.Auto), required = false),
+    OdtStylePropKeys.SubListStyles    -> StyleValidator.all[String](_ => None),
+    OdtStylePropKeys.MinHeight        -> StyleValidator.r(OdtStylePropKeys.MinHeight.regex, OdtStylePropKeys.MinHeight.convert, required = false),
+    OdtStylePropKeys.ColWidth         -> StyleValidator.r(OdtStylePropKeys.ColWidth.regex, OdtStylePropKeys.ColWidth.convert, required = false)
   )
 
 }

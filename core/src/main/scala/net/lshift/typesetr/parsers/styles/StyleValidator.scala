@@ -1,7 +1,4 @@
-package net.lshift.typesetr
-package parsers
-package odt
-package styles
+package net.lshift.typesetr.parsers.styles
 
 import java.util.regex.Pattern
 

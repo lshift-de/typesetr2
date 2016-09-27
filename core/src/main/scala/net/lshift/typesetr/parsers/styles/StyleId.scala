@@ -1,12 +1,6 @@
 package net.lshift.typesetr
 package parsers
-package odt
 package styles
-
-import xml._
-
-import scalaz.Tags.First
-import scalaz.Scalaz._
 
 /**
  * Class representing a unique identifier of a single style.
@@ -40,23 +34,6 @@ object StyleId {
   def apply(family: Option[String], name: String): StyleId = StyleIdImpl(family, name)
 
   def none: StyleId = None
-
-  def fromNode(node: scala.xml.Node): Option[StyleId] =
-    styleFromNode(node, OdtTags.StyleName)
-
-  def forNonStyleNode(node: scala.xml.Node): Option[StyleId] =
-    styleFromNode(node, OdtTags.StyleNameAttr)
-
-  private def styleFromNode(node: scala.xml.Node, attr: XmlAttribute): Option[StyleId] = {
-    val family =
-      if (node.xmlTag == OdtTags.TextListStyle) scala.None
-      else node.attributes.getTag(OdtTags.StyleFamily)
-
-    for {
-      name <- scalaz.Tag.unwrap(First(node.attributes.getTag(attr)) |+|
-        First(node.attributes.getTag(OdtTags.TableStyleNameAttr)))
-    } yield StyleId(family, name)
-  }
 
   implicit class StyleIdOps(val s: StyleId) extends AnyVal {
     def withThisFamily(name0: String) = StyleId(s.family, name0)

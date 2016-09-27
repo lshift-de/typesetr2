@@ -1,6 +1,7 @@
 package net.lshift.typesetr
 package parsers
 
+import net.lshift.typesetr.parsers.styles.{StylePropKey, Style}
 import odt.styles._
 import net.lshift.typesetr.xml.attributes.StyleAttribute
 import xml._
@@ -61,7 +62,7 @@ class OdtParser() extends Parser {
           scriptsNode <- parseBody(rawScripts)(styleFromMeta, logger)
         } yield scriptsNode :: Nil).getOrElse(List())
 
-      val styleParser = StyleParser.default()
+      val styleParser = OdtStyleParser.defaultOdt
       val stylesFromDoc = styleParser.loadFromDocContent(root, styleFromMeta)
       val bodyNodes = rawBody.child.flatMap(parseBody(_)(stylesFromDoc, logger))
       val body1 = Repr.makeElem(Tags.BODY, bodyNodes, contents = None, attrs = Nil)(rawBody, implicitly[NodeFactory.Aux[DocNode]])
@@ -118,7 +119,7 @@ class OdtParser() extends Parser {
 
         val emptyStyleSheet = DocumentStyle(header, footer, w)
 
-        val docWithStyles = StyleParser.default().loadFromDocContent(node, emptyStyleSheet)
+        val docWithStyles = OdtStyleParser.defaultOdt.loadFromDocContent(node, emptyStyleSheet)
 
         logger.debug(s"Loaded style:\n${docWithStyles}")
 
@@ -150,13 +151,13 @@ class OdtParser() extends Parser {
     implicit val source: DocNode = node
 
     lazy val sty: Style = {
-      val styleIdOpt = StyleId.forNonStyleNode(node)
+      val styleIdOpt = OdtStyleId.forNonStyleNode(node)
       (for {
         styleId <- styleIdOpt
         style   <- docStyle.style(styleId)
       } yield style).getOrElse {
         logger.info(s"no style for ${styleIdOpt}")
-        Style.empty
+        OdtStyle.empty
       }
     }
 
@@ -231,7 +232,7 @@ class OdtParser() extends Parser {
           // The change of style is reflected in the Typesetr's internal
           // attribute list that carries over the new style info name.
           // The latter will be modified, if necessary, in the Odt writer.
-          val (newStyleId, fact) = StylePropertyFactory.odtQuoting(parent = sty)
+          val (newStyleId, fact) = OdtStylePropertyFactory.odtQuoting(parent = sty)
           newStyles = fact.create(newStyleId) :: newStyles
 
 
@@ -409,19 +410,19 @@ object OdtParser {
   case class ValToTag[+T <: StyleAttribute](value: T, tag: Tag)
 
   type StyleToTags =
-    StyleToTag[StylePropKey.Underline.type] !:
-      StyleToTag[StylePropKey.FontWeight.type] !:
-        StyleToTag[StylePropKey.FontStyleProp.type] !:
-          StyleToTag[StylePropKey.LineThrough.type] !:
-            StyleToTag[StylePropKey.TextPosition.type] !:
+    StyleToTag[OdtStylePropKeys.Underline.type] !:
+      StyleToTag[OdtStylePropKeys.FontWeight.type] !:
+        StyleToTag[OdtStylePropKeys.FontStyleProp.type] !:
+          StyleToTag[OdtStylePropKeys.LineThrough.type] !:
+            StyleToTag[OdtStylePropKeys.TextPosition.type] !:
               HNil
 
   private val styleToTagsMap: StyleToTags =
-    StyleToTag(StylePropKey.Underline)(ValToTag[attributes.Underline](attributes.Underline.Solid, Tags.U) :: Nil) ::
-      StyleToTag(StylePropKey.FontWeight)(ValToTag[attributes.FontWeight](attributes.FontWeight.Bold, Tags.B) :: Nil) ::
-        StyleToTag(StylePropKey.FontStyleProp)(ValToTag[attributes.FontStyle](attributes.FontStyle.Italic, Tags.I) :: Nil) ::
-          StyleToTag(StylePropKey.LineThrough)(ValToTag[attributes.LineThrough](attributes.LineThrough.Solid, Tags.S) :: Nil) ::
-            StyleToTag[StylePropKey.TextPosition.type](StylePropKey.TextPosition)(ValToTag(attributes.TextPosition.Sub, Tags.SUB) :: ValToTag(attributes.TextPosition.Sup, Tags.SUP) :: Nil) ::
+    StyleToTag(OdtStylePropKeys.Underline)(ValToTag[attributes.Underline](attributes.Underline.Solid, Tags.U) :: Nil) ::
+      StyleToTag(OdtStylePropKeys.FontWeight)(ValToTag[attributes.FontWeight](attributes.FontWeight.Bold, Tags.B) :: Nil) ::
+        StyleToTag(OdtStylePropKeys.FontStyleProp)(ValToTag[attributes.FontStyle](attributes.FontStyle.Italic, Tags.I) :: Nil) ::
+          StyleToTag(OdtStylePropKeys.LineThrough)(ValToTag[attributes.LineThrough](attributes.LineThrough.Solid, Tags.S) :: Nil) ::
+            StyleToTag[OdtStylePropKeys.TextPosition.type](OdtStylePropKeys.TextPosition)(ValToTag(attributes.TextPosition.Sub, Tags.SUB) :: ValToTag(attributes.TextPosition.Sup, Tags.SUP) :: Nil) ::
               HNil
 
   private final val sizeP = """(\d+)cm""".r

@@ -1,8 +1,6 @@
-package net.lshift.typesetr
-package parsers
-package odt
+package net.lshift.typesetr.parsers.styles
 
-import styles.StyleId
+import net.lshift.typesetr.parsers.Repr
 
 /**
  * Type class that is capable of extracting a style's

@@ -4,6 +4,7 @@ package odt
 package styles
 
 import net.lshift.typesetr.pandoc.Markers
+import net.lshift.typesetr.parsers.styles.{ Style, StyleId, StylePropertyFactory }
 import net.lshift.typesetr.util.{ Percentage, Inches, ValOfUnit }
 import net.lshift.typesetr.xml.XmlAttribute
 import net.lshift.typesetr.xml.attributes.{ TextAlign, FontStyle }
@@ -12,12 +13,8 @@ import scala.xml.{ TopScope, Elem, MetaData, Text }
 
 import scala.language.implicitConversions
 
-abstract class StylePropertyFactory[T] {
-  def create(styleId: StyleId)(implicit factory: NodeFactory.Aux[T]): Repr.Aux[T]
-  def modifyBody(styleId: StyleId, children: Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T]): Seq[Repr.Aux[T]]
-}
+object OdtStylePropertyFactory {
 
-object StylePropertyFactory {
   def odtQuoting(parent: Style): (StyleId, StylePropertyFactory[scala.xml.Node]) = {
     val randomName = StyleId(parent.id.family, parent.id.name + "_1")
     (randomName, QuotingStyleParagraph(parent, PandocQuoteLeftMargin))

@@ -1,11 +1,10 @@
-package net.lshift.typesetr
-package parsers.odt.styles
+package net.lshift.typesetr.parsers.styles
 
+import net.lshift.typesetr.xml.Tag
 import net.lshift.typesetr.xml.attributes.FontFamily
-import xml.Tag
-import xml.{ InternalTags => ITags }
 
 import scala.language.implicitConversions
+import net.lshift.typesetr.xml.{ InternalTags => ITags }
 
 /**
  * Represents a `type` of the style.
@@ -19,7 +18,7 @@ sealed abstract class StyleType(val name: String) {
 
   /**
    * An XML tag representing the style
-   * @return
+   *
    */
   def tag: Tag
 

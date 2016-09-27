@@ -2,8 +2,8 @@ package net.lshift.typesetr
 package parsers
 
 import cmd.InputFormat
-import parsers.odt.StyleExtractor
-import styles.MetaFromDocument
+import styles.StyleExtractor
+import net.lshift.typesetr.styles.MetaFromDocument
 
 /**
   * Input-independent configuration that returns

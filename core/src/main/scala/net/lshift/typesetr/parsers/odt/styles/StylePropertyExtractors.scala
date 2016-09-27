@@ -1,6 +1,7 @@
 package net.lshift.typesetr
 package parsers.odt.styles
 
+import net.lshift.typesetr.parsers.styles.StylePropKey
 import shapeless.HMap
 
 /*
@@ -18,26 +19,26 @@ object StylePropertyExtractors {
   }
 
   val map = HMap[StyleProp2Extractor](
-    StylePropKey.FontFamily      -> PropertiesExtractor.text,
-    StylePropKey.FontSeize       -> PropertiesExtractor.text,
-    StylePropKey.FontWeight      -> PropertiesExtractor.text,
-    StylePropKey.FontStyleProp   -> PropertiesExtractor.text,
+    OdtStylePropKeys.FontFamily      -> PropertiesExtractor.text,
+    OdtStylePropKeys.FontSeize       -> PropertiesExtractor.text,
+    OdtStylePropKeys.FontWeight      -> PropertiesExtractor.text,
+    OdtStylePropKeys.FontStyleProp   -> PropertiesExtractor.text,
 
-    StylePropKey.Color           -> PropertiesExtractor.mixed,
-    StylePropKey.BackgroundColor -> PropertiesExtractor.mixed,
+    OdtStylePropKeys.Color           -> PropertiesExtractor.mixed,
+    OdtStylePropKeys.BackgroundColor -> PropertiesExtractor.mixed,
 
-    StylePropKey.Underline       -> PropertiesExtractor.text,
-    StylePropKey.LineThrough     -> PropertiesExtractor.text,
-    StylePropKey.TextPosition    -> PropertiesExtractor.text,
+    OdtStylePropKeys.Underline       -> PropertiesExtractor.text,
+    OdtStylePropKeys.LineThrough     -> PropertiesExtractor.text,
+    OdtStylePropKeys.TextPosition    -> PropertiesExtractor.text,
 
-    StylePropKey.TextAlign       -> PropertiesExtractor.paragraph,
-    StylePropKey.LineHeight      -> PropertiesExtractor.paragraph,
-    StylePropKey.MarginLeft      -> PropertiesExtractor.paragraph,
-    StylePropKey.ParBreak        -> PropertiesExtractor.paragraph,
-    StylePropKey.TextIndent      -> PropertiesExtractor.paragraph,
+    OdtStylePropKeys.TextAlign       -> PropertiesExtractor.paragraph,
+    OdtStylePropKeys.LineHeight      -> PropertiesExtractor.paragraph,
+    OdtStylePropKeys.MarginLeft      -> PropertiesExtractor.paragraph,
+    OdtStylePropKeys.ParBreak        -> PropertiesExtractor.paragraph,
+    OdtStylePropKeys.TextIndent      -> PropertiesExtractor.paragraph,
 
-    StylePropKey.ColWidth        -> PropertiesExtractor.paragraph,
-    StylePropKey.MinHeight       -> PropertiesExtractor.paragraph
+    OdtStylePropKeys.ColWidth        -> PropertiesExtractor.paragraph,
+    OdtStylePropKeys.MinHeight       -> PropertiesExtractor.paragraph
 
   )
 }

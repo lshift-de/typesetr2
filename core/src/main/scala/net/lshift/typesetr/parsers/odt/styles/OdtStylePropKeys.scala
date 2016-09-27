@@ -1,45 +1,12 @@
 package net.lshift.typesetr
-package parsers
-package odt
-package styles
+package parsers.odt.styles
 
-import xml.attributes.StyleAttribute
-import xml.{ XmlAttribute, Tag}
+import parsers.odt.OdtTags
+import parsers.styles.{ StylePropKey, StyleType }
 import util.ValOfUnit
+import xml.XmlAttribute
 
-import scala.language.implicitConversions
-
-/**
-  * Class representing a type information
-  * of a single style property (a style `sheet` may
-  * contain many style properties).
-  */
-sealed abstract class StylePropKey { self =>
-
-  // Type of the property's value
-  type Result
-
-  /**
-    * The low-level xml attribute name that this style property
-    * encapsulates.
-    *
-    * The attribute has a string value that needs to be
-    * validated and translated into a first-class Scala object
-    */
-  def name: Option[XmlAttribute]
-
-  // A reference to the self type.
-  // V and Tag are only needed to define proper
-  // heterogenous maps.
-  type V = self.type
-
-  implicit val Tag: V
-
-}
-
-object StylePropKey {
-
-  type Aux[T] = StylePropKey { type Result = T }
+object OdtStylePropKeys {
 
   trait RegexConverter { self: StylePropKey =>
 
@@ -57,11 +24,6 @@ object StylePropKey {
       }
 
   }
-
-  type Of = StylePropKey { type Result <: StyleAttribute }
-  // TODO: Figure out why the type inferencer goes
-  // nuts when we use With[StyleAttribute] instead
-  type With[+T] = StylePropKey { type Result <: T }
 
   case object Tpe extends StylePropKey {
     type Result = StyleType
@@ -129,11 +91,12 @@ object StylePropKey {
     type Result = xml.attributes.TextAlign
     implicit val Tag: this.type = this
     def toResult: String => Option[xml.attributes.TextAlign] = {
-      (x: String) => xml.attributes.TextAlign.stringToTextAlign(x) match {
-        case Some(xml.attributes.TextAlign.Start) => Some(xml.attributes.TextAlign.Left)
-        case Some(xml.attributes.TextAlign.End) => Some(xml.attributes.TextAlign.Right)
-        case other                        => other
-      }
+      (x: String) =>
+        xml.attributes.TextAlign.stringToTextAlign(x) match {
+          case Some(xml.attributes.TextAlign.Start) => Some(xml.attributes.TextAlign.Left)
+          case Some(xml.attributes.TextAlign.End)   => Some(xml.attributes.TextAlign.Right)
+          case other                                => other
+        }
     }
     def name: Option[XmlAttribute] = Some(OdtTags.FoTextAlign)
   }

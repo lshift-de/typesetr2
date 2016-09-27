@@ -3,6 +3,7 @@ package parsers
 package odt
 package styles
 
+import net.lshift.typesetr.parsers.styles._
 import odt.OdtTags
 import xml.{XmlTag, NameSpaces}
 import xml.attributes._
@@ -20,49 +21,11 @@ import util.Logger
 
 import scala.language.implicitConversions
 
-abstract class StyleParser {
+class OdtStyleParser extends StyleParser {
 
   type DocNode = scala.xml.Node
 
-  /**
-    * Loads all the additional styles from the ODT's
-    * content document (rather than from a meta document)
-    *
-    * @param rootStyle xml node of the styles aggregator
-    * @param doc an initial representation of the document's styles
-    * @return an updated document's style information
-    */
-  def loadFromDocContent(rootStyle: scala.xml.Node,
-                         doc: DocumentStyle.Aux[DocNode])(implicit logger: Logger): DocumentStyle.Aux[DocNode]
-
-  /**
-    * Load style information from the node and append it to the existing
-    * style dictionary.
-    *
-    * @param node the underlying node to be analyzed
-    * @param doc the existing style dictionary
-    * @param logger typesetr's logging utility
-    * @return a (potentially updated) document's style dictionary
-    */
-  def appendStyleNode(node: scala.xml.Node,
-                      doc: DocumentStyle.Aux[DocNode])(implicit logger: Logger): DocumentStyle.Aux[DocNode]
-
-  /**
-    * Parse a single style node and return
-    * a validated and translated representation of it.
-    *
-    * @param node xml node representing a style property info
-    * @param doc document's style information
-    * @return a validated representation of the style property, if any
-    */
-  protected def parseStyle(node: scala.xml.Node,
-                           doc: DocumentStyle)(implicit logger: Logger): Option[Style]
-
-}
-
-class StyleParserImpl extends StyleParser {
-
-  import StyleParserImpl._
+  import OdtStyleParser._
 
   def loadFromDocContent(rootStyle: Node, doc: DocumentStyle.Aux[DocNode])(implicit logger: Logger): DocumentStyle.Aux[DocNode] = {
     (for {
@@ -75,7 +38,7 @@ class StyleParserImpl extends StyleParser {
     (for {
       name <- node.attributes.getTag(OdtTags.StyleName)
       styleInfo <- parseStyle(node, doc)
-      styleId <- StyleId.fromNode(node)
+      styleId <- OdtStyleId.fromNode(node)
     } yield (styleId, styleInfo) +: doc) getOrElse doc
   }
 
@@ -87,7 +50,7 @@ class StyleParserImpl extends StyleParser {
           (for {
             name      <- node.attributes.getTag(OdtTags.StyleName)
             styleInfo <- parseStyle(node, doc)
-            styleId   <- StyleId.fromNode(node)
+            styleId   <- OdtStyleId.fromNode(node)
           } yield (styleId, styleInfo) +: doc) getOrElse doc
         })
     }
@@ -97,7 +60,7 @@ class StyleParserImpl extends StyleParser {
       logger.info(s"Ignoring node $styleNode")
       None
     } else {
-      val id = StyleId.fromNode(styleNode)
+      val id = OdtStyleId.fromNode(styleNode)
       val parent = styleNode.attributes.getTag(OdtTags.StyleParentStyle)
 
       lazy val parentStyle = (for {
@@ -161,9 +124,9 @@ class StyleParserImpl extends StyleParser {
       val mappingFun = new toMap(styleNode)
       import mappingFun._
 
-      val styleMap = Style.styleProperties.map(mappingFun)
+      val styleMap = OdtStyle.styleProperties.map(mappingFun)
       id map (styleId =>
-        Style.typesafeStyle(styleMap, styleId, parentStyle.map(_.id), tpe)(styleNode))
+        OdtStyle.typesafeStyle(styleMap, styleId, parentStyle.map(_.id), tpe)(styleNode))
     }
   }
 
@@ -171,17 +134,7 @@ class StyleParserImpl extends StyleParser {
 
 }
 
-object StyleParser {
-
-  // Returns a default implementation of the style factory
-  def default(): StyleParser = _instance
-
-  private lazy val _instance = new StyleParserImpl
-
-}
-
-object StyleParserImpl {
-
+object OdtStyleParser {
   final val invalidNodes =
     Seq(
       OdtTags.StyleDefault,
@@ -190,6 +143,8 @@ object StyleParserImpl {
       OdtTags.TextNotesConf,
       OdtTags.TextLineNumConf)
 
-  final val ParagraphFamily = "paragraph"
+  lazy val defaultOdt: StyleParser.Aux[scala.xml.Node] = new OdtStyleParser()
+
+  private final val ParagraphFamily = "paragraph"
 
 }

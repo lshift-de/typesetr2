@@ -1,8 +1,8 @@
 package net.lshift.typesetr
 package postprocessors
 
+import net.lshift.typesetr.parsers.styles._
 import net.lshift.typesetr.xml.InternalTags
-import parsers.odt.styles._
 import net.lshift.typesetr.parsers.{ NodeConfigs, NodeInfo, DocumentStyle, Repr }
 import styles.MetaFromDocument
 

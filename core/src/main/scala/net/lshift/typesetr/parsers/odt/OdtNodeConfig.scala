@@ -2,8 +2,9 @@ package net.lshift.typesetr
 package parsers
 package odt
 
-import net.lshift.typesetr.cmd.InputFormat
-import net.lshift.typesetr.parsers.odt.styles.StyleId
+import styles.OdtStyleId
+import cmd.InputFormat
+import net.lshift.typesetr.parsers.styles.StyleExtractor
 import net.lshift.typesetr.styles.MetaFromDocument
 
 /**
@@ -20,14 +21,12 @@ class OdtNodeConfig extends NodeConfigs {
   lazy val styleExtractor: StyleExtractor.Aux[Node] =
     new StyleExtractor {
       type DocNode = Node
-      def extractId(node: Repr.Aux[Node]): Option[StyleId] =
-        StyleId.forNonStyleNode(node.source)
+      def extractId(node: Repr.Aux[Node]): Option[parsers.styles.StyleId] =
+        OdtStyleId.forNonStyleNode(node.source)
     }
 
-  lazy val nodeFactory: NodeFactory.Aux[Node] =
-    new OdtNodeFactory
+  lazy val nodeFactory: NodeFactory.Aux[Node] = new OdtNodeFactory
 
-  lazy val nodeInfo: NodeInfo.Aux[Node] =
-    new OdtNodeInfo
+  lazy val nodeInfo: NodeInfo.Aux[Node] = new OdtNodeInfo
 
 }

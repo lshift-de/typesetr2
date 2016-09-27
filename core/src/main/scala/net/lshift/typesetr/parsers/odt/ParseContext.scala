@@ -2,7 +2,7 @@ package net.lshift.typesetr
 package parsers
 package odt
 
-import styles.Style
+import net.lshift.typesetr.parsers.styles.Style
 
 abstract class ParseContext {
   def listLevel: Int
