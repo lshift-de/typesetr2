@@ -232,7 +232,7 @@ class OdtParser() extends Parser {
           // The change of style is reflected in the Typesetr's internal
           // attribute list that carries over the new style info name.
           // The latter will be modified, if necessary, in the Odt writer.
-          val (newStyleId, fact) = OdtStylePropertyFactory.odtQuoting(parent = sty)
+          val (newStyleId, fact) = OdtDocumentFormatingFactory.odtQuoting(parent = sty)
           newStyles = fact.create(newStyleId) :: newStyles
 
 

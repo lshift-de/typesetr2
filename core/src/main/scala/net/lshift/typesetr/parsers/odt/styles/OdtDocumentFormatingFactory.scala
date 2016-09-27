@@ -4,7 +4,7 @@ package odt
 package styles
 
 import net.lshift.typesetr.pandoc.Markers
-import net.lshift.typesetr.parsers.styles.{ Style, StyleId, StylePropertyFactory }
+import net.lshift.typesetr.parsers.styles.{ Style, StyleId, DocumentFormatingFactory }
 import net.lshift.typesetr.util.{ Percentage, Inches, ValOfUnit }
 import net.lshift.typesetr.xml.XmlAttribute
 import net.lshift.typesetr.xml.attributes.{ TextAlign, FontStyle }
@@ -13,9 +13,9 @@ import scala.xml.{ TopScope, Elem, MetaData, Text }
 
 import scala.language.implicitConversions
 
-object OdtStylePropertyFactory {
+object OdtDocumentFormatingFactory {
 
-  def odtQuoting(parent: Style): (StyleId, StylePropertyFactory[scala.xml.Node]) = {
+  def odtQuoting(parent: Style): (StyleId, DocumentFormatingFactory.Aux[scala.xml.Node]) = {
     val randomName = StyleId(parent.id.family, parent.id.name + "_1")
     (randomName, QuotingStyleParagraph(parent, PandocQuoteLeftMargin))
   }
@@ -25,7 +25,9 @@ object OdtStylePropertyFactory {
   //   <style:paragraph-properties fo:margin-left="0.5in" fo:margin-right="0in" fo:line-height="115%" fo:text-align="justify" style:justify-single-word="false" fo:text-indent="0in" style:auto-text-indent="false" fo:break-before="auto" fo:break-after="auto" style:writing-mode="lr-tb"/>
   //   <style:text-properties fo:font-style="italic" style:font-style-asian="italic" style:font-style-complex="italic"/>
   // </style:style>
-  private case class QuotingStyleParagraph(parentStyle: Style, indent: ValOfUnit) extends StylePropertyFactory[scala.xml.Node] {
+  private case class QuotingStyleParagraph(parentStyle: Style, indent: ValOfUnit) extends DocumentFormatingFactory {
+
+    type DocNode = scala.xml.Node
 
     def create(styleId: StyleId)(implicit factory: NodeFactory.Aux[scala.xml.Node]): Repr.Aux[scala.xml.Node] = {
       val paragraphProps = paragraphWithLeftMargin(margin = indent, parentStyle.textAlign)
