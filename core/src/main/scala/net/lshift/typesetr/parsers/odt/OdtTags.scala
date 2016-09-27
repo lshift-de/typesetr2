@@ -40,6 +40,7 @@ object OdtTags {
   val StyleNameAttr: XmlAttribute = (implicitly[NameSpaces].apply("text"), "style-name")
   val SoftPageBreak: XmlTag = (implicitly[NameSpaces].apply("text"), "soft-page-break")
   val TextOutlineStyle: XmlTag = (implicitly[NameSpaces].apply("text"), "outline-style")
+  val TextOutlineLevel: XmlAttribute = (implicitly[NameSpaces].apply("text"), "outline-level")
   val TextNotesConf: XmlTag = (implicitly[NameSpaces].apply("text"), "notes-configuration")
   val TextLineNumConf: XmlTag = (implicitly[NameSpaces].apply("text"), "linenumbering-configuration")
 

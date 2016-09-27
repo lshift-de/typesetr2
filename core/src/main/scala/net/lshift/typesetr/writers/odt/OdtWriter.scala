@@ -144,6 +144,9 @@ class OdtWriter(inputFile: File) extends Writer {
       case xml.Attribute(InternalAttributes.style, styleId) :: rest =>
         translateAttribute(node.copy(meta =
           node.attributes.copyWith(OdtTags.StyleNameAttr, styleId)), rest)
+      case xml.Attribute(InternalAttributes.outlineLvl, lvl) :: rest =>
+        translateAttribute(node.copy(meta =
+          node.attributes.copyWith(OdtTags.TextOutlineLevel, lvl)), rest)
       case _ :: rest =>
         translateAttribute(node, rest)
     }

@@ -8,5 +8,6 @@ object InternalAttributes {
   lazy val textAlignClazz = AttributeKey("class")
   lazy val indent = AttributeKey("indent")
   lazy val style = AttributeKey("new-style")
+  lazy val outlineLvl = AttributeKey("outline-level")
 
 }

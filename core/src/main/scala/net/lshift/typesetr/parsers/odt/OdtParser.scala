@@ -186,11 +186,18 @@ class OdtParser() extends Parser {
         Repr.makeTextElem[DocNode](linebreakEncoded, synthetic = true)
 
       case OdtTags.H =>
-        // TODO: why on non-blank we wrap it?
         logger.debug(s"[parser] header tag: $node")
         for {
           styleTpe <- sty.tpe if !(node isBlank)
-        } yield node.wrap(tag = styleTpe.tag, body = children)
+        } yield {
+          val modifiers = styleTpe match {
+            case hStyle: styles.HeadingStyle =>
+              Attribute(InternalAttributes.outlineLvl, hStyle.index.toString) :: Nil
+            case _ =>
+              Nil
+          }
+          node.wrap(tag = styleTpe.tag, body = children, attributes = modifiers)
+        }
 
       case OdtTags.TextList =>
         val listStyle = docStyle.newListLevelContext
