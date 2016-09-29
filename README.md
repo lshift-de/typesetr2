@@ -52,8 +52,24 @@ where
 
 ## Limitations
 
+### Overview
+ 
+ - [o] headers - no sections above heading level 5
+ - [ ] inline code - ODT Parser in Pandoc does not recognize any code blocks (other input formats support it)
+ - [ ] removal of bogus paragraph elements - won't be implemented (Pandoc understands those correctly)
+ - [ ] list items - custom typesetr's styling - desired?
+ - [ ] list items - starting/restarting numbering - currently Pandoc hardcoded 1 as a starting number for ODT documents
+ - [ ] images - not supported in the ODT Parser in Pandoc
+
+Legend:
+ - empty - not supported
+ - o - partially supported
+ - i - implementation in progress
+ - X - implemented
+
 ### Headers
 
 Unlike the old oversion of Typesetr, Pandoc does not handle heading styles
 above the level 5. While a workaround can be integrated, currently no styling
 is applied above level 5.
+
