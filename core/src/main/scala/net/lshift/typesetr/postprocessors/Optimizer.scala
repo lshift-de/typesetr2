@@ -150,7 +150,15 @@ trait PostProcessorUtils[T] extends OpimizerStrategies[T] {
     def idx: Int
   }
   case class TextKey(idx: Int) extends GroupKey
-  case class SigKey(elemSig: ElemSig, idx: Int) extends GroupKey
+  case class SigKey(elemSig: ElemSig, idx: Int) extends GroupKey {
+    override def equals(x: Any): Boolean =
+      x match {
+        case SigKey(elemSig2, idx2) =>
+          (elemSig2._1 equals elemSig._1) && (elemSig2._2 equals elemSig._2) && (idx2 == idx)
+        case _ =>
+          false
+      }
+  }
   case class SkolemKey(idx: Int) extends GroupKey
   case class RemoveKey(idx: Int) extends GroupKey
 
@@ -413,6 +421,7 @@ trait OptimizerCoalesceParentChild[T] {
   //     </li>
   protected def coalesceParentChild(sig: ElemSig, elem: Repr.Aux[T])(implicit logger: Logger, sty: DocumentStyle.Aux[T]): Option[Repr.Aux[T]] = {
 
+    // Pandoc can handle those paragraphs easily
     object BodyWithBogusP {
       val liftableTags = List(LI, DT, DD, FOOTNOTE)
 
@@ -426,8 +435,8 @@ trait OptimizerCoalesceParentChild[T] {
       def unapply(elem: Repr.Aux[T]) = {
         if (elem hasTag liftableTags)
           elem.body match {
-            case (elem: Repr) :: DoesNotStartWithP(elems) if elem.hasTag(P) =>
-              Some(elem.body.asInstanceOf[Seq[Repr.Aux[T]]] ++ elems)
+            case (elem1: Repr) :: DoesNotStartWithP(elems) if elem1.hasTag(P) =>
+              Some(elem1.body ++ elems)
             case _ =>
               None
           }
@@ -480,10 +489,10 @@ trait OptimizerCoalesceParentChild[T] {
     }
 
     Some(elem match {
-      case BodyWithBogusP(children) =>
+      /*case BodyWithBogusP(children) =>
         logger.debug("[parent-child] body with bogus p")
         Repr.makeElem(elem.tag, children, attrs = elem.attr, contents = None)(
-          elem.source, implicitly[NodeFactory.Aux[T]])
+          elem.source, implicitly[NodeFactory.Aux[T]])*/
       case LiftableP(child) =>
         child
       case LiftableSpanStyle(attrs, body) =>

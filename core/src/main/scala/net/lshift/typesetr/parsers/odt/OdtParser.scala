@@ -267,21 +267,23 @@ class OdtParser() extends Parser {
           First(body2) |+| First(Repr.makeElem(tag = Tags.SPAN, body = body1, contents = None, attrs = Nil)))
 
       case OdtTags.A =>
-        //val tpeAttr = AttributeKey(OdtTags.HrefType)
+        val hrefAttr = AttributeKey(OdtTags.HrefType)
         // TODO: re-enable the assert
         //assert((tpeAttr inAttributes (attr)).getOrElse("") == "simple")
 
         // TODO: store a definition separately
 
+        val hrefLink = source.attributes.getTag(OdtTags.HrefAttr)
+        val attributes = hrefLink.map(link => Attribute(InternalAttributes.href, link) :: Nil).getOrElse(Nil)
         val body = children.flatMap(child =>
           whack(child, _ hasTag (Tags.SPAN | Tags.U)))
-        Repr.makeElem(tag = Tags.A, body, contents = None, attrs = Nil)
+        Repr.makeElem(tag = Tags.A, body, contents = None, attrs = attributes)
 
       case OdtTags.BookmarkStart =>
         // TOOD: Missing guards
         val attrs = node.attributes.getTag(OdtTags.TextNameAttr).
           map(v => Attribute(InternalAttributes.href, v) :: Nil).getOrElse(Nil)
-        node.wrap(tag = Tags.A, body = children, attributes = attrs)
+        node.wrap(tag = Tags.LABEL, body = children, attributes = attrs)
 
       case OdtTags.Table =>
         logger.warn(s"[limitation] Ignoring Table node")

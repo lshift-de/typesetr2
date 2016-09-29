@@ -36,21 +36,6 @@ class NodeOps(val x: scala.xml.Node) extends AnyVal {
   def hasAttribute(attr: Attribute): Boolean =
     hasAttribute(attr :: Nil)
 
-  def getAttribute(attrName: String): Option[Seq[Node]] = x match {
-    case elem: Elem =>
-      val meta = elem.attributes(attrName)
-      if (meta == null) None
-      else Some(meta)
-    case _ =>
-      None
-  }
-
-  def hasAttrWithVal(attrName: String, v: String): Boolean =
-    getAttribute(attrName).map(_.exists(n => n match {
-      case Text(data) if data == v => true
-      case _                       => false
-    })).getOrElse(false)
-
   def \!(tag: XmlTag): Seq[scala.xml.Node] = x.child.filter(node =>
     node.prefix == tag.namespace.v && node.label == tag.tag)
 

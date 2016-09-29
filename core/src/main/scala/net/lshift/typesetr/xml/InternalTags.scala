@@ -4,6 +4,7 @@ object InternalTags {
   final lazy val TITLE = Tag("title")
   final lazy val SUBTITLE = Tag("sub")
   final lazy val A = Tag("a")
+  final lazy val LABEL = Tag("label")
   final lazy val SPAN = Tag("span")
   final lazy val B = Tag("b")
   final lazy val I = Tag("i")

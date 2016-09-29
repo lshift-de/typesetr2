@@ -28,6 +28,11 @@ sealed abstract class Attribute {
 
   def value: Option[String]
 
+  override def equals(x: Any): Boolean =
+    x match {
+      case x: Attribute => (key equals x.key) && (value equals x.value)
+      case _            => false
+    }
 }
 
 case class AttributeWithVal(key: AttributeKey)(v: String) extends Attribute {
