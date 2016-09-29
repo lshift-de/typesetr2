@@ -79,11 +79,11 @@ object OdtStyle {
 
   }
 
-  def typesafeStyle(mmap: MMap, id: StyleId,
+  def typesafeStyle(mmap: TextMMap, id: StyleId,
                     parent: Option[StyleId], tpe: Option[StyleType])(source: scala.xml.Node): Style =
     new RecordsBackedStyleImpl(mmap, id, parent, tpe)(source)
 
-  private class RecordsBackedStyleImpl(mmap: MMap,
+  private class RecordsBackedStyleImpl(mmap: TextMMap,
                                val id: StyleId,
                                val parent: Option[StyleId],
                                val tpe: Option[StyleType])(source0: scala.xml.Node)
@@ -93,7 +93,7 @@ object OdtStyle {
       (mmap.toMap[StylePropKey, Any]).get(x).asInstanceOf[Option[Option[x.Result]]].flatten
 
     protected def property[T <: StylePropKey](x: Witness.Aux[T])(
-      implicit sel: ops.record.Selector[MMap, x.T]) : sel.Out = mmap(x)
+      implicit sel: ops.record.Selector[TextMMap, x.T]) : sel.Out = mmap(x)
 
     def fontFamily: Option[FontFamily] =
       property(OdtStylePropKeys.FontFamily)
@@ -167,10 +167,10 @@ object OdtStyle {
   type Aux[S <: StylePropKey] = Option[S#Result] with KeyTag[S#V, Option[S#Result]]
 
   /**
-    * Heterogeneous list of records representing a mapping between style
+    * Heterogeneous list of records representing a mapping between text style
     * properties and types of their values
     */
-  type MMap =
+  private type TextMMap =
     Aux[OdtStylePropKeys.FontFamily.type] ::
     Aux[OdtStylePropKeys.FontSeize.type] ::
     Aux[OdtStylePropKeys.FontWeight.type] ::
@@ -200,6 +200,6 @@ object OdtStyle {
       keysWitness()
   }
 
-  lazy val styleProperties = { (new KeysOfRecordMapHelper[MMap]).keys() }
+  lazy val textStyleProperties = { (new KeysOfRecordMapHelper[TextMMap]).keys() }
 
 }

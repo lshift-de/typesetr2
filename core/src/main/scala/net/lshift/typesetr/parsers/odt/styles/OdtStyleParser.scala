@@ -124,7 +124,7 @@ class OdtStyleParser extends StyleParser {
       val mappingFun = new toMap(styleNode)
       import mappingFun._
 
-      val styleMap = OdtStyle.styleProperties.map(mappingFun)
+      val styleMap = OdtStyle.textStyleProperties.map(mappingFun)
       id map (styleId =>
         OdtStyle.typesafeStyle(styleMap, styleId, parentStyle.map(_.id), tpe)(styleNode))
     }
