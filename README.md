@@ -58,9 +58,9 @@ where
  - [ ] inline code - ODT Parser in Pandoc does not recognize any code blocks (other input formats support it)
  - [ ] removal of bogus paragraph elements - won't be implemented (Pandoc understands those correctly)
  - [ ] list items - custom typesetr's styling - desired?
- - [ ] list items - starting/restarting numbering - currently Pandoc hardcoded 1 as a starting number for ODT documents
- - [ ] images - not supported in the ODT Parser in Pandoc
-
+ - [ ] list items - starting/restarting numbering - currently Pandoc hardcoded 1 as a starting number for ODT documents (see `getListConstructor`)
+ - [ ] images - not supported in the ODT Parser in Pandoc (see `image` in other parsers)
+ - [X] labels - needs to translate local href references to bookmark references
 Legend:
  - empty - not supported
  - o - partially supported

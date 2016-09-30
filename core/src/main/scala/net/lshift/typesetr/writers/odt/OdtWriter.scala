@@ -133,7 +133,7 @@ class OdtWriter(inputFile: File) extends Writer {
     }
   }
 
-  private def translateAttributes(node: Aux[N], indent: Int)(
+  private def translateAttributes(nodeRepr: Aux[N], indent: Int)(
     implicit config: Config, writer: java.io.Writer, logger: Logger): N = {
 
     def translateAttribute(node: N, attr: List[xml.Attribute]): N = attr match {
@@ -147,11 +147,45 @@ class OdtWriter(inputFile: File) extends Writer {
       case xml.Attribute(InternalAttributes.outlineLvl, lvl) :: rest =>
         translateAttribute(node.copy(meta =
           node.attributes.copyWith(OdtTags.TextOutlineLevel, lvl)), rest)
+      case xml.Attribute(InternalAttributes.href, href) :: rest =>
+        nodeRepr.tag match {
+          // Note: When using bookmarks for labels Pandoc introduces
+          //       its own pretty-printed anchors. Sadly the renaming is
+          //       is not consistent (looks like a bug in the odt parser)
+          //       so the bookmark references just refer to some new anchors
+          //       rather than those introduced in the labels.
+          //       Using references fixes things in a sense that for some reason
+          //       Pandoc stops introducing renaming for the labels (but keeps
+          //       doing it for the references (see 'read_reference_start' method
+          //       in Pandoc).
+          case InternalTags.LABEL =>
+            new Elem(
+              prefix = OdtTags.ReferenceStart.namespace.short.value,
+              label = OdtTags.ReferenceStart.tag,
+              attributes1 = node.attributes.copyWith(OdtTags.TextNameAttr, href),
+              minimizeEmpty = node.asInstanceOf[Elem].minimizeEmpty,
+              scope = node.scope,
+              child = (node.child: _*))
+          case InternalTags.A if href.startsWith("#") =>
+            // Normally that should be the correct way.
+            // But Pandoc's bug is preventing us from "doing the right thing".
+            // (see above comment)
+            /*new Elem(
+              prefix = OdtTags.ReferenceRef.namespace.short.value,
+              label = OdtTags.ReferenceRef.tag,
+              attributes1 = node.attributes.copyWith(OdtTags.BookmarkOrReferenceName, "anchor-" + href),
+              minimizeEmpty = node.asInstanceOf[Elem].minimizeEmpty,
+              scope = node.scope,
+              child = (node.child: _*))*/
+            translateAttribute(node, rest)
+          case _ =>
+            translateAttribute(node, rest)
+        }
       case _ :: rest =>
         translateAttribute(node, rest)
     }
 
-    translateAttribute(node.source, node.attr)
+    translateAttribute(nodeRepr.source, nodeRepr.attr)
   }
 
   private def filterNamespaceBinding(scope: NamespaceBinding,

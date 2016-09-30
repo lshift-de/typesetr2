@@ -20,8 +20,12 @@ object OdtTags {
 
   val A: XmlTag = (implicitly[NameSpaces].apply("text"), "a")
   val BookmarkStart: XmlTag = (implicitly[NameSpaces].apply("text"), "bookmark-start")
+  val ReferenceStart: XmlTag = (implicitly[NameSpaces].apply("text"), "reference-mark-start")
   val BookmarkEnd: XmlTag = (implicitly[NameSpaces].apply("text"), "bookmark-end")
   val Bookmark: XmlTag = (implicitly[NameSpaces].apply("text"), "bookmark")
+  val BookmarkRef: XmlTag = (implicitly[NameSpaces].apply("text"), "bookmark-ref")
+  val ReferenceRef: XmlTag = (implicitly[NameSpaces].apply("text"), "reference-ref")
+  val BookmarkOrReferenceName: XmlAttribute = (implicitly[NameSpaces].apply("text"), "ref-name")
   val H: XmlTag = (implicitly[NameSpaces].apply("text"), "h")
   val TextList: XmlTag = (implicitly[NameSpaces].apply("text"), "list")
   val TextListItem: XmlTag = (implicitly[NameSpaces].apply("text"), "list-item")

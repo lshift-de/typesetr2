@@ -114,7 +114,7 @@ class MetaDataOps(val x: scala.xml.MetaData) extends AnyVal {
     else if (x.key == tagName.tag)
       new PrefixedAttribute(tagName.namespace.short.value, tagName.tag, value, x.next)
     else
-      x.copy(x.copyWith(tagName, value))
+      x.copy(x.next.copyWith(tagName, value))
   }
 
 }

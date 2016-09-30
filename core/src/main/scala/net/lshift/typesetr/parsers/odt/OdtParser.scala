@@ -279,7 +279,7 @@ class OdtParser() extends Parser {
           whack(child, _ hasTag (Tags.SPAN | Tags.U)))
         Repr.makeElem(tag = Tags.A, body, contents = None, attrs = attributes)
 
-      case OdtTags.BookmarkStart =>
+      case OdtTags.BookmarkStart | OdtTags.Bookmark =>
         // TOOD: Missing guards
         val attrs = node.attributes.getTag(OdtTags.TextNameAttr).
           map(v => Attribute(InternalAttributes.href, v) :: Nil).getOrElse(Nil)
@@ -325,7 +325,7 @@ class OdtParser() extends Parser {
       case t @ OdtTags.Text =>
         node.wrap(tag = t.toInternalTag, body = children)
 
-      case OdtTags.SeqDecl | OdtTags.Bookmark | OdtTags.SoftPageBreak =>
+      case OdtTags.SeqDecl | OdtTags.SoftPageBreak =>
         None
 
       case t @ OdtTags.Scripts =>
