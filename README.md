@@ -61,10 +61,20 @@ where
  - [ ] list items - starting/restarting numbering - currently Pandoc hardcoded 1 as a starting number for ODT documents (see `getListConstructor`)
  - [ ] images - not supported in the ODT Parser in Pandoc (see `image` in other parsers)
  - [X] labels - needs to translate local href references to bookmark references
+ - [ ] inline math formulas - Pandoc translates backslashes to \textbackslash{}, which breaks the latex conversion
+ - [ ] simple tables - currently ignored
+ - [ ] inner quoations (American style) - unknown state
+ - [ ] negative numbers - (also broken in the old typesetr)
+ - [ ] page breaks - currently ignored
+ - [ ] page numbering - total number of pages is broken
+ - [ ] table of contents 
+ - [ ] links as new commands - remains to be decided whether it is necessary with the new design
+ 
 Legend:
  - empty - not supported
  - o - partially supported
  - i - implementation in progress
+ - w - won't be implemented
  - X - implemented
 
 ### Headers
