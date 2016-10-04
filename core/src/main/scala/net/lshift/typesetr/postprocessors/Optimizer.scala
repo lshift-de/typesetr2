@@ -488,6 +488,28 @@ trait OptimizerCoalesceParentChild[T] {
 
     }
 
+    object SpanElem {
+      def unapply(elem: Repr.Aux[T]): Option[Repr.Aux[T]] = elem.tag match {
+        case SPAN => Some(elem)
+        case _    => None
+      }
+    }
+
+    object SpanWithinSpan {
+
+      def unapply(elem: Repr.Aux[T]): Option[Repr.Aux[T]] = {
+        elem match {
+          case SpanElem(elem1) =>
+            elem1.body match {
+              case SpanElem(elem2) :: Nil => Some(elem2)
+              case _                      => None
+            }
+          case _ => None
+        }
+      }
+
+    }
+
     Some(elem match {
       /*case BodyWithBogusP(children) =>
         logger.debug("[parent-child] body with bogus p")
@@ -495,6 +517,8 @@ trait OptimizerCoalesceParentChild[T] {
           elem.source, implicitly[NodeFactory.Aux[T]])*/
       case LiftableP(child) =>
         child
+      case SpanWithinSpan(insideElem) =>
+        insideElem
       case LiftableSpanStyle(attrs, body) =>
         logger.debug("[parent-child] liftable span")
         val meta = elem.attr.filter(_.key != STYLE) ++
