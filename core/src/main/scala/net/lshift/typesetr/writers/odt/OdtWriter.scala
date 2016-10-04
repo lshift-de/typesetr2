@@ -97,7 +97,7 @@ class OdtWriter(inputFile: File) extends Writer {
             // Make sure that \ are properly quoted.
             val encoded1 = inlineMath.replaceAllIn(encoded,
               m => scala.util.matching.Regex.quoteReplacement(
-                     Markers.mathBlock(m.group(inlineMathGroup))))
+                Markers.mathBlock(m.group(inlineMathGroup))))
             writer.write(s"$space$encoded1$NewLine")
             true
           case _ =>
