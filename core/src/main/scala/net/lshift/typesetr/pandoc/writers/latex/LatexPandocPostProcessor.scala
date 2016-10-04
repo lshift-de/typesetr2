@@ -33,4 +33,16 @@ class LatexPandocPostProcessor extends PandocPostProcessor {
       m => Regex.quoteReplacement(PygmentsFormatter(m.group(Markers.groupName),
         LatexFormatter)))
 
+  def replaceInlineMath(body: BodyTpe)(implicit log: util.Logger): BodyTpe =
+    Markers.MathR.replaceAllIn(body,
+      { m =>
+        Regex.quoteReplacement(s"\\(") +
+          Regex.quoteReplacement(m.group(Markers.groupName).
+            replaceAllLiterally("\\textbackslash{}", "textbackslash"). // - replace all valid, encoded backslashes with a dummy
+            replaceAllLiterally("\\", "").                             // - remove backslashes introduced by Pandoc
+            replaceAllLiterally("textbasckslash", "\\").               // - do an actual translation to \
+            replaceAllLiterally("{}", "")) +                           // - workaround for Pandoc's bug that puts curly brackets for sub/sup-scripts in a wrong place
+          Regex.quoteReplacement(s"\\)")                               //   e.g. x^{}2 instead of x^{2}
+      })
+
 }

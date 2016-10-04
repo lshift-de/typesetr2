@@ -36,8 +36,14 @@ object Markers {
   def formatBlock[T](txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T]): Seq[Repr.Aux[T]] =
     verbatim(Verbatim)(txt)
 
+  def mathBlock(txt: => String): String = {
+    val name1 = Math + "-" + increment()
+    s"$BeginMath!$name1!$txt$EndMath!$name1!"
+  }
+
   final val RightAlign = "attrib"
   final val Verbatim = "verbatim"
+  final val Math = "math"
 
   private final val BeginEnv = "TYPESETRENVSTART"
 
@@ -51,6 +57,10 @@ object Markers {
 
   private final val EndFormat = "TYPESETRPREEND"
 
+  private final val BeginMath = "TYPESETRMATHSTART"
+
+  private final val EndMath = "TYPESETRMATHEND"
+
   final val groupStartName = "group-start"
   final val groupName = "content"
   final val groupEndName = "group-end"
@@ -60,5 +70,7 @@ object Markers {
   final val CmdR = new scala.util.matching.Regex(s"(?s)$BeginCmd!(.*)-(\\d*)!(.*)$EndCmd!(.*)-\\2!", groupStartName, "id", groupName, groupEndName)
 
   final val PreR = new scala.util.matching.Regex(s"(?s)${BeginFormat}!$Verbatim-(\\d*)!(.*)${EndFormat}!$Verbatim-\\1!", "id", groupName)
+
+  final val MathR = new scala.util.matching.Regex(s"${BeginMath}!$Math-(\\d*)!(.*)${EndMath}!$Math-\\1!", "id", groupName)
 
 }

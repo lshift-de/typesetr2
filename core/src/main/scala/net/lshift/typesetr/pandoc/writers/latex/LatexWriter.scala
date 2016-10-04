@@ -112,7 +112,8 @@ class LatexWriter(from: File, target: File, template: styles.StyleTemplate, docM
   def bodyFixes(body: BodyTpe)(implicit ppp: postprocessors.PandocPostProcessor.Aux[Out, BodyTpe], log: util.Logger): BodyTpe = {
     val v1 = ppp.replaceEnvBlock(body)
     val v2 = ppp.replaceCmdBlock(v1)
-    ppp.replaceFormattedBlock(v2)
+    val v3 = ppp.replaceFormattedBlock(v2)
+    ppp.replaceInlineMath(v3)
   }
 
   /**

@@ -6,6 +6,7 @@ import java.io.{ File, FileOutputStream }
 import java.nio.channels.Channels
 
 import cmd.Config
+import net.lshift.typesetr.pandoc.Markers
 import net.lshift.typesetr.parsers.odt.OdtTags
 import parsers.Repr.Aux
 import util.Logger
@@ -92,11 +93,12 @@ class OdtWriter(inputFile: File) extends Writer {
               case (t, (from, to)) =>
                 t.replaceAll(from, to)
             }
-            //            val x = node.getAttribute(InternalAttributes.indent.toString).flatMap(_.value).map(_.toInt).getOrElse(0)
-            //            if (x > 1)
-            //              writer.write(s"$space${("\\ " * x).toString}$encoded$NewLine")
-            //            else
-            writer.write(s"$space$encoded$NewLine")
+
+            // Make sure that \ are properly quoted.
+            val encoded1 = inlineMath.replaceAllIn(encoded,
+              m => scala.util.matching.Regex.quoteReplacement(
+                     Markers.mathBlock(m.group(inlineMathGroup))))
+            writer.write(s"$space$encoded1$NewLine")
             true
           case _ =>
             writer.write(s"<missing text>$NewLine")
@@ -229,6 +231,10 @@ object OdtWriter {
     "<" -> "&lt;",
     ">" -> "&gt;",
     """"""" -> "&quot;")
+
+  private final val inlineMath = new scala.util.matching.Regex("\\\\\\((.*)\\\\\\)", inlineMathGroup)
+
+  private final val inlineMathGroup = "mathFormula"
 
   private final val BlankSpace = " "
 

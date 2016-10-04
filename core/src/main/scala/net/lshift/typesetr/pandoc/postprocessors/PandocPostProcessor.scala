@@ -50,6 +50,18 @@ abstract class PandocPostProcessor {
     */
   def replaceFormattedBlock(body: BodyTpe)(implicit log: util.Logger): BodyTpe
 
+  /**
+    * Replace all inline math fragments with the target's
+    * equivalent
+    *
+    * @param body content to translate
+    * @return `body` with all the occurrences of the
+    *        inline math fragments replaced by the
+    *        target's equivalent
+    */
+  def replaceInlineMath(body: BodyTpe)(implicit log: util.Logger): BodyTpe
+
+
 }
 
 object PandocPostProcessor {
