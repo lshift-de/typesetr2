@@ -77,6 +77,10 @@ Legend:
  - w - won't be implemented
  - X - implemented
 
+## Bugs
+
+ - [ ] duplicate entries for references, bookmarks etc (see [reported bug](https://github.com/jgm/pandoc/issues/3143))
+
 ### Headers
 
 Unlike the old oversion of Typesetr, Pandoc does not handle heading styles
