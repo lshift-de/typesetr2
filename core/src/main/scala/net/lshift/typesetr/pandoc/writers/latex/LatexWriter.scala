@@ -25,7 +25,7 @@ class LatexWriter(from: File, target: File, template: styles.StyleTemplate, docM
 
   type BodyTpe = String
 
-  private val customCmds =
+  private def customCmds(config: Config) =
     // TODO: Are there legitimate situations when `quote` should be left as-is?
     s"""|\\\\renewenvironment\\{quote\\}\\{\\\\begin\\{quoting\\}\\}\\{\\\\end\\{quoting\\}\\}
         |\\\\newenvironment\\{rightalign\\}\\{\\\\begin\\{flushright\\}\\\\itshape\\}\\{\\\\end\\{flushright\\}\\}
@@ -33,6 +33,7 @@ class LatexWriter(from: File, target: File, template: styles.StyleTemplate, docM
         |\\\\renewlist\\{enumerate\\}\\{enumerate\\}\\{20\\}
         |\\\\providecommand\\{\\\\tightlist\\}\\{%
         |  \\\\setlength\\{\\\\itemsep\\}\\{0pt\\}\\\\setlength\\{\\\\parskip\\}\\{0pt\\}\\}
+        |\\\\setcounter\\{tocdepth\\}\\{${config.tocDepth}\\}
      """.stripMargin
 
   def write(config: Config)(implicit logger: Logger): Unit = {
@@ -53,7 +54,7 @@ class LatexWriter(from: File, target: File, template: styles.StyleTemplate, docM
       val finalContent0 =
         templBody.
           replaceFirst(SectionBabel, babelHeader).
-          replaceFirst(SectionHead, latexHead.mkString("\n") + "\n" + customCmds).
+          replaceFirst(SectionHead, latexHead.mkString("\n") + "\n" + customCmds(config)).
           replaceFirst(SectionMeta, xmpFields.mkString("\n"))
       logger.info(s"Template without a body: $finalContent0")
 

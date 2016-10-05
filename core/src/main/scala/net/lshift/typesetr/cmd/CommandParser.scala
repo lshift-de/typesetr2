@@ -56,6 +56,14 @@ object CommandParser extends OptReaders {
       c.copy(page = x))
       .text("One-based index of the page to render")
 
+    opt[Int]("toc").optional().action((x, c) =>
+      c.copy(page = x))
+      .text("Include table of contents")
+
+    opt[Int]("toc-depth").optional().action((x, c) =>
+      c.copy(page = x))
+      .text("Table of contents maximal depth")
+
     opt[Int]("pixels").optional().action((x, c) =>
       c.copy(pixels = x))
       .text("PNG image size")
