@@ -29,6 +29,10 @@ class LatexWriter(from: File, target: File, template: styles.StyleTemplate, docM
     // TODO: Are there legitimate situations when `quote` should be left as-is?
     s"""|\\\\renewenvironment\\{quote\\}\\{\\\\begin\\{quoting\\}\\}\\{\\\\end\\{quoting\\}\\}
         |\\\\newenvironment\\{rightalign\\}\\{\\\\begin\\{flushright\\}\\\\itshape\\}\\{\\\\end\\{flushright\\}\\}
+        |\\\\renewlist\\{itemize\\}\\{itemize\\}\\{20\\}
+        |\\\\renewlist\\{enumerate\\}\\{enumerate\\}\\{20\\}
+        |\\\\providecommand\\{\\\\tightlist\\}\\{%
+        |  \\\\setlength\\{\\\\itemsep\\}\\{0pt\\}\\\\setlength\\{\\\\parskip\\}\\{0pt\\}\\}
      """.stripMargin
 
   def write(config: Config)(implicit logger: Logger): Unit = {
