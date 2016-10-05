@@ -69,6 +69,7 @@ where
  - [ ] page numbering - total number of pages is broken
  - [ ] table of contents 
  - [ ] links as new commands - remains to be decided whether it is necessary with the new design
+ - [ ] deeply nested items - currently not supported (Pandoc limitation - https://github.com/jgm/pandoc/issues/2922)
  
 Legend:
  - empty - not supported
