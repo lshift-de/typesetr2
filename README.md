@@ -65,8 +65,8 @@ where
  - [ ] simple tables - currently ignored
  - [ ] inner quoations (American style) - unknown state
  - [ ] negative numbers - (also broken in the old typesetr)
- - [ ] page breaks - currently ignored
- - [ ] page numbering - total number of pages is broken
+ - [ ] page breaks - Pandoc [limitation](https://github.com/jgm/pandoc/issues/1934)
+ - [X] page numbering - total number of pages is broken
  - [X] table of contents 
  - [ ] links as new commands - remains to be decided whether it is necessary with the new design
  - [i] deeply nested items - currently not supported ([Pandoc limitation](https://github.com/jgm/pandoc/issues/2922))
