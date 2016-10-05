@@ -325,7 +325,10 @@ class OdtParser() extends Parser {
       case t @ OdtTags.Text =>
         node.wrap(tag = t.toInternalTag, body = children)
 
-      case OdtTags.SeqDecl | OdtTags.SoftPageBreak =>
+      case t @ OdtTags.SoftPageBreak =>
+        node.wrap(tag = t.toInternalTag, body = children)
+
+      case OdtTags.SeqDecl =>
         None
 
       case t @ OdtTags.Scripts =>
