@@ -9,7 +9,7 @@ import java.nio.file.Files
 import cmd.{ LogLevel, Config }
 import pandoc.writers._
 import net.lshift.typesetr.styles._
-import util.Logger
+import util.{ Logger, MediaExtractor }
 import org.apache.commons.io.FileUtils
 
 import scala.sys.process.{ ProcessLogger, Process }
@@ -18,7 +18,12 @@ import scala.language.postfixOps
 
 import XMPMeta.lang
 
-class LatexWriter(from: File, target: File, template: styles.StyleTemplate, docMeta: styles.MetaFromDocument, generatePdf: Boolean) extends Writer {
+class LatexWriter(from: File,
+                  target: File,
+                  template: styles.StyleTemplate,
+                  docMeta: styles.MetaFromDocument,
+                  generatePdf: Boolean,
+                  mediaExtractor: MediaExtractor) extends Writer {
   import LatexWriter._
 
   type Out = cmd.OutputFormat.Tex.type
@@ -42,7 +47,6 @@ class LatexWriter(from: File, target: File, template: styles.StyleTemplate, docM
       body <- from.loadFile()
       templFile <- template.template
       templBody <- templFile.loadFile()
-
     } yield {
       val langProp = meta.getKey(lang).map(_.raw).flatMap(Lang.apply).getOrElse(Lang.default)
       val xmpFields = xmpMeta(meta)
@@ -56,7 +60,7 @@ class LatexWriter(from: File, target: File, template: styles.StyleTemplate, docM
           replaceFirst(SectionBabel, babelHeader).
           replaceFirst(SectionHead, latexHead.mkString("\n") + "\n" + customCmds(config)).
           replaceFirst(SectionMeta, xmpFields.mkString("\n"))
-      logger.info(s"Template without a body: $finalContent0")
+      logger.info(s"Template without a body: $finalContent0 @ $from")
 
       val finalContent =
         finalContent0.replaceAllLiterally(SectionBody, bodyFixes(body))
@@ -81,6 +85,7 @@ class LatexWriter(from: File, target: File, template: styles.StyleTemplate, docM
       val tmpDir = File.createTempFile("pdf", ".typesetr")
       tmpDir.delete()
       tmpDir.mkdirs()
+      mediaExtractor.copyMediaTo(tmpDir)
       template.copyFilesTo(tmpDir)
 
       logger.info(s"Temporary directory with all sources: $tmpDir")

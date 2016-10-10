@@ -18,9 +18,16 @@ class OdtFile(mmap: Map[String, File]) {
   def content: Option[File] = mmap.get(CONTENT_F)
   def style: Option[File] = mmap.get(STYLES_F)
 
-  def copyToDir(dir: File): Boolean =
+  /**
+   * Copy extracted files into a given directory
+   *
+   * @param dir target directory
+   * @param ff filter on files to copy
+   * @return true if successful, false otherwise
+   */
+  def copyToDir(dir: File, ff: File => Boolean = _ => true): Boolean =
     mmap forall {
-      case (key, f) =>
+      case (key, f) if ff(f) =>
         f.mkdirs()
         try {
           val targetF = new File(dir + File.separator + key)
@@ -32,6 +39,7 @@ class OdtFile(mmap: Map[String, File]) {
             ex.printStackTrace()
             false
         }
+      case _ => true
     }
 }
 
@@ -109,6 +117,7 @@ object OdtFile {
           dir.mkdir()
 
           origFile.copyToDir(dir)
+
           copy(f, new File(dir + File.separator + CONTENT_F), REPLACE_EXISTING)
           val (files1, mimeFile) = dir.listFiles().toList.span(_.getName != MIMETYPE)
 

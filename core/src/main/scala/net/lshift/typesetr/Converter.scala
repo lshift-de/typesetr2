@@ -71,7 +71,7 @@ object Converter {
               outputFile.format,
               pandocInputF).right
             generator <- pandocPostprocessor(pandocOutput, outputFile.outputFile,
-              config, docMeta).right
+              config, docMeta, pandocInputF).right
           } yield {
             generator.write(config)
             if (!config.Ytmp) {
@@ -129,21 +129,23 @@ object Converter {
    * @param outFile desired output file of the document generation
    * @param config converter configuration
    * @param docMeta meta information inferred from the document
+   * @param origDoc postprocessed, pre-pandoc input file
    * @return a generic document generator.
    */
-  def pandocPostprocessor(inFile: File, outFile: File, config: Config, docMeta: MetaFromDocument): Either[String, pandoc.Writer] = {
-    val template = config.inFormat match {
+  def pandocPostprocessor(inFile: File, outFile: File, config: Config, docMeta: MetaFromDocument, origDoc: File): Either[String, pandoc.Writer] = {
+    val (template, mediaExtractor) = config.inFormat match {
       case InputFormat.Odt =>
-        styles.StyleTemplate.odt(config.styleBase, config.style)
+        (styles.StyleTemplate.odt(config.styleBase, config.style),
+          new parsers.odt.OdtMediaExtractor(origDoc))
       // TODO: other templating formats
       case _ =>
         ???
     }
     config.outFormat match {
       case OutputFormat.Pdf =>
-        Right(new LatexWriter(inFile, outFile, template, docMeta, true))
+        Right(new LatexWriter(inFile, outFile, template, docMeta, true, mediaExtractor))
       case OutputFormat.Tex =>
-        Right(new LatexWriter(inFile, outFile, template, docMeta, false))
+        Right(new LatexWriter(inFile, outFile, template, docMeta, false, mediaExtractor))
       case format =>
         Left("No postprocessor for the $format format")
     }

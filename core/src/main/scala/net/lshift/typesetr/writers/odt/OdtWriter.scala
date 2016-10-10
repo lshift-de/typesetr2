@@ -51,6 +51,7 @@ class OdtWriter(inputFile: File) extends Writer {
       (for {
         (odtFileMap, odtDir) <- inputFile.unpack()
       } yield {
+        logger.info(s"Temporary .odt directory: $odtDir")
         val packed = f.pack(stream, odtFileMap)
         if (!config.Ytmp)
           odtDir.deleteDirectory()
