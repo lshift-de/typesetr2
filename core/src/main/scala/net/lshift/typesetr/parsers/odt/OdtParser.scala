@@ -96,13 +96,13 @@ class OdtParser() extends Parser {
 
 
   def loadDocStyleFromMeta(node: scala.xml.Node)(implicit logger: Logger): Option[(Repr.Aux[DocNode], DocumentStyle.Aux[DocNode])] = {
-    def length(prop: Option[String]): Option[Int] =
-      prop.toRight("0cm").fold(inCm, inCm)
+    def length(prop: Option[String]): Option[Double] =
+      prop.toRight("0cm").fold(valueWithUnits, valueWithUnits).map(_.toCm)
 
     val doc = (for {
       rawHeader  <- node \!! (OdtTags.MasterStyle / OdtTags.StyleMasterPage / OdtTags.StyleHeader)
       rawFooter  <- node \!! (OdtTags.MasterStyle / OdtTags.StyleMasterPage / OdtTags.StyleFooter)
-      pgLayout<- node \!! (OdtTags.AutomaticStyle / OdtTags.StylePageLayout)
+      pgLayout<- node \!! (OdtTags.AutomaticStyle / OdtTags.StylePageLayout / OdtTags.StylePageLayoutProps)
     } yield {
       for {
         marginLeft   <- length(pgLayout.attributes.getTag(OdtTags.FoMarginLeft))
@@ -117,7 +117,7 @@ class OdtParser() extends Parser {
           pageWidth - (marginLeft + marginRight +
           paddingLeft + paddingRight)
 
-        val emptyStyleSheet = DocumentStyle(header, footer, w)
+        val emptyStyleSheet = DocumentStyle(header, footer, util.Centimeters(w))
 
         val docWithStyles = OdtStyleParser.defaultOdt.loadFromDocContent(node, emptyStyleSheet)
 
@@ -437,16 +437,17 @@ object OdtParser {
             StyleToTag[OdtStylePropKeys.TextPosition.type](OdtStylePropKeys.TextPosition)(ValToTag(attributes.TextPosition.Sub, Tags.SUB) :: ValToTag(attributes.TextPosition.Sup, Tags.SUP) :: Nil) ::
               HNil
 
-  private final val sizeP = """(\d+)cm""".r
+  private final val sizeP = """(\d+)(cm|in|pt)""".r
 
   private final val spaceEncoded = " &nbsp;"
   private final val linebreakEncoded = "br"
   private final val tabEncoded = " \\t"
 
-  private def inCm(v: String): Option[Int] =
+  private def valueWithUnits(v: String): Option[util.ValOfUnit] = {
     sizeP.findFirstMatchIn(v) match {
-      case Some(sizeP(size)) => Some(size.toInt)
-      case res               => None
+      case Some(sizeP(size, units)) => util.ValOfUnit.parse((size.toDouble, units))
+      case _ => None
     }
+  }
 
 }

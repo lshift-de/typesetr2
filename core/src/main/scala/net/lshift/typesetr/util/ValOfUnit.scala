@@ -21,6 +21,12 @@ sealed abstract class ValOfUnit(val name: String) {
    */
   def roundValue: String = s"${value.toInt}$name"
 
+  /**
+   * Convert value to centimeters
+   * @return
+   */
+  def toCm: Double
+
   override def toString: String = s"$value$name"
 
 }
@@ -41,27 +47,37 @@ object ValOfUnit {
 
 }
 
-case class Centimeters(value: Double) extends ValOfUnit(Centimeters.name)
+case class Centimeters(value: Double) extends ValOfUnit(Centimeters.name) {
+  def toCm: Double = value
+}
 object Centimeters {
   val name: String = "cm"
 }
 
-case class Milimeters(value: Double) extends ValOfUnit(Centimeters.name)
+case class Milimeters(value: Double) extends ValOfUnit(Centimeters.name) {
+  def toCm: Double = value / 100
+}
 object Milimeters {
   val name: String = "mm"
 }
 
-case class Percentage(value: Double) extends ValOfUnit(Percentage.name)
+case class Percentage(value: Double) extends ValOfUnit(Percentage.name) {
+  def toCm: Double = ???
+}
 object Percentage {
   val name: String = "%"
 }
 
-case class Inches(value: Double) extends ValOfUnit(Inches.name)
+case class Inches(value: Double) extends ValOfUnit(Inches.name) {
+  def toCm: Double = value * 2.54
+}
 object Inches {
   val name: String = "in"
 }
 
-case class Pt(value: Double) extends ValOfUnit(Pt.name)
+case class Pt(value: Double) extends ValOfUnit(Pt.name) {
+  def toCm: Double = ???
+}
 object Pt {
   val name: String = "pt"
 }

@@ -1,7 +1,7 @@
 package net.lshift.typesetr.parsers.styles
 
 import net.lshift.typesetr.parsers.{ NodeInfo, Repr, ReprNullFactory }
-import net.lshift.typesetr.util
+import net.lshift.typesetr.util.{ Logger, ValOfUnit, Centimeters }
 
 import scalaz.Scalaz._
 import scalaz.Tags.First
@@ -26,7 +26,7 @@ abstract class DocumentStyle { self =>
 
   def footer: Repr.Aux[Node]
 
-  def textWidth: Int
+  def textWidth: ValOfUnit
 
   def listLevelDepth: Int
 
@@ -48,7 +48,7 @@ abstract class DocumentStyle { self =>
    *
    * @param style a tuple representing style's id and meta info
    */
-  def +:(style: (StyleId, Style))(implicit logger: util.Logger): self.type = {
+  def +:(style: (StyleId, Style))(implicit logger: Logger): self.type = {
     if (styles.contains(style._1))
       logger.info((s"Overriding style ${style._1}"))
     //assert(!styles.contains(style._1), s"overriding style ${style._1}")
@@ -94,12 +94,12 @@ object DocumentStyle {
 
   def apply[T](header0: Repr.Aux[T],
                footer0: Repr.Aux[T],
-               textWidth0: Int): DocumentStyle.Aux[T] =
+               textWidth0: ValOfUnit): DocumentStyle.Aux[T] =
     new DocumentStyle { self =>
 
       type Node = T
 
-      def textWidth: Int = textWidth0
+      def textWidth: ValOfUnit = textWidth0
 
       def listLevelDepth: Int = 0
 
@@ -138,7 +138,7 @@ object DocumentStyle {
 
     protected def styles: Map[StyleId, Style] = prev.styles
 
-    def textWidth: Int = prev.textWidth
+    def textWidth: ValOfUnit = prev.textWidth
 
     def footer: Repr.Aux[T] = prev.footer
 
@@ -153,7 +153,7 @@ object DocumentStyle {
 
     type Node = T
 
-    def textWidth: Int = 0
+    def textWidth: ValOfUnit = Centimeters(0)
 
     def header: Repr.Aux[T] = repr.empty()
 
