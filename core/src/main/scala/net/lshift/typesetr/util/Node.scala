@@ -117,4 +117,10 @@ class MetaDataOps(val x: scala.xml.MetaData) extends AnyVal {
       x.copy(x.next.copyWith(tagName, value))
   }
 
+  def remove(tagName: XmlAttribute): scala.xml.MetaData = {
+    if (x == scala.xml.Null) scala.xml.Null
+    else if (x.key == tagName.tag) x.next
+    else x.copy(x.next.remove(tagName))
+  }
+
 }
