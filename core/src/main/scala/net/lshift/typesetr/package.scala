@@ -3,7 +3,7 @@ package net.lshift
 import net.lshift.typesetr.parsers.odt.OdtFile
 import OdtFile.OdtFileOps
 import net.lshift.typesetr.util.IO.FileOps
-import net.lshift.typesetr.util.{ MetaDataOps, NodeOps }
+import net.lshift.typesetr.util.{ UnitsOps, MetaDataOps, NodeOps }
 
 import scala.language.implicitConversions
 
@@ -20,5 +20,11 @@ package object typesetr {
 
   implicit def toJavaFileOps(x: java.io.File): util.IO.FileOps =
     new FileOps(x)
+
+  implicit def toUnits(x: Double): UnitsOps =
+    new UnitsOps(x)
+
+  implicit def toUnits(x: Int): UnitsOps =
+    new UnitsOps(x)
 
 }

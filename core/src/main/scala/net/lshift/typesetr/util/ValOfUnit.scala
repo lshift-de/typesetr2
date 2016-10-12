@@ -1,6 +1,9 @@
 package net.lshift.typesetr.util
 
+import net.lshift.typesetr.util
+
 import scala.language.implicitConversions
+import scala.util.matching.Regex
 
 /**
  * A value along with its unit.
@@ -23,6 +26,7 @@ sealed abstract class ValOfUnit(val name: String) {
 
   /**
    * Convert value to centimeters
+   *
    * @return
    */
   def toCm: Double
@@ -35,6 +39,13 @@ object ValOfUnit {
 
   def default: ValOfUnit = Centimeters(0)
 
+  def parse(x: String): Option[ValOfUnit] =
+    sizeP.findFirstMatchIn(x) match {
+      case Some(sizeP(size, units)) =>
+        util.ValOfUnit.parse((size.toDouble, units))
+      case _ => None
+    }
+
   def parse(x: (Double, String)): Option[ValOfUnit] = x._2 match {
     case Centimeters.name => Some(Centimeters(x._1))
     case Percentage.name  => Some(Percentage(x._1))
@@ -44,6 +55,8 @@ object ValOfUnit {
   }
 
   implicit def toAttributeValue(x: ValOfUnit): String = x.roundValue
+
+  private final val sizeP = s"([\\d\\.]+)(${Centimeters.name}|${Inches.name}|${Pt.name})".r
 
 }
 
@@ -80,4 +93,15 @@ case class Pt(value: Double) extends ValOfUnit(Pt.name) {
 }
 object Pt {
   val name: String = "pt"
+}
+
+class UnitsOps(val x: Double) extends AnyVal {
+
+  def centimeters: ValOfUnit = Centimeters(x)
+
+  def milimeters: ValOfUnit = Milimeters(x)
+
+  def inches: ValOfUnit = Inches(x)
+
+  def pt: ValOfUnit = Pt(x)
 }

@@ -1,10 +1,13 @@
-package net.lshift.typesetr.parsers.styles
+package net.lshift.typesetr
+package parsers
+package styles
 
-import net.lshift.typesetr.parsers.{ NodeInfo, Repr, ReprNullFactory }
-import net.lshift.typesetr.util.{ Logger, ValOfUnit, Centimeters }
+import util.{ Logger, ValOfUnit }
 
 import scalaz.Scalaz._
 import scalaz.Tags.First
+
+import scala.language.postfixOps
 
 /**
  * Class representing the generic style information of the document.
@@ -153,7 +156,7 @@ object DocumentStyle {
 
     type Node = T
 
-    def textWidth: ValOfUnit = Centimeters(0)
+    def textWidth: ValOfUnit = 0 centimeters
 
     def header: Repr.Aux[T] = repr.empty()
 

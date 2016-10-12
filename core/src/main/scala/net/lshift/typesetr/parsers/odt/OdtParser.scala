@@ -15,7 +15,7 @@ import scalaz.{ Tags => STags, Tag => STag, _ }
 import scalaz.Scalaz._
 import shapeless.{Poly, Poly2, HList, HNil, :: => !:, Witness}
 
-import util.Logger
+import util.{ValOfUnit, Logger}
 import xml.{InternalTags => Tags}
 
 import scala.language.{ postfixOps, implicitConversions, existentials }
@@ -97,7 +97,7 @@ class OdtParser() extends Parser {
 
   def loadDocStyleFromMeta(node: scala.xml.Node)(implicit logger: Logger): Option[(Repr.Aux[DocNode], DocumentStyle.Aux[DocNode])] = {
     def length(prop: Option[String]): Option[Double] =
-      prop.toRight("0cm").fold(valueWithUnits, valueWithUnits).map(_.toCm)
+      prop.toRight("0cm").fold(ValOfUnit.parse, ValOfUnit.parse).map(_.toCm)
 
     val doc = (for {
       rawHeader  <- node \!! (OdtTags.MasterStyle / OdtTags.StyleMasterPage / OdtTags.StyleHeader)
@@ -117,7 +117,7 @@ class OdtParser() extends Parser {
           pageWidth - (marginLeft + marginRight +
           paddingLeft + paddingRight)
 
-        val emptyStyleSheet = DocumentStyle(header, footer, util.Centimeters(w))
+        val emptyStyleSheet = DocumentStyle(header, footer, w centimeters)
 
         val docWithStyles = OdtStyleParser.defaultOdt.loadFromDocContent(node, emptyStyleSheet)
 
@@ -437,17 +437,8 @@ object OdtParser {
             StyleToTag[OdtStylePropKeys.TextPosition.type](OdtStylePropKeys.TextPosition)(ValToTag(attributes.TextPosition.Sub, Tags.SUB) :: ValToTag(attributes.TextPosition.Sup, Tags.SUP) :: Nil) ::
               HNil
 
-  private final val sizeP = """(\d+)(cm|in|pt)""".r
-
   private final val spaceEncoded = " &nbsp;"
   private final val linebreakEncoded = "br"
   private final val tabEncoded = " \\t"
-
-  private def valueWithUnits(v: String): Option[util.ValOfUnit] = {
-    sizeP.findFirstMatchIn(v) match {
-      case Some(sizeP(size, units)) => util.ValOfUnit.parse((size.toDouble, units))
-      case _ => None
-    }
-  }
 
 }
