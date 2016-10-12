@@ -61,6 +61,16 @@ abstract class PandocPostProcessor {
     */
   def replaceInlineMath(body: BodyTpe)(implicit log: util.Logger): BodyTpe
 
+  /**
+    * Replace all img fragments with the target's
+    * equivalent
+    *
+    * @param body image representation to translate
+    * @return `body` with all the occurrences of the
+    *        inline math fragments replaced by the
+    *        target's equivalent
+    */
+  def replaceImgBlock(body: BodyTpe)(implicit log: util.Logger): BodyTpe
 
 }
 

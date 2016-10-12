@@ -39,14 +39,14 @@ class OdtParser() extends Parser {
       root <- inFile.content.map(XML.loadFile)
       rootStyle <- inFile.style.map(XML.loadFile)
 
-      // 2. Find all the different nodes in the xml files
+      // 2. Find all the key nodes in the unpacked binary (either in content.xml or styles.xml)
       // a) font node
       rawFont <- rootStyle \!! OdtTags.Font
       // b) automatic style node in meta
       rawAutoStyle <- rootStyle \!! OdtTags.AutomaticStyle
-      // c) body node in the content
+      // c) body node in the content.xml
       rawBody <- root \!! OdtTags.Body
-      // d) automatic style node in the content
+      // d) automatic style node in the content.xml
       rawStyleInBody <- root \!! OdtTags.AutomaticStyle
 
       //rawStyle <- rootStyle \!! OdtTags.Styles
@@ -299,12 +299,16 @@ class OdtParser() extends Parser {
       case OdtTags.TableColumn =>
         node.wrap(tag = Tags.COL, body = children)
 
-      case OdtTags.Frame =>
-        // TODO: ignore for the moment
-        logger.warn(s"Ignoring Frame node")
-        //Utils.makeFigure[Underlying](???,
-        //  ???, children, FigureInfo.fromNode(node))
-        None
+      case t@ OdtTags.Frame =>
+        val width = source.attributes.getTag(OdtTags.SvgWidth).toRight("0cm").fold(ValOfUnit.parse, ValOfUnit.parse)
+        val relWidth = width.map (v => (v.toCm / docStyle.textWidth.toCm)) getOrElse(0.0)
+
+        val frameAttributes = source.attributes.getTag(OdtTags.AnchorTpe).map { v =>
+          Attribute(InternalAttributes.frameDisplay, Utils.shouldInline(v == "as-char", relWidth)) ::
+          Attribute(InternalAttributes.imgWidth, Utils.inferWidthPercentage(relWidth)) :: Nil
+        }
+
+        node.wrap(tag = Tags.FRAME, body = children, attributes = frameAttributes.getOrElse(Nil))
 
       case OdtTags.Image =>
 

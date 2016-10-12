@@ -57,6 +57,7 @@ object InternalTags {
   final lazy val BR = Tag("br")
   final lazy val DIV = Tag("div")
   final lazy val IMG = Tag("img")
+  final lazy val FRAME = Tag("frame")
 
   final lazy val HEAD = Tag("head")
   final lazy val META = Tag("meta")

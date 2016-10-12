@@ -74,9 +74,21 @@ trait PostProcessorUtils[T] extends OpimizerStrategies[T] {
           }
       }
 
+    def hasImgAttribute(attrs: List[Attribute]): Option[(ImageKind, Double)] =
+      for {
+        imgKindRaw <- InternalAttributes.frameDisplay inAttributes attrs flatMap (_.value)
+        imgWidthRaw <- InternalAttributes.imgWidth inAttributes attrs flatMap (_.value)
+        imgKind <- ImageKind(imgKindRaw)
+      } yield (imgKind, imgWidthRaw.toDouble)
+
     def maybeCollapseGroups(key: ElemSig, elems: Seq[Repr.Aux[T]])(implicit logger: Logger): Seq[Repr.Aux[T]] = {
       elems match {
-        case singleElem :: Nil => elems
+        case singleElem :: Nil =>
+          val imgKindOpt = hasImgAttribute(singleElem.attr)
+          imgKindOpt.map {
+            case (imgKind, width) => imgKind.formatting.format(elems)
+          } getOrElse (elems)
+
         case _ =>
           logger.debug(s"Collapse groups of ${key._1}")
           key._1 match {

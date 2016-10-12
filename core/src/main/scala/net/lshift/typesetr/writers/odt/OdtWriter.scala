@@ -150,6 +150,10 @@ class OdtWriter(inputFile: File) extends Writer {
       case xml.Attribute(InternalAttributes.outlineLvl, lvl) :: rest =>
         translateAttribute(node.copy(meta =
           node.attributes.copyWith(OdtTags.TextOutlineLevel, lvl)), rest)
+      case xml.Attribute(InternalAttributes.imgWidth, width) :: rest =>
+        translateAttribute(node.copy(meta =
+          node.attributes.copyWith(OdtTags.SvgWidth, s"$width%"). // Pandoc understands '%'
+            remove(OdtTags.SvgHeight)), rest)
       case xml.Attribute(InternalAttributes.href, href) :: rest =>
         nodeRepr.tag match {
           // Note: When using bookmarks for labels Pandoc introduces

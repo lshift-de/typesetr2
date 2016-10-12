@@ -7,6 +7,7 @@ import postprocessors.PandocPostProcessor
 import scala.util.matching.Regex
 
 class LatexPandocPostProcessor extends PandocPostProcessor {
+  import LatexPandocPostProcessor._
 
   type BodyTpe = String
 
@@ -45,4 +46,37 @@ class LatexPandocPostProcessor extends PandocPostProcessor {
           Regex.quoteReplacement(s"\\)") //   e.g. x^{}2 instead of x^{2}
       })
 
+  def replaceImgBlock(body: BodyTpe)(implicit log: util.Logger): BodyTpe = {
+    val keyvalentry: String => Option[(String, String)] = (s: String) => s.split("=").toList match {
+      case k :: v :: Nil => Some((k, v))
+      case _             => None
+    }
+    Markers.ImgR.replaceAllIn(body, { m =>
+      val imgCommand = m.group(Markers.groupName).trim()
+      if (imgCommand == "") ""
+      else {
+        val r = new Regex(s"(.*)\\\\${imgLatexCmd}\\[(.+)\\]\\{(.*)\\}.*", "prefix", "opts", "url")
+        Regex.quoteReplacement(r.replaceAllIn(imgCommand, { mInner =>
+          val prefix = mInner.group("prefix")
+          m.group(Markers.imgKindGroupName) match {
+            case Markers.ImgInline =>
+              Regex.quoteReplacement(s"$prefix\\tystrmarginfigure{${mInner.group("url")}}")
+            case Markers.ImgRaw =>
+              Regex.quoteReplacement(s"${imgCommand}")
+            case _ =>
+              val opts = mInner.group("opts").split(",").toList.flatMap(s => keyvalentry(s)).toMap
+              val width = opts.get("width").map(_.stripSuffix("\\textwidth")).getOrElse("1")
+              val caption = "TODO" // TODO
+              Regex.quoteReplacement(s"$prefix\\tystrblockfigure[$width]{$caption}{${mInner.group("url")}}")
+          }
+        }))
+      }
+
+    })
+  }
+
+}
+
+object LatexPandocPostProcessor {
+  val imgLatexCmd = "includegraphics"
 }

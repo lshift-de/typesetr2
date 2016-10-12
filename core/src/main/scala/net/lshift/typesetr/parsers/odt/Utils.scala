@@ -2,19 +2,39 @@ package net.lshift.typesetr
 package parsers
 package odt
 
+import net.lshift.typesetr.util.ValOfUnit
 import xml.attributes.FontFamily
 
 object Utils extends FontUtils
   with FigureUtils
 
 trait FigureUtils { self: Utils.type =>
-  def makeFigure[T](inline: Boolean,
-                    relativeWidth: Int,
-                    body: Seq[Repr.Aux[T]],
-                    info: FigureInfo
-                   ): Repr.Aux[T] =
-    ???
 
+  import FigureUtils._
+
+  def shouldInline(inlineAttr: Boolean, relativeWidth: Double): String =
+    if (inlineAttr && (relativeWidth < MAX_INLINE_WIDTH_RATIO))
+      InlineImg.kind
+    else
+      BlockImg.kind
+
+  def inferWidthPercentage(relativeWidth: Double): String = {
+    val (width_perc, _) = snap_width_percentage(relativeWidth * 100)
+    "%.2f".format(width_perc)
+  }
+
+  def isFullWidthImg(inline: Boolean, relativeWidth: Double): Boolean = {
+    val (width_perc, xlarge) = snap_width_percentage(relativeWidth * 100)
+    !inline && (width_perc >= 100) && xlarge
+  }
+
+  private def snap_width_percentage(widthPercentage: Double): (Double, Boolean) = {
+    val snaps = Math.round(SNAPS_PER_PAGE * (widthPercentage / 100.0))
+    val xlarge = snaps > (SNAPS_PER_PAGE + 1)
+    val snaps1 = Math.min(snaps, SNAPS_PER_PAGE)
+    val width = Math.round(100 * snaps / SNAPS_PER_PAGE)
+    (width, xlarge)
+  }
 
   def isCodeFont(ff: FontFamily): Boolean =
     ff.name.toLowerCase().endsWith(" mono") ||
@@ -26,6 +46,13 @@ trait FigureUtils { self: Utils.type =>
   }
 }
 
+object FigureUtils {
+
+  private final val SNAPS_PER_PAGE = 33
+
+  private final val MAX_INLINE_WIDTH_RATIO = .75
+
+}
 
 trait FontUtils { self: Utils.type =>
   lazy val codeFonts =

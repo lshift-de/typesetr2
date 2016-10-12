@@ -123,7 +123,8 @@ class LatexWriter(from: File,
     val v1 = ppp.replaceEnvBlock(body)
     val v2 = ppp.replaceCmdBlock(v1)
     val v3 = ppp.replaceFormattedBlock(v2)
-    ppp.replaceInlineMath(v3)
+    val v4 = ppp.replaceInlineMath(v3)
+    ppp.replaceImgBlock(v4)
   }
 
   /**

@@ -9,5 +9,7 @@ object InternalAttributes {
   lazy val indent = AttributeKey("indent")
   lazy val style = AttributeKey("new-style")
   lazy val outlineLvl = AttributeKey("outline-level")
+  lazy val frameDisplay = AttributeKey("frame-display")
+  lazy val imgWidth = AttributeKey("img-width")
 
 }
