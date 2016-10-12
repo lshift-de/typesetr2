@@ -55,8 +55,8 @@ abstract class Repr {
   override def toString: String =
     s"[$id][$tag]: ${super.toString}"
 
-  def copy(children: Seq[Repr.Aux[R]])(implicit factory: NodeFactory.Aux[R]): self.type =
-    factory.copy(children)(self).asInstanceOf[self.type]
+  def copy(children: Seq[Repr.Aux[R]] = body, source1: R = self.source)(implicit factory: NodeFactory.Aux[R]): self.type =
+    factory.copy(children, source1)(self).asInstanceOf[self.type]
 
 }
 
@@ -73,9 +73,9 @@ object Repr {
     factory.create(tag, source, body, attrs = attrs, contents = contents)
 
   def makeTextElem[T](contents0: String, synthetic: Boolean = false)(
-    implicit source: T, factory: NodeFactory.Aux[T]): Repr.Aux[T] = {
+    implicit factory: NodeFactory.Aux[T]): Repr.Aux[T] = {
     val t = if (synthetic) Tag.syntheticTextTag else Tag.textTag
-    factory.createWithContents(t, source, contents0)
+    factory.createWithContents(t, factory.textNode(contents0), contents0)
   }
 
   def empty[T](implicit builder: ReprNullFactory[T]): Repr.Aux[T] =

@@ -10,9 +10,9 @@ import styles.MetaFromDocument
 import xml._
 import xml.InternalTags._
 import xml.Attributes._
-import parsers.{ Repr, NodeFactory, NodeConfigs, NodeInfo }
+import parsers._
 
-import util.Logger
+import util.{ ValOfUnit, Logger }
 
 import scala.annotation.tailrec
 
@@ -132,9 +132,7 @@ trait PostProcessorUtils[T] extends OpimizerStrategies[T] {
       key match {
         case TextKey(_) =>
           val text = elems.flatMap(_.extractPlainText).mkString("")
-          Repr.makeTextElem(text)(
-            implicitly[NodeFactory.Aux[T]].textNode(text),
-            implicitly[NodeFactory.Aux[T]]) :: Nil
+          Repr.makeTextElem(text) :: Nil
         case SigKey(key, _) =>
           maybeCollapseGroups(key, elems)
         case SkolemKey(_) =>

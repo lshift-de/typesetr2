@@ -18,8 +18,8 @@ class OdtNodeFactory extends NodeFactory {
              contents: Option[String] = None): Aux[scala.xml.Node] =
     OdtNodeRepr(elem, children, tag, contents, attrs)
 
-  def copy(children: Seq[Aux[DocNode]])(repr: Aux[DocNode]) =
-    OdtNodeRepr(repr.source, children, repr.tag, repr.contents, repr.attr)
+  def copy(children: Seq[Aux[DocNode]], source1: DocNode)(repr: Aux[DocNode]) =
+    OdtNodeRepr(source1, children, repr.tag, repr.contents, repr.attr)
 
   def textNode(text: String): scala.xml.Node =
     Text(text)
