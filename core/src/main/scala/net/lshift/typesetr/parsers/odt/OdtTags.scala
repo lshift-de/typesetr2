@@ -17,6 +17,7 @@ object OdtTags {
 
   val Frame: XmlTag = (implicitly[NameSpaces].apply("draw"), "frame")
   val Image: XmlTag = (implicitly[NameSpaces].apply("draw"), "image")
+  val TextBox: XmlTag = (implicitly[NameSpaces].apply("draw"), "text-box")
 
   val A: XmlTag = (implicitly[NameSpaces].apply("text"), "a")
   val AnchorTpe: XmlAttribute = (implicitly[NameSpaces].apply("text"), "anchor-type")
