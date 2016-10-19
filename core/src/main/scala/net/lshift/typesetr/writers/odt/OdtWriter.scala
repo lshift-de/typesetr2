@@ -81,6 +81,8 @@ class OdtWriter(inputFile: File) extends Writer {
     logger: Logger): Boolean = {
 
     val space = BlankSpace * (Indent * indent)
+    val docSpace = if (config.YprettyPrint) BlankSpace * (Indent * indent) else ""
+    val docNewLine = if (config.YprettyPrint) NewLine else ""
     node.tag match {
 
       case Tag.syntheticTextTag =>
@@ -116,21 +118,21 @@ class OdtWriter(inputFile: File) extends Writer {
 
         node.body match {
           case Nil if node.contents.isEmpty =>
-            writer.write(s"$space<${n.prefix}:${n.label}$attrbs $scope/>$NewLine")
+            writer.write(s"$docSpace<${n.prefix}:${n.label}$attrbs $scope/>$docNewLine")
           case _ =>
-            writer.write(s"$space<${n.prefix}:${n.label}$attrbs $scope>$NewLine")
+            writer.write(s"$docSpace<${n.prefix}:${n.label}$attrbs $scope>$docNewLine")
             node.tag match {
               case InternalTags.CODE =>
                 val x = node.getAttribute(InternalAttributes.indent).flatMap(_.value).map(_.toInt).getOrElse(0)
                 if (x > 1) {
-                  writer.write(s"$space${(pandoc.Writer.TypesetrPreSpace * x).toString}")
+                  writer.write(s"$docSpace${(pandoc.Writer.TypesetrPreSpace * x).toString}")
                   node.body.forall(writeNode(_, 0))
                 } else
                   node.body.forall(writeNode(_, indent + 1))
               case _ =>
                 node.body.forall(writeNode(_, indent + 1))
             }
-            writer.write(s"$space</${n.prefix}:${n.label}>$NewLine")
+            writer.write(s"$docSpace</${n.prefix}:${n.label}>$docNewLine")
         }
         true
     }
