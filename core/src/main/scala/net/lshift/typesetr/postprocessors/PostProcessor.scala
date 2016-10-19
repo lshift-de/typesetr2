@@ -16,7 +16,7 @@ abstract class PostProcessor[T] {
 
   def optimize(node: Repr.Aux[T])(implicit logger: util.Logger, sty: DocumentStyle.Aux[T]): Repr.Aux[T]
 
-  def inferMeta(node: Repr.Aux[T])(implicit docStyle: DocumentStyle.Aux[T]): (Repr.Aux[T], MetaFromDocument)
+  def inferMeta(node: Repr.Aux[T])(implicit docStyle: DocumentStyle.Aux[T]): Either[String, (Repr.Aux[T], MetaFromDocument)]
 
   implicit protected def nodeConfig: NodeConfigs.WithNode[T]
 

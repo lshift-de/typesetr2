@@ -51,21 +51,25 @@ class OdtParser() extends Parser {
 
       //rawStyle <- rootStyle \!! OdtTags.Styles
       (styleNode, styleFromMeta) <- loadDocStyleFromMeta(rootStyle)
-      autoStyle <- parseBody(rawAutoStyle)(styleFromMeta, logger)
+      autoStyle        <- parseBody(rawAutoStyle)(styleFromMeta, logger, implicitly[ParsingContext])
 
-      styleInBody <- parseBody(rawStyleInBody)(styleFromMeta, logger)
+      styleInBody      <- parseBody(rawStyleInBody)(styleFromMeta, logger, implicitly[ParsingContext])
     } yield {
       // (optional) scripts node parsing
       val scriptsNode =
         (for {
           rawScripts <- root \!! OdtTags.Scripts
-          scriptsNode <- parseBody(rawScripts)(styleFromMeta, logger)
+          scriptsNode <- parseBody(rawScripts)(styleFromMeta, logger, implicitly[ParsingContext])
         } yield scriptsNode :: Nil).getOrElse(List())
 
       val styleParser = OdtStyleParser.default
       val stylesFromDoc = styleParser.loadFromDocContent(root, styleFromMeta)
-      val bodyNodes = rawBody.child.flatMap(parseBody(_)(stylesFromDoc, logger))
-      val body1 = Repr.makeElem(Tags.BODY, bodyNodes, contents = None, attrs = Nil)(rawBody, implicitly[NodeFactory.Aux[DocNode]])
+      val parsedChildrenNodes = rawBody.child.flatMap(parseBody(_)(stylesFromDoc, logger, implicitly[ParsingContext]))
+      val body1 = Repr.makeElem(Tags.BODY, parsedChildrenNodes, contents = None, attrs = Nil)(rawBody, implicitly[NodeFactory.Aux[DocNode]])
+
+      // The original nodes may be enriched with some new ones that
+      // are added as part of the parsing process.
+      // The new style nodes have to be included in the modified .odt binary.
       val reifiedStyleNodes = styleInBody.copy(styleInBody.body ++ newStyles)
       val reifiedStylesDict = newStyles.foldLeft(stylesFromDoc) {
         case (doc, styleNode) => styleParser.appendStyleNode(styleNode.source, doc) }
@@ -109,8 +113,8 @@ class OdtParser() extends Parser {
         paddingLeft  <- length(pgLayout.attributes.getTag(OdtTags.FoPaddingLeft))
         paddingRight <- length(pgLayout.attributes.getTag(OdtTags.FoPaddingRight))
         pageWidth    <- length(pgLayout.attributes.getTag(OdtTags.FoPageWidth))
-        header       <- parseBody(rawHeader)(DocumentStyle.empty, implicitly[Logger])
-        footer       <- parseBody(rawFooter)(DocumentStyle.empty, implicitly[Logger])
+        header       <- parseBody(rawHeader)(DocumentStyle.empty, implicitly[Logger], implicitly[ParsingContext])
+        footer       <- parseBody(rawFooter)(DocumentStyle.empty, implicitly[Logger], implicitly[ParsingContext])
       } yield {
         val w =
           pageWidth - (marginLeft + marginRight +
@@ -131,7 +135,7 @@ class OdtParser() extends Parser {
     doc map ((node1, _))
   }
 
-  def parseBody(node: scala.xml.Node)(implicit docStyle: DocumentStyle.Aux[DocNode], logger: Logger): Option[Repr.Aux[DocNode]] = {
+  def parseBody(node: scala.xml.Node)(implicit docStyle: DocumentStyle.Aux[DocNode], logger: Logger, ctx: ParsingContext): Option[Repr.Aux[DocNode]] = {
     node match {
       case Text(text) =>
         Some(node.wrap(tag = Tag.textTag, body = Nil, contents = Some(text)))
@@ -140,7 +144,7 @@ class OdtParser() extends Parser {
     }
   }
 
-  private def parseBodyElement(node: DocNode)(implicit docStyle: DocumentStyle.Aux[DocNode], logger: Logger): Option[Repr.Aux[DocNode]] = {
+  private def parseBodyElement(node: DocNode)(implicit docStyle: DocumentStyle.Aux[DocNode], logger: Logger, ctx: ParsingContext): Option[Repr.Aux[DocNode]] = {
     // TODO: handle lists
 
     implicit def toOpt[T](x: Repr.Aux[T]): Option[Repr.Aux[T]] =
@@ -200,7 +204,7 @@ class OdtParser() extends Parser {
 
       case OdtTags.TextList =>
         val listStyle = docStyle.newListLevelContext
-        val children = node.child.flatMap(parseBody(_)(listStyle, logger))
+        val children = node.child.flatMap(parseBody(_)(listStyle, logger, ctx))
         Repr.makeElem(tag = Tags.LIST, body = children, contents = None, attrs = Nil)
 
       case OdtTags.TextListItem =>
@@ -302,12 +306,21 @@ class OdtParser() extends Parser {
         val width = source.attributes.getTag(OdtTags.SvgWidth).toRight("0cm").fold(ValOfUnit.parse, ValOfUnit.parse)
         val relWidth = width.map (v => (v.toCm / docStyle.textWidth.toCm)) getOrElse(0.0)
 
+        // If the frame has a caption, we only modify the width of the figure
+        // but leave the formatting to Pandoc. Pandoc is too sensitive
+        // to the structure of the document and with our contributions it seems
+        // handle it correctly.
+        val children1 = node.child.flatMap(parseBody(_)(docStyle, logger, ctx.copy(inFrame = true)))
+        val noTypesetrTransform = !ctx.inFrame && children1.exists(_.tag == Tags.IMG)
+
         val frameAttributes = source.attributes.getTag(OdtTags.AnchorTpe).map { v =>
-          Attribute(InternalAttributes.frameDisplay, Utils.shouldInline(v == "as-char", relWidth)) ::
-          Attribute(InternalAttributes.imgWidth, Utils.inferWidthPercentage(relWidth)) :: Nil
+          Attribute(InternalAttributes.imgWidth, Utils.inferWidthPercentage(relWidth)) :: (
+            if (noTypesetrTransform)
+              Attribute(InternalAttributes.frameDisplay, Utils.shouldInline(v == "as-char", relWidth)) :: Nil
+            else Nil)
         }
 
-        node.wrap(tag = Tags.FRAME, body = children, attributes = frameAttributes.getOrElse(Nil))
+        node.wrap(tag = Tags.FRAME, body = children1, attributes = frameAttributes.getOrElse(Nil))
 
       case OdtTags.Image =>
 
@@ -405,6 +418,11 @@ class OdtParser() extends Parser {
   implicit lazy val nodeConfig: NodeConfigs.WithNode[scala.xml.Node] =
     new OdtNodeConfig
 
+}
+
+case class ParsingContext(inFrame: Boolean, inTable: Boolean)
+object ParsingContext {
+  implicit def emptyCtx: ParsingContext = ParsingContext(inFrame = false, inTable = false)
 }
 
 object OdtParser {
