@@ -13,22 +13,27 @@ trait MetaInferencer[T] { self =>
 
   implicit protected def nodeConfig: NodeConfigs.WithNode[T]
 
-  def inferMeta(root: Repr.Aux[T])(implicit docStyle: DocumentStyle.Aux[T]): (Repr.Aux[T], MetaFromDocument) = {
+  def inferMeta(root: Repr.Aux[T])(implicit docStyle: DocumentStyle.Aux[T]): Either[String, (Repr.Aux[T], MetaFromDocument)] = {
     // 1. Go through all the nodes
-    val childrenAndCmds = (root.body.map { node =>
+    val (body1, metaEntries) = (root.body.map { node =>
       if (node.tag == InternalTags.BODY) {
-        inferFromBody(node)
+        inferMetaFromBody(node)
       } else (node, Nil)
     }).unzip
 
     // The order of occurrence matters.
     // 2. Combine different commands into a single meta dictionary
-    val meta =
-      childrenAndCmds._2.flatten.foldLeft(nodeConfig.metaExtractor) {
-        case (meta, cmd) => cmd.includeIn(meta)
-      }
+    val metaEntries1 = metaEntries.flatten
+    if (metaEntries1.isEmpty) Left("Couldn't infer any meta information from the document")
+    else {
+      val meta =
+        metaEntries1.foldLeft(nodeConfig.metaExtractor) {
+          case (meta, entry) => entry.includeIn(meta)
+        }
 
-    (root.copy(childrenAndCmds._1), meta)
+      // Replace the original root with the given children nodes.
+      Right((root.copy(body1), meta))
+    }
   }
 
   /**
@@ -40,12 +45,12 @@ trait MetaInferencer[T] { self =>
    *  Value associated with the meta tag
    * </p>
    */
-  private object CommandParagraph {
+  private object MetaParagraph {
 
-    def unapply(elem: Repr.Aux[T]): Option[CommandNode] = elem.tag match {
+    def unapply(elem: Repr.Aux[T]): Option[InferredMetaEntryNode] = elem.tag match {
       case InternalTags.P =>
         elem.body match {
-          case SpanWithValue(cmd) if cmd.cmd.nonEmpty && cmd.cmd.get != "caption" =>
+          case SpanWithValue(cmd) if cmd.key != "caption" =>
             Some(cmd)
           case others =>
             None
@@ -53,7 +58,7 @@ trait MetaInferencer[T] { self =>
       case _ => None
     }
 
-    object CommandSpan {
+    object MetaSpan {
       def unapply(elem: Repr.Aux[T]): Option[Repr.Aux[T]] = elem.tag match {
         case InternalTags.SPAN => elem.body.headOption
         case _                 => None
@@ -61,10 +66,10 @@ trait MetaInferencer[T] { self =>
     }
 
     object SpanWithValue {
-      def unapply(elems: Seq[Repr.Aux[T]]): Option[CommandNode] =
+      def unapply(elems: Seq[Repr.Aux[T]]): Option[InferredMetaEntryNode] =
         elems match {
-          case CommandSpan(cmd) :: rest if cmd.tag == InternalTags.U =>
-            Some(new RegularCommandNode(cmd, rest))
+          case MetaSpan(cmd) :: rest if cmd.tag == InternalTags.U =>
+            RegularMetaEntryNode(cmd, rest)
           case _ =>
             None
         }
@@ -76,30 +81,59 @@ trait MetaInferencer[T] { self =>
    * Some command nodes are identified through the style
    * that is being applied to the node.
    */
-  private object StyleCommandHeader {
+  private object MetaHeader {
 
-    def unapply(elem: Repr.Aux[T])(implicit docStyle: DocumentStyle.Aux[T]): Option[CommandNode] = {
+    private val allowedStyleTypes = (sTpe: StyleType) => sTpe.isInstanceOf[TitleStyleType]
+
+    private def inferStyleKind(style: Style)(implicit docStyle: DocumentStyle.Aux[T]): Option[StyleType] =
+      scalaz.Tag.unwrap(
+        First(style.tpe.filter(allowedStyleTypes)) |+|
+          First(style.parent.flatMap(docStyle.style).flatMap(_.tpe).filter(allowedStyleTypes)))
+
+    def unapply(elem: Repr.Aux[T])(implicit docStyle: DocumentStyle.Aux[T]): Option[InferredMetaEntryNode] = {
       val style = docStyle.styleForNode(elem)(self.nodeConfig.styleExtractor, self.nodeConfig.nodeInfo)
-      style.flatMap(hasMetaInfo).map(kind => new StyleCommandNode(kind, elem))
+      style.flatMap(inferStyleKind).flatMap(kind => StyleMetaEntryNode(kind, elem))
     }
 
   }
 
-  private def inferFromBody(bodyNode: Repr.Aux[T])(implicit docStyle: DocumentStyle.Aux[T]): (Repr.Aux[T], List[CommandNode]) = {
+  /**
+   * Looks at the top-level nodes of the document,
+   * and infers from them meta entries, if possible.
+   *
+   * Note: the inference of a meta entry means that the corresponding
+   * node is removed from the document.
+   *
+   * @param bodyNode node representing the body of the document
+   * @param docStyle existing style dictionary
+   * @return
+   */
+  private def inferMetaFromBody(bodyNode: Repr.Aux[T])(implicit docStyle: DocumentStyle.Aux[T]): (Repr.Aux[T], List[InferredMetaEntryNode]) = {
 
-    def elementsOfBody(elem: Repr.Aux[T]): Either[CommandNode, Repr.Aux[T]] = elem match {
-      case CommandParagraph(cmd) =>
+    /**
+     * Takes a document's node and classifies it as
+     * a) either containing a style information
+     * b) or no information, and leaves the node as is
+     */
+    def classifyElement(elem: Repr.Aux[T]): Either[InferredMetaEntryNode, Repr.Aux[T]] = elem match {
+      case MetaParagraph(cmd) =>
         Left(cmd)
-      case StyleCommandHeader(cmd) =>
+      case MetaHeader(cmd) =>
         Left(cmd)
       case _ =>
         Right(elem)
     }
 
-    def analyzeBodyNodes(elem: Repr.Aux[T], nesting: Int): (Repr.Aux[T], List[CommandNode]) = {
+    /**
+     * Look at a single node, and it's nesting within the body
+     * of the document.
+     *
+     * @return a node, with possibly updated child nodes, and the inferred entries
+     */
+    def analyzeBodyNodes(elem: Repr.Aux[T], nesting: Int): (Repr.Aux[T], List[InferredMetaEntryNode]) = {
       if (nodeConfig.nodeInfo.isContentInBody(elem, nesting)) {
-        val nodesOrCmd = elem.body map elementsOfBody
-        val (nodes, cmds) = nodesOrCmd.foldRight((Nil: List[Repr.Aux[T]], Nil: List[CommandNode])) {
+        val nodesOrCmd = elem.body map classifyElement
+        val (nodes, cmds) = nodesOrCmd.foldRight((Nil: List[Repr.Aux[T]], Nil: List[InferredMetaEntryNode])) {
           case (Left(cmd), acc)   => (acc._1, cmd :: acc._2)
           case (Right(node), acc) => (node :: acc._1, acc._2)
         }
@@ -110,78 +144,84 @@ trait MetaInferencer[T] { self =>
       } else (elem, Nil)
     }
 
-    // Assumes the same of level nesting for every document, which is a mistake.
     val nodesAndCmds = bodyNode.body.map(analyzeBodyNodes(_, 0)).unzip
-    // TODO: create a new node
     (bodyNode.copy(nodesAndCmds._1), nodesAndCmds._2.flatten.toList)
 
   }
 
-  private def isMetaStyle(styleKind: StyleType): Boolean =
-    styleKind match {
-      case _: TitleStyleType => true
-      case _                 => false
-    }
+  /**
+   *
+   * Class for representing a single piece of style information
+   * inferred from the document
+   */
+  sealed abstract class InferredMetaEntryNode {
 
-  private def hasMetaInfo(style: Style)(implicit docStyle: DocumentStyle.Aux[T]): Option[StyleType] = {
-    scalaz.Tag.unwrap(
-      First(style.tpe.filter(isMetaStyle)) |+|
-        First(style.parent.flatMap(docStyle.style).flatMap(_.tpe).filter(isMetaStyle)))
-  }
+    /**
+     * Meta-key inferred from the document
+     */
+    def key: String
 
-  abstract class CommandNode {
+    /**
+     * Meta-value inferred from the document
+     */
+    def value: String
 
-    def cmd: Option[String]
-
-    def value: Option[String]
-
+    /**
+     * Include that style information in the meta data
+     *
+     * @param meta initial meta data
+     * @return meta data updated with this style
+     */
     def includeIn(meta: MetaFromDocument): MetaFromDocument
 
   }
 
-  private class StyleCommandNode(styleInfo: StyleType, valueNode: Repr.Aux[T]) extends CommandNode {
-
-    def cmd: Option[String] = styleInfo match {
-      case TitleStyleTpe    => Some("title")
-      case SubTitleStyleTpe => Some("subtitle")
-      case _                => None
-    }
-
-    def value: Option[String] = valueNode.extractPlainText(deep = true)
+  private case class StyleMetaEntryNode(key: String, value: String)(styleInfo: StyleType) extends InferredMetaEntryNode {
 
     def includeIn(meta: MetaFromDocument): MetaFromDocument = styleInfo match {
       case TitleStyleTpe =>
-        value.map(meta.withTitle).getOrElse(meta)
+        meta.withTitle(value)
       case SubTitleStyleTpe =>
-        value.map(meta.withSubTitle).getOrElse(meta)
+        meta.withSubTitle(value)
       case _ =>
         meta
     }
 
   }
 
-  private class RegularCommandNode(cmdNode: Repr.Aux[T], valueNodes: List[Repr.Aux[T]]) extends CommandNode {
+  private object StyleMetaEntryNode {
+    def apply(styleInfo: StyleType, valueNode: Repr.Aux[T]): Option[InferredMetaEntryNode] =
+      for {
+        key <- withTitleKind(styleInfo)
+        v <- valueNode.extractPlainText(deep = true)
+      } yield StyleMetaEntryNode(key, v)(styleInfo)
 
-    def cmd: Option[String] =
-      cmdNode.extractPlainText(deep = true).flatMap { txt =>
-        if (txt.endsWith(":")) Some(txt.stripSuffix(":").toLowerCase)
-        else None
-      }
+    private def withTitleKind(styleInfo: StyleType) = styleInfo match {
+      case tpe: TitleStyleType => Some(tpe.name)
+      case _                   => None
+    }
+  }
 
-    def value: Option[String] =
-      valueNodes.flatMap(_.extractPlainText(deep = true)) match {
-        case Nil    => None
-        case values => Some(values.mkString("").trim)
-      }
-
-    def isValid: Boolean = cmd.nonEmpty && value.nonEmpty
+  private case class RegularMetaEntryNode(key: String, value: String) extends InferredMetaEntryNode {
 
     def includeIn(meta: MetaFromDocument): MetaFromDocument =
-      (for {
-        key <- cmd
-        v <- value
-      } yield meta.withKey(key, v)).getOrElse(meta)
+      meta.withKey(key, value)
 
+  }
+
+  private object RegularMetaEntryNode {
+
+    private def nonEmptyList[T](xs: List[T]): Option[List[T]] = xs match {
+      case Nil => None
+      case xs  => Some(xs)
+    }
+
+    def apply(cmdNode: Repr.Aux[T], valueNodes: List[Repr.Aux[T]]): Option[InferredMetaEntryNode] = {
+      for {
+        txt <- cmdNode.extractPlainText(deep = true) if txt.endsWith(":")
+        values <- nonEmptyList(valueNodes.flatMap(_.extractPlainText(deep = true)))
+      } yield RegularMetaEntryNode(txt.stripSuffix(":").toLowerCase, values.mkString("").trim)
+    }
   }
 
 }

@@ -28,7 +28,7 @@ class OdtParser() extends Parser {
 
   def parse(input: File,
             makeTransclusions: Boolean)(
-    implicit logger: Logger, config: cmd.Config): ParsedDocument[DocNode] = {
+    implicit logger: Logger, config: cmd.Config): Either[String, ParsedDocument[DocNode]] = {
 
     logger.info(s"Parsing $input")
 
@@ -36,18 +36,18 @@ class OdtParser() extends Parser {
       // 1. Take an input file, and attempt to unpack it
       //    since it is an ODT binary
       (inFile, odtDir) <- input.unpack()
-      root <- inFile.content.map(XML.loadFile)
-      rootStyle <- inFile.style.map(XML.loadFile)
+      root             <- inFile.content.map(XML.loadFile) // content.xml
+      rootStyle        <- inFile.style.map(XML.loadFile) // styles.xml
 
       // 2. Find all the key nodes in the unpacked binary (either in content.xml or styles.xml)
       // a) font node
-      rawFont <- rootStyle \!! OdtTags.Font
+      rawFont          <- rootStyle \!! OdtTags.Font
       // b) automatic style node in meta
-      rawAutoStyle <- rootStyle \!! OdtTags.AutomaticStyle
+      rawAutoStyle     <- rootStyle \!! OdtTags.AutomaticStyle
       // c) body node in the content.xml
-      rawBody <- root \!! OdtTags.Body
+      rawBody          <- root \!! OdtTags.Body
       // d) automatic style node in the content.xml
-      rawStyleInBody <- root \!! OdtTags.AutomaticStyle
+      rawStyleInBody   <- root \!! OdtTags.AutomaticStyle
 
       //rawStyle <- rootStyle \!! OdtTags.Styles
       (styleNode, styleFromMeta) <- loadDocStyleFromMeta(rootStyle)
@@ -55,14 +55,14 @@ class OdtParser() extends Parser {
 
       styleInBody <- parseBody(rawStyleInBody)(styleFromMeta, logger)
     } yield {
-      // Append to the resulting structure the (optional) scripts node
+      // (optional) scripts node parsing
       val scriptsNode =
         (for {
           rawScripts <- root \!! OdtTags.Scripts
           scriptsNode <- parseBody(rawScripts)(styleFromMeta, logger)
         } yield scriptsNode :: Nil).getOrElse(List())
 
-      val styleParser = OdtStyleParser.defaultOdt
+      val styleParser = OdtStyleParser.default
       val stylesFromDoc = styleParser.loadFromDocContent(root, styleFromMeta)
       val bodyNodes = rawBody.child.flatMap(parseBody(_)(stylesFromDoc, logger))
       val body1 = Repr.makeElem(Tags.BODY, bodyNodes, contents = None, attrs = Nil)(rawBody, implicitly[NodeFactory.Aux[DocNode]])
@@ -73,19 +73,18 @@ class OdtParser() extends Parser {
       if (!config.Ytmp)
         odtDir.deleteDirectory()
 
-      (root, reifiedStylesDict, scriptsNode ::: (parseFonts(rawFont) :: reifiedStyleNodes :: body1 :: Nil))
+      (root,
+        reifiedStylesDict,
+        scriptsNode ::: (parseFonts(rawFont) :: reifiedStyleNodes :: body1 :: Nil))
     }
 
     parsed match {
       case Some((root, style, rootBody)) =>
-        ParsedDocument(root.wrap(tag = Tags.ROOT, body = rootBody), style)
+        Right(ParsedDocument(root.wrap(tag = Tags.ROOT, body = rootBody), style))
       case None =>
-        ???
+        Left("Invalid .odt binary. File corrupted?") // TODO
     }
   }
-
-  def rewriteInput(meta: Any, unaugmentedMeta: Any, transclusions: Any, asides: Any, rewriteInfo: Any): Any =
-    ???
 
   // Just leave them as they are
   private def parseFonts(node: scala.xml.Node): Repr.Aux[DocNode] =
@@ -119,7 +118,7 @@ class OdtParser() extends Parser {
 
         val emptyStyleSheet = DocumentStyle(header, footer, w centimeters)
 
-        val docWithStyles = OdtStyleParser.defaultOdt.loadFromDocContent(node, emptyStyleSheet)
+        val docWithStyles = OdtStyleParser.default.loadFromDocContent(node, emptyStyleSheet)
 
         logger.debug(s"Loaded style:\n${docWithStyles}")
 

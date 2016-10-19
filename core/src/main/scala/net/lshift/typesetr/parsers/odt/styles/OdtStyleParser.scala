@@ -143,7 +143,7 @@ object OdtStyleParser {
       OdtTags.TextNotesConf,
       OdtTags.TextLineNumConf)
 
-  lazy val defaultOdt: StyleParser.Aux[scala.xml.Node] = new OdtStyleParser()
+  lazy val default: StyleParser.Aux[scala.xml.Node] = new OdtStyleParser()
 
   private final val ParagraphFamily = "paragraph"
 

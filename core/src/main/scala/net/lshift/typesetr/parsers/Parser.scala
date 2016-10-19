@@ -15,7 +15,7 @@ abstract class Parser {
 
   /**
    * Parse a given file and return a typesetr's
-   * interpretation of it.
+   * interpretation of it in the form of the internal representation.
    *
    * @param input input file to be parsed
    * @return interpretation of the document in
@@ -23,10 +23,10 @@ abstract class Parser {
    */
   def parse(input: File,
             makeTransclusions: Boolean)(
-              implicit logger: Logger, config: cmd.Config): ParsedDocument[DocNode]
+              implicit logger: Logger, config: cmd.Config): Either[String, ParsedDocument[DocNode]]
 
   /**
-   * Return document-specific functions for analyzing
+   * Document-specific functions for analyzing
    * document's nodes
    */
   implicit def nodeConfig: NodeConfigs.WithNode[DocNode]

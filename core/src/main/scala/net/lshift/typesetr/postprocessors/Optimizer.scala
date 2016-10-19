@@ -99,8 +99,6 @@ trait PostProcessorUtils[T] extends OpimizerStrategies[T] {
             case BLOCK =>
               // collapse blocks into one
               coalesceBlocks(key, elems) //.filterNot(BogusElement.isBogus)
-            // FIXME: missing LIT and CMD
-            // checking
             case _ =>
               logger.debug("Coalesce based on parent-child relation")
               (for {

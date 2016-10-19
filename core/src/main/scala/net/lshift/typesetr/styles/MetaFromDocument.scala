@@ -41,6 +41,6 @@ object MetaFromDocument {
 
   final val subtitle = MetaKey("subtitle")
 
-  lazy val keys: List[MetaKey] = List(title, subtitle)
+  lazy val knownKeys: List[MetaKey] = List(title, subtitle)
 
 }

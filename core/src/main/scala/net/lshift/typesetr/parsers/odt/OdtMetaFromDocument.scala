@@ -42,7 +42,7 @@ case class OdtMetaFromDocument(
 
   def entries: List[(MetaKey, String)] =
     for {
-      key <- MetaFromDocument.keys ++ mapKeys.keys
+      key <- MetaFromDocument.knownKeys ++ mapKeys.keys
       v <- fromKey(key)
     } yield (key, v)
 

@@ -1,13 +1,13 @@
 package net.lshift.typesetr.parsers.styles
 
-import net.lshift.typesetr.xml.Tag
+import net.lshift.typesetr.xml.{ Tag, InternalTags => ITags }
 import net.lshift.typesetr.xml.attributes.FontFamily
 
 import scala.language.implicitConversions
-import net.lshift.typesetr.xml.{ InternalTags => ITags }
 
 /**
- * Represents a `type` of the style.
+ * Representation of the `type` of the style,
+ * i.e. to which document node does it apply.
  *
  *  The type is taken from the original ODT format
  *  and translated into a generic output node style.
@@ -17,7 +17,7 @@ import net.lshift.typesetr.xml.{ InternalTags => ITags }
 sealed abstract class StyleType(val name: String) {
 
   /**
-   * An XML tag representing the style
+   * A tag representing the style
    *
    */
   def tag: Tag
@@ -29,7 +29,7 @@ object StyleType {
   /**
    * All allowed internal style `kinds`
    *
-   * @return a list of all available styles types
+   * @return a list of all available styles kinds
    */
   def all = List(TitleStyleTpe, SubTitleStyleTpe,
     HeadingStyle.h1, HeadingStyle.h2, HeadingStyle.h3, HeadingStyle.h4,
@@ -66,8 +66,7 @@ class HeadingStyle(val index: Int) extends StyleType(s"h$index") {
     case _               => false
   }
 
-  override def toString: String =
-    s"<h$index>"
+  override def toString: String = s"<h$index>"
 }
 
 object HeadingStyle {

@@ -17,8 +17,7 @@ import scala.language.postfixOps
 
 /**
  * The main entry point to running typesetr pipeline.
- * Running the converter without any options set will
- * actually
+ * See command parser for the list of options.
  */
 object Converter {
 
@@ -46,36 +45,31 @@ object Converter {
               (???, ???)
           }
 
+          lazy val optimizer = postprocessors.DefaultPostProcessor.fromConfig(parser.nodeConfig)
           // 2. Parse the document and produce an internal
           // representation of the document
-          val parsed = parser.parse(inputFile, makeTransclusions = false)
-          // 3. Optimize the document
-          val optimizer = postprocessors.DefaultPostProcessor.fromConfig(parser.nodeConfig)
-          val optimizedDoc =
-            if (config.Yoptimize)
-              optimizer.optimize(parsed.root)(implicitly[Logger], parsed.style)
-            else
-              parsed.root
-
-          val (cleansedDoc, docMeta) = optimizer.inferMeta(optimizedDoc)(parsed.style)
-
-          // 4. Store the optimized document
-          val optimizedInput =
-            writer.writeToFile(cleansedDoc)(logger, config)
-
-          // 5. Translate the optimized document using pandoc
-          // 6. Apply Typesetr's templates
           for {
-            pandocInputF <- optimizedInput.toRight("No input found").right
+            parsedDoc <- (parser.parse(inputFile, makeTransclusions = false)).right
+            // 3. Optimize the document
+            optimizedDoc <- Right(if (config.Yoptimize)
+              optimizer.optimize(parsedDoc.root)(implicitly[Logger], parsedDoc.style)
+            else
+              parsedDoc.root).right
+            //inferredMeta <- Right(optimizer.inferMeta(optimizedDoc)(parsedDoc.style)).right
+            inferredMeta <- optimizer.inferMeta(optimizedDoc)(parsedDoc.style).right
+            // 4. Store the optimized document
+            pandocInputF <- writer.writeToFile(inferredMeta._1)(logger, config).
+              toRight("Failed to save the optimized document to a file").right
+            // 5. Translate the optimized document using pandoc
             pandocOutput <- pandocTranslation(config.inFormat,
               outputFile.format,
               pandocInputF).right
+            // 6. Apply Typesetr's templates, configuration
             generator <- pandocPostprocessor(pandocOutput, outputFile.outputFile,
-              config, docMeta, pandocInputF).right
+              config, inferredMeta._2, pandocInputF).right
           } yield {
             generator.write(config)
             if (!config.Ytmp) {
-              optimizedInput.map(_.delete())
               pandocInputF.delete()
               pandocOutput.delete()
             }
@@ -89,7 +83,9 @@ object Converter {
           case _ =>
         }
 
-      case None =>
+      case _ =>
+      // An error occurred, the problem was already reported
+      // by the command parser.
     }
   }
 
@@ -151,11 +147,6 @@ object Converter {
     }
   }
 
-  def rewriteInput(config: Config): Option[String] = {
-    // TODO
-    Some("")
-  }
-
   def retrieveInputFile(config: Config): Either[String, File] = {
     Right(config.inFile.getOrElse({
 
@@ -214,16 +205,20 @@ object Converter {
 }
 
 /**
- * Configuration for output.
- *
- * - format - final output format, based on the input/output file
- * - rewriteInputTo - the output of the Typesetr's pre-processor
- * - outputFile - desired output file
+ * Output configuration
  */
 abstract class ProcessingFileInfo {
+
+  /**
+   * Final output format, based on the input/output file
+   */
   def format: OutputFormat
-  //def rewriteInputTo: File
+
+  /**
+   * Desired target file
+   */
   def outputFile: File
+
 }
 
 object ProcessingFileInfo {
