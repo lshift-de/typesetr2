@@ -26,9 +26,7 @@ class OdtParser() extends Parser {
 
   type DocNode = scala.xml.Node
 
-  def parse(input: File,
-            makeTransclusions: Boolean)(
-    implicit logger: Logger, config: cmd.Config): Either[String, ParsedDocument[DocNode]] = {
+  def parse(input: File)(implicit logger: Logger, config: cmd.Config): Either[String, ParsedDocument[DocNode]] = {
 
     logger.info(s"Parsing $input")
 
@@ -103,9 +101,7 @@ class OdtParser() extends Parser {
       prop.toRight("0cm").fold(ValOfUnit.parse, ValOfUnit.parse).map(_.toCm)
 
     val doc = (for {
-      rawHeader  <- node \!! (OdtTags.MasterStyle / OdtTags.StyleMasterPage / OdtTags.StyleHeader)
-      rawFooter  <- node \!! (OdtTags.MasterStyle / OdtTags.StyleMasterPage / OdtTags.StyleFooter)
-      pgLayout<- node \!! (OdtTags.AutomaticStyle / OdtTags.StylePageLayout / OdtTags.StylePageLayoutProps)
+      pgLayout   <- node \!! (OdtTags.AutomaticStyle / OdtTags.StylePageLayout / OdtTags.StylePageLayoutProps)
     } yield {
       for {
         marginLeft   <- length(pgLayout.attributes.getTag(OdtTags.FoMarginLeft))
@@ -113,14 +109,17 @@ class OdtParser() extends Parser {
         paddingLeft  <- length(pgLayout.attributes.getTag(OdtTags.FoPaddingLeft))
         paddingRight <- length(pgLayout.attributes.getTag(OdtTags.FoPaddingRight))
         pageWidth    <- length(pgLayout.attributes.getTag(OdtTags.FoPageWidth))
-        header       <- parseBody(rawHeader)(DocumentStyle.empty, implicitly[Logger], implicitly[ParsingContext])
-        footer       <- parseBody(rawFooter)(DocumentStyle.empty, implicitly[Logger], implicitly[ParsingContext])
       } yield {
         val w =
-          pageWidth - (marginLeft + marginRight +
-          paddingLeft + paddingRight)
+          pageWidth - (marginLeft + marginRight + paddingLeft + paddingRight)
 
-        val emptyStyleSheet = DocumentStyle(header, footer, w centimeters)
+        val rawHeader  = node \!! (OdtTags.MasterStyle / OdtTags.StyleMasterPage / OdtTags.StyleHeader)
+        val rawFooter  = node \!! (OdtTags.MasterStyle / OdtTags.StyleMasterPage / OdtTags.StyleFooter)
+        val headerOpt = rawHeader.flatMap(n => parseBody(n)(DocumentStyle.empty, implicitly[Logger], implicitly[ParsingContext]))
+        val footerOpt = rawFooter.flatMap(n => parseBody(n)(DocumentStyle.empty, implicitly[Logger], implicitly[ParsingContext]))
+
+
+        val emptyStyleSheet = DocumentStyle(headerOpt, footerOpt, w centimeters)
 
         val docWithStyles = OdtStyleParser.default.loadFromDocContent(node, emptyStyleSheet)
 

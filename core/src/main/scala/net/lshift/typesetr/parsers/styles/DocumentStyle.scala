@@ -25,9 +25,9 @@ abstract class DocumentStyle { self =>
    * in the original Typesetr.
    * TODO: figure out why on earth do we need those?
    */
-  def header: Repr.Aux[Node]
+  def header: Option[Repr.Aux[Node]]
 
-  def footer: Repr.Aux[Node]
+  def footer: Option[Repr.Aux[Node]]
 
   def textWidth: ValOfUnit
 
@@ -95,8 +95,8 @@ object DocumentStyle {
 
   type Aux[T] = DocumentStyle { type Node = T }
 
-  def apply[T](header0: Repr.Aux[T],
-               footer0: Repr.Aux[T],
+  def apply[T](header0: Option[Repr.Aux[T]] = None,
+               footer0: Option[Repr.Aux[T]] = None,
                textWidth0: ValOfUnit): DocumentStyle.Aux[T] =
     new DocumentStyle { self =>
 
@@ -109,9 +109,9 @@ object DocumentStyle {
       def newListLevelContext: DocumentStyle.Aux[Node] =
         new ListDocumentStyle[T](self)
 
-      def header: Repr.Aux[this.Node] = header0
+      def header: Option[Repr.Aux[this.Node]] = header0
 
-      def footer: Repr.Aux[this.Node] = footer0
+      def footer: Option[Repr.Aux[this.Node]] = footer0
 
       protected var styles: Map[StyleId, Style] = Map.empty
 
@@ -135,15 +135,15 @@ object DocumentStyle {
   private class ListDocumentStyle[T](prev: DocumentStyle.Aux[T]) extends DocumentStyle { self =>
     type Node = T
 
-    def header: Repr.Aux[T] = prev.header
+    def header: Option[Repr.Aux[T]] = prev.header
+
+    def footer: Option[Repr.Aux[T]] = prev.footer
 
     def newListLevelContext: Aux[T] = new ListDocumentStyle[T](self)
 
     protected def styles: Map[StyleId, Style] = prev.styles
 
     def textWidth: ValOfUnit = prev.textWidth
-
-    def footer: Repr.Aux[T] = prev.footer
 
     protected def updateStyles(style: (StyleId, Style)): ListDocumentStyle.this.type = ???
 
@@ -156,15 +156,15 @@ object DocumentStyle {
 
     type Node = T
 
-    def textWidth: ValOfUnit = 0 centimeters
+    def header: Option[Repr.Aux[T]] = None
 
-    def header: Repr.Aux[T] = repr.empty()
+    def footer: Option[Repr.Aux[T]] = None
+
+    def textWidth: ValOfUnit = 0 centimeters
 
     def listLevelDepth: Int = 0
 
     def newListLevelContext: Aux[T] = new ListDocumentStyle[T](self)
-
-    def footer: Repr.Aux[T] = repr.empty()
 
     def style(id: StyleId): Option[Style] = None
 

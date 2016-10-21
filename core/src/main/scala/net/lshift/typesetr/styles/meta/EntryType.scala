@@ -52,9 +52,10 @@ object MetaEntryType {
     type T = Boolean
 
     def translate(x: AnyRef): Boolean = x match {
-      case "yes" => true
-      case "no"  => false
-      case _     => ???
+      case "yes"                => true
+      case "no"                 => false
+      case b: java.lang.Boolean => b
+      case _                    => ???
     }
 
     def default: String = "no"

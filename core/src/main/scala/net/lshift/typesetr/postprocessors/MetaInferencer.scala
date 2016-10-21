@@ -24,16 +24,15 @@ trait MetaInferencer[T] { self =>
     // The order of occurrence matters.
     // 2. Combine different commands into a single meta dictionary
     val metaEntries1 = metaEntries.flatten
-    if (metaEntries1.isEmpty) Left("Couldn't infer any meta information from the document")
-    else {
-      val meta =
-        metaEntries1.foldLeft(nodeConfig.metaExtractor) {
-          case (meta, entry) => entry.includeIn(meta)
-        }
+    val meta =
+      metaEntries1.foldLeft(nodeConfig.metaExtractor) {
+        case (meta, entry) => entry.includeIn(meta)
+      }
 
-      // Replace the original root with the given children nodes.
-      Right((root.copy(body1), meta))
-    }
+    // Replace the original root with the given children nodes.
+    val noChange = (root.body zip body1) forall { case (n1, n2) => n1 eq n2 }
+    val root1 = if (noChange) root else root.copy(body1)
+    Right((root1, meta))
   }
 
   /**

@@ -35,8 +35,7 @@ class OdtWriter(inputFile: File) extends Writer {
 
     logger.info(s"New content of the .odt file is located @ $f")
 
-    val outS = new FileOutputStream(f)
-    val writer = Channels.newWriter(outS.getChannel(), TextEncoding)
+    val writer = Channels.newWriter(new FileOutputStream(f).getChannel(), TextEncoding)
 
     val rewriteTo = File.createTempFile("rewritten", "-typesetr.odt")
     val stream = new FileOutputStream(rewriteTo)
@@ -46,6 +45,7 @@ class OdtWriter(inputFile: File) extends Writer {
     try {
       writer.write("<?xml version='1.0' encoding='" + TextEncoding + s"'?>$NewLine")
       writeNode(node, indent = 0)(config, writer, implicitly[Logger])
+      writer.close()
 
       // 2. Pack into an .odt binary
       (for {
@@ -69,7 +69,6 @@ class OdtWriter(inputFile: File) extends Writer {
     } finally {
       if (!config.Ytmp)
         f.delete()
-      writer.close()
       stream.close()
     }
 

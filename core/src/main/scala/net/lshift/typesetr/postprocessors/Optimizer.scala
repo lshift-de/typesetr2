@@ -24,6 +24,7 @@ trait Optimizer[T] {
   type ElemSig = (Tag, List[Attribute])
 
   def optimize(node: Repr.Aux[T])(implicit logger: Logger, sty: DocumentStyle.Aux[T]): Repr.Aux[T] = {
+    logger.info("Optimizing document")
     val nodes = coalesce(node.body.toList)
     implicitly[NodeFactory.Aux[T]].create(
       tag = node.tag,

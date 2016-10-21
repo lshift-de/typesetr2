@@ -15,6 +15,10 @@ object Markers {
     res
   }
 
+  def reset(): Unit = {
+    counter = 0
+  }
+
   private def wrap[T](name: String, beginName: String, endName: String)(txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T]): Seq[Repr.Aux[T]] = {
     val name1 = name + "-" + increment()
     (Repr.makeTextElem(s"$beginName!$name1!", synthetic = false) +:

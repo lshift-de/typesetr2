@@ -21,9 +21,7 @@ abstract class Parser {
    * @return interpretation of the document in
    *         typesetr's internal format
    */
-  def parse(input: File,
-            makeTransclusions: Boolean)(
-              implicit logger: Logger, config: cmd.Config): Either[String, ParsedDocument[DocNode]]
+  def parse(input: File)(implicit logger: Logger, config: cmd.Config): Either[String, ParsedDocument[DocNode]]
 
   /**
    * Document-specific functions for analyzing
