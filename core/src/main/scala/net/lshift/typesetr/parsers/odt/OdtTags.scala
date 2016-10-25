@@ -18,6 +18,7 @@ object OdtTags {
   val Frame: XmlTag = (implicitly[NameSpaces].apply("draw"), "frame")
   val Image: XmlTag = (implicitly[NameSpaces].apply("draw"), "image")
   val TextBox: XmlTag = (implicitly[NameSpaces].apply("draw"), "text-box")
+  val DrawStyleName: XmlAttribute = (implicitly[NameSpaces].apply("draw"), "style-name")
 
   val A: XmlTag = (implicitly[NameSpaces].apply("text"), "a")
   val AnchorTpe: XmlAttribute = (implicitly[NameSpaces].apply("text"), "anchor-type")
@@ -111,6 +112,7 @@ object OdtTags {
   val FoParBreak: XmlAttribute = (implicitly[NameSpaces].apply("fo"), "break-before")
   val FoParBreakAfter: XmlAttribute = (implicitly[NameSpaces].apply("fo"), "break-after")
   val FoTextIndent: XmlAttribute = (implicitly[NameSpaces].apply("fo"), "text-indent")
+  val FoMinHeight: XmlAttribute = (implicitly[NameSpaces].apply("fo"), "min-height")
 
   val SvgWidth: XmlAttribute = (implicitly[NameSpaces].apply("svg"), "width")
   val SvgHeight: XmlAttribute = (implicitly[NameSpaces].apply("svg"), "height")

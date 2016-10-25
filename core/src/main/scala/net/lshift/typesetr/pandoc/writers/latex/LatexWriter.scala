@@ -192,6 +192,7 @@ object LatexWriter {
   private final val BABEL_HEADER = (lang: String) =>
     s"""|\\\\usepackage[${lang}]{babel}
         |\\\\usepackage[${lang}]{isodate}
+        |\\\\usepackage{float}
         |\\\\def\\\\languageshorthands#1{}""".stripMargin
 
   private final val SectionBabel = "INTERPOLATEBABEL"

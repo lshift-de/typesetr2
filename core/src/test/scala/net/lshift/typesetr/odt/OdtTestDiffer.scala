@@ -39,13 +39,25 @@ class OdtTestDiffer extends Differ {
 
   private def compareNodes(elem1: scala.xml.Node, elem2: scala.xml.Node, idx: Int): Option[String] = {
     if (elem1.prefix != elem2.prefix)
-      Some(s"[$idx] incomparable nodes prefixes: ${elem1.prefix} vs ${elem2.prefix}")
+      Some(s"""|[$idx] incomparable nodes prefixes:
+               |${elem1.prefix}
+               | vs
+               |${elem2.prefix}""".stripMargin)
     else if (elem1.label != elem2.label)
-      Some(s"[$idx] incomparable nodes labels: ${elem1.label} vs ${elem2.label}")
+      Some(s"""|[$idx] incomparable nodes labels:
+               |${elem1.label}
+               |vs
+               |${elem2.label}""".stripMargin)
     else if (elem1.attributes != elem2.attributes)
-      Some(s"[$idx] incomparable nodes attributes: ${elem1.attributes} vs ${elem2.attributes}")
+      Some(s"""|[$idx] incomparable nodes attributes:
+               |${elem1.attributes}
+               |vs
+               |${elem2.attributes}""".stripMargin)
     else if (elem1.text != elem2.text)
-      Some(s"[$idx] incomparable nodes attributes: ${elem1.text} vs ${elem2.text}")
+      Some(s"""|[$idx] incomparable nodes text:
+               |${elem1.text}
+               |vs
+               |${elem2.text}""".stripMargin)
     else seqToOpt((elem1.child zip elem2.child).flatMap { case (e1, e2) => compareNodes(e1, e2, idx + 1) })
   }
 

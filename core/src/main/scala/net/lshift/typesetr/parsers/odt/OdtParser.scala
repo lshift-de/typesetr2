@@ -248,7 +248,7 @@ class OdtParser() extends Parser {
           val attr1 = Attribute(InternalAttributes.style, newStyleId.name) :: Nil
           Repr.makeElem(tag = Tags.BLOCK, children, attrs = attr1, contents = None)(
             source, implicitly[NodeFactory.Aux[DocNode]])
-        } getOrElse (node.wrap(tag = Tags.P, body = children)))
+        } getOrElse (Repr.makeElem(tag = Tags.P, body = children, attrs = Nil, contents = None)))
 
       case OdtTags.Span =>
         // Translate attributes into individual, nested nodes
@@ -265,8 +265,20 @@ class OdtParser() extends Parser {
               contents = None,
               attrs = Attribute(InternalAttributes.style, "Standard") :: attrs2.map(_ :: Nil).getOrElse(Nil)))
 
+        // Maybe it is a caption
+        val txtContent = children.flatMap(_.extractPlainText(deep = false)).mkString
+        val body3 = if (txtContent == CAPTION_TXT) Some(
+          Repr.makeElem(
+            tag = Tags.CAPTION,
+            body = children,
+            contents = None,
+            attrs = Nil
+          )
+        ) else None
+
         scalaz.Tag.unwrap(
-          First(body2) |+| First(Repr.makeElem(tag = Tags.SPAN, body = body1, contents = None, attrs = Nil)))
+          First(body2) |+| First(body3) |+|
+            First(Repr.makeElem(tag = Tags.SPAN, body = body1, contents = None, attrs = Nil)))
 
       case OdtTags.A =>
         val hrefAttr = AttributeKey(OdtTags.HrefType)
@@ -308,7 +320,7 @@ class OdtParser() extends Parser {
         // If the frame has a caption, we only modify the width of the figure
         // but leave the formatting to Pandoc. Pandoc is too sensitive
         // to the structure of the document and with our contributions it seems
-        // handle it correctly.
+        // to handle it correctly.
         val children1 = node.child.flatMap(parseBody(_)(docStyle, logger, ctx.copy(inFrame = true)))
         val noTypesetrTransform = !ctx.inFrame && children1.exists(_.tag == Tags.IMG)
 
@@ -463,5 +475,7 @@ object OdtParser {
   private final val spaceEncoded = " &nbsp;"
   private final val linebreakEncoded = "br"
   private final val tabEncoded = " \\t"
+
+  private final val CAPTION_TXT = "Caption:"
 
 }

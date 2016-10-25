@@ -82,35 +82,114 @@ trait PostProcessorUtils[T] extends OpimizerStrategies[T] {
         imgKind <- ImageKind(imgKindRaw)
       } yield (imgKind, imgWidthRaw.toDouble)
 
-    def maybeCollapseGroups(key: ElemSig, elems: Seq[Repr.Aux[T]])(implicit logger: Logger): Seq[Repr.Aux[T]] = {
-      elems match {
-        case singleElem :: Nil =>
-          val imgKindOpt = hasImgAttribute(singleElem.attr)
-          imgKindOpt.map {
-            case (imgKind, width) => imgKind.formatting.format(elems)
-          } getOrElse (elems)
+    object FigureP {
+      // Extracts the last frame element and whatever was pre- and post- of it, if any.
+      def unapply(elem: Repr.Aux[T]): Option[(List[Repr.Aux[T]], Repr.Aux[T], List[Repr.Aux[T]])] = {
+        // Only attach the caption to the last frame node
+        val spanned = elem.body.foldRight((Nil: List[Repr.Aux[T]], Nil: List[Repr.Aux[T]])) {
+          case (elem, acc) =>
+            if (acc._1.nonEmpty) (elem :: acc._1, acc._2)
+            else if (elem.tag == InternalTags.FRAME) (elem :: Nil, acc._2)
+            else (Nil, elem :: acc._2)
+        }
+        spanned._1.reverse match {
+          case head :: rest => Some((rest, head, spanned._2))
+          case Nil          => None
+        }
+      }
+    }
 
+    object FigureWithCaptionP {
+      // Extracts the last frame element and whatever was pre- and post- of it, if any.
+      def unapply(elem: Repr.Aux[T]): Option[(List[Repr.Aux[T]], Repr.Aux[T], List[Repr.Aux[T]])] = {
+        // Only attach the caption to the last frame node
+        val spanned = elem.body.foldRight((Nil: List[Repr.Aux[T]], Nil: List[Repr.Aux[T]])) {
+          case (elem, acc) =>
+            if (acc._1.nonEmpty) (elem :: acc._1, acc._2)
+            else if (elem.tag == InternalTags.FRAME) (elem :: Nil, acc._2)
+            else (Nil, elem :: acc._2)
+        }
+        (spanned._1.reverse, spanned._2) match {
+          case (head :: rest, caption :: rest2) =>
+            if (caption.tag == InternalTags.CAPTION)
+              Some((rest, head, rest2))
+            else
+              None
+          case _ => None
+        }
+      }
+    }
+
+    object CaptionP {
+      def unapply(elem: Repr.Aux[T]): Option[List[Repr.Aux[T]]] =
+        elem.body.headOption.filter(_.tag == InternalTags.CAPTION).map(_ => elem.body.tail.toList)
+    }
+
+    // Attach a caption to the element, if present.
+    // Captions are associated with figures/tables if they are immediately
+    // following the given element.
+    def paragraphSlidingWindow(elems: List[Repr.Aux[T]], acc: List[Repr.Aux[T]]): List[Repr.Aux[T]] = elems match {
+      // Figure and its caption in separate paragraphs but still next to each other
+      case (p @ FigureP(pre, figElem, post)) :: (c @ CaptionP(txtElems)) :: rest =>
+        // create a new figure with a caption
+        val postTxt = post.flatMap(_.extractPlainText(deep = true)).mkString("")
+        if (postTxt.trim != "") {
+          logger.info("A text between a figure and a caption is non-empty. Ignoring caption.")
+          paragraphSlidingWindow(p :: rest, acc)
+        } else {
+          val withInferredCaption = implicitly[NodeFactory.Aux[T]].imgWithCaption(figElem, txtElems)
+          val newP = implicitly[NodeFactory.Aux[T]].paragraphFrom(pre ++ Seq(withInferredCaption), p)
+          paragraphSlidingWindow(rest, newP :: acc)
+        }
+
+      // Figure and caption in the same paragraph
+      case (p @ FigureWithCaptionP(pre, figElem, caption)) :: rest =>
+        val withInferredCaption = implicitly[NodeFactory.Aux[T]].imgWithCaption(figElem, caption)
+        val newP = implicitly[NodeFactory.Aux[T]].paragraphFrom(pre ++ Seq(withInferredCaption), p)
+        paragraphSlidingWindow(rest, newP :: acc)
+
+      case (p @ FigureP(pre, fig, post)) :: rest =>
+        val imgKindOpt = hasImgAttribute(fig.attr)
+        val newP = imgKindOpt.map {
+          case (imgKind, width) =>
+            val body1: Seq[Repr.Aux[T]] =
+              pre.toSeq ++ imgKind.formatting.format(Seq(fig)) ++ post.toSeq
+            implicitly[NodeFactory.Aux[T]].paragraphFrom(body1, p)
+        } getOrElse (p)
+        paragraphSlidingWindow(rest, newP :: acc)
+
+      // FIXME: this potentially means that there was a table before
+      //        will need to update this condition, once the support is in
+      case (elem @ CaptionP(txtElems)) :: rest =>
+        logger.info(s"""Ignoring caption ${txtElems.map(_.extractPlainText).mkString("")} not associated with any image/table""")
+        paragraphSlidingWindow(rest, elem :: acc)
+
+      case head :: rest =>
+        paragraphSlidingWindow(rest, head :: acc)
+
+      case _ =>
+        acc.reverse
+    }
+
+    def maybeCollapseGroups(key: ElemSig, elems: Seq[Repr.Aux[T]])(implicit logger: Logger): Seq[Repr.Aux[T]] = {
+      logger.debug(s"Collapse groups of ${key._1}")
+      key._1 match {
+        case inline if inline isIn INLINE_TAG_WITH_BLOCKQUOTE =>
+          // weird odt splitting
+          // TODO: enable filtering once styles are back
+          coalesceSiblings(key, elems) //.filterNot(BogusElement.isBogus)
+        case BLOCK =>
+          // collapse blocks into one
+          coalesceBlocks(key, elems) //.filterNot(BogusElement.isBogus)
+        case P =>
+          paragraphSlidingWindow(elems.toList, acc = Nil)
         case _ =>
-          logger.debug(s"Collapse groups of ${key._1}")
-          key._1 match {
-            case inline if inline isIn INLINE_TAG_WITH_BLOCKQUOTE =>
-              // weird odt splitting
-              // TODO: enable filtering once styles are back
-              coalesceSiblings(key, elems) //.filterNot(BogusElement.isBogus)
-            case BLOCK =>
-              // collapse blocks into one
-              coalesceBlocks(key, elems) //.filterNot(BogusElement.isBogus)
-            case _ =>
-              logger.debug("Coalesce based on parent-child relation")
-              (for {
-                elem <- elems
-                elem1 <- coalesceParentChild(key, elem)
-                elem2 <- coalesceHeadings(elem1)
-              } yield elem2).flatten
-            // TODO: looks like the current implementation
-            // is too eager.
-            //elems
-          }
+          logger.debug(s"Coalesce based on parent-child relation ${key._1}")
+          (for {
+            elem <- elems
+            elem1 <- coalesceParentChild(key, elem)
+            elem2 <- coalesceHeadings(elem1)
+          } yield elem2).flatten
       }
     }
 
@@ -343,18 +422,13 @@ trait OptimizerCoalesceSiblings[T] {
     val compactedElems = coalesce(elems.flatMap(_.body).toList)
 
     logger.debug(s"coalesce siblings: $sig > Reduced ${elems.length} to ${compactedElems.length}")
-    elems match {
-      case Nil => Nil
-      case first :: rest =>
-        if (sig._1 == SPAN) compactedElems
-        // TODO, create a new XML node
-        else {
-          Repr.makeElem(sig._1, compactedElems, contents = None,
-            attrs = sig._2)(first.source, implicitly[NodeFactory.Aux[T]]) :: Nil
-        }
 
-    }
+    elems.headOption.map { first =>
+      Repr.makeElem(sig._1, compactedElems, contents = None,
+        attrs = sig._2)(first.source, implicitly[NodeFactory.Aux[T]]) :: Nil
+    } getOrElse (compactedElems)
   }
+  
 }
 
 trait OptimzerCoalesceHeadings[T] {

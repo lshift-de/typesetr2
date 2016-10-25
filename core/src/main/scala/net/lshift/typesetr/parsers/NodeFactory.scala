@@ -20,6 +20,10 @@ abstract class NodeFactory {
                          contents: String): Repr.Aux[DocNode] =
     create(tag, docNode, Nil, Nil, Some(contents))
 
+  def imgWithCaption(img: Repr.Aux[DocNode], caption: Seq[Repr.Aux[DocNode]]): Repr.Aux[DocNode]
+
+  def paragraphFrom(body: Seq[Repr.Aux[DocNode]], p0: Repr.Aux[DocNode]): Repr.Aux[DocNode]
+
   def copy(children: Seq[Repr.Aux[DocNode]], source1: DocNode)(repr: Repr.Aux[DocNode]): Repr.Aux[DocNode]
 
   def textNode(text: String): DocNode

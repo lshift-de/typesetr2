@@ -11,5 +11,7 @@ object InternalAttributes {
   lazy val outlineLvl = AttributeKey("outline-level")
   lazy val frameDisplay = AttributeKey("frame-display")
   lazy val imgWidth = AttributeKey("img-width")
+  lazy val captionRepr = AttributeKey("caption-present")
+  lazy val caption = AttributeKey("caption")
 
 }
