@@ -17,11 +17,10 @@ class OdtOptimizerRunner(styleBase0: File) extends FileConfigUtils {
     implicit val config = defaultOdtConfig(input)
     implicit val logger = Logger(config.logging)
 
+    Markers.reset()
     // 1. Infer the input-specific parser
     val parser = new parsers.OdtParser()
     val writer = new OdtWriter(input)
-
-    Markers.reset()
 
     lazy val optimizer = postprocessors.DefaultPostProcessor.fromConfig(parser.nodeConfig)
 

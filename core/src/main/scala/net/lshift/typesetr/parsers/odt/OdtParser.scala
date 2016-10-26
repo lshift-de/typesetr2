@@ -1,7 +1,7 @@
 package net.lshift.typesetr
 package parsers
 
-import net.lshift.typesetr.parsers.styles.{DocumentStyle, StylePropKey, Style}
+import net.lshift.typesetr.parsers.styles.{StyleId, DocumentStyle, StylePropKey, Style}
 import odt.styles._
 import net.lshift.typesetr.xml.attributes.StyleAttribute
 import xml._
@@ -25,6 +25,8 @@ class OdtParser() extends Parser {
   import OdtParser._
 
   type DocNode = scala.xml.Node
+
+  private[this] var counter: Int = 1
 
   def parse(input: File)(implicit logger: Logger, config: cmd.Config): Either[String, ParsedDocument[DocNode]] = {
 
@@ -68,8 +70,8 @@ class OdtParser() extends Parser {
       // The original nodes may be enriched with some new ones that
       // are added as part of the parsing process.
       // The new style nodes have to be included in the modified .odt binary.
-      val reifiedStyleNodes = styleInBody.copy(styleInBody.body ++ newStyles)
-      val reifiedStylesDict = newStyles.foldLeft(stylesFromDoc) {
+      val reifiedStyleNodes = styleInBody.copy(styleInBody.body ++ newStyles.values)
+      val reifiedStylesDict = newStyles.values.foldLeft(stylesFromDoc) {
         case (doc, styleNode) => styleParser.appendStyleNode(styleNode.source, doc) }
 
       if (!config.Ytmp)
@@ -93,7 +95,7 @@ class OdtParser() extends Parser {
     node.wrapRec(tag = Tag.nodeTag)
 
   // FIXME:
-  private var newStyles: List[Repr.Aux[scala.xml.Node]] = List.empty
+  private var newStyles: Map[StyleId, Repr.Aux[scala.xml.Node]] = Map.empty
 
 
   def loadDocStyleFromMeta(node: scala.xml.Node)(implicit logger: Logger): Option[(Repr.Aux[DocNode], DocumentStyle.Aux[DocNode])] = {
@@ -224,7 +226,7 @@ class OdtParser() extends Parser {
         }
 
       case OdtTags.NoteBody =>
-        // TODO: postprocessing should get rid of the whitespaces
+        // TODO: postprocessing should remove any whitespaces
         Repr.makeElem(Tags.FOOTNOTE, children, contents = None, attrs = Nil)
 
       case OdtTags.P =>
@@ -232,7 +234,7 @@ class OdtParser() extends Parser {
         val indentLvl =
           First(sty.marginLeft) |+| First(sty.textIndent)
 
-        Some(scalaz.Tag.unwrap(indentLvl) map { lvl =>
+        Some(scalaz.Tag.unwrap(indentLvl).filter(_.toCm > 1).map { lvl =>
           // Augment the style of the paragraph to
           // introduce blockquote.
 
@@ -241,12 +243,15 @@ class OdtParser() extends Parser {
           // The change of style is reflected in the Typesetr's internal
           // attribute list that carries over the new style info name.
           // The latter will be modified, if necessary, in the Odt writer.
-          val (newStyleId, fact) = OdtDocumentFormatingFactory.odtQuoting(parent = sty)
-          newStyles = fact.create(newStyleId) :: newStyles
-
+          val (newStyleId, fact) = OdtDocumentFormatingFactory.odtQuoting(parent = sty, counter)
+          newStyles = if (newStyles.contains(newStyleId))
+            newStyles
+          else
+            newStyles + (newStyleId -> fact.create(newStyleId))
 
           val attr1 = Attribute(InternalAttributes.style, newStyleId.name) :: Nil
-          Repr.makeElem(tag = Tags.BLOCK, children, attrs = attr1, contents = None)(
+          val children1 = node.child.flatMap(parseBody(_)(docStyle, logger, ctx.copy(inBlock = true)))
+          Repr.makeElem(tag = Tags.BLOCK, children1, attrs = attr1, contents = None)(
             source, implicitly[NodeFactory.Aux[DocNode]])
         } getOrElse (Repr.makeElem(tag = Tags.P, body = children, attrs = Nil, contents = None)))
 
@@ -260,7 +265,7 @@ class OdtParser() extends Parser {
         val attrs2 = children.flatMap(_.getAttribute(InternalAttributes.indent)).headOption
         val body2 = sty.fontFamily.filter(_.isCodeFont).map(_ =>
             Repr.makeElem(
-              tag = Tags.CODE,
+              tag = if (ctx.inBlock) Tags.BLOCKCODE else Tags.CODE,
               body = children,
               contents = None,
               attrs = Attribute(InternalAttributes.style, "Standard") :: attrs2.map(_ :: Nil).getOrElse(Nil)))
@@ -431,9 +436,19 @@ class OdtParser() extends Parser {
 
 }
 
-case class ParsingContext(inFrame: Boolean, inTable: Boolean)
+/**
+  * Object represetning the content (child-parent) relationship
+  * between the nodes, during parsing
+  * @param inFrame is the parser within a frame node
+  * @param inTable is the parser currently parsing a table
+  * @param inBlock is the parser currently parsing some block
+  */
+case class ParsingContext(
+                           inFrame: Boolean,
+                           inTable: Boolean,
+                           inBlock: Boolean)
 object ParsingContext {
-  implicit def emptyCtx: ParsingContext = ParsingContext(inFrame = false, inTable = false)
+  implicit def emptyCtx: ParsingContext = ParsingContext(inFrame = false, inTable = false, inBlock = false)
 }
 
 object OdtParser {

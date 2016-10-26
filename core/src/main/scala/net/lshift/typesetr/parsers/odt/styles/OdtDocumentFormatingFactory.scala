@@ -15,8 +15,8 @@ import scala.language.implicitConversions
 
 object OdtDocumentFormatingFactory {
 
-  def odtQuoting(parent: Style): (StyleId, DocumentFormatingFactory.Aux[scala.xml.Node]) = {
-    val randomName = StyleId(parent.id.family, parent.id.name + "_1")
+  def odtQuoting(parent: Style, counter: Int): (StyleId, DocumentFormatingFactory.Aux[scala.xml.Node]) = {
+    val randomName = StyleId(parent.id.family, s"${parent.id.name}_${counter}")
     (randomName, QuotingStyleParagraph(parent, PandocQuoteLeftMargin))
   }
 

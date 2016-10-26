@@ -3,13 +3,12 @@ package net.lshift.typesetr.tests.odt
 import net.lshift.typesetr.Differ
 import net.lshift.typesetr.odt.OdtTestDiffer
 import org.scalatest._
+import java.io.File
 
 import scala.language.postfixOps
 
-import java.io.File
-
-class ImageOdtSpec extends FlatSpec with Matchers {
-  import ImageOdtSpec._
+class ImageOdtSpec extends OdtSpec {
+  import OdtSpec._
 
   lazy val differ: Differ = new OdtTestDiffer()
   lazy val testRunner = new OdtOptimizerRunner(new File(s"$resources/styles"))
@@ -99,11 +98,4 @@ class ImageOdtSpec extends FlatSpec with Matchers {
     assert(result.isEmpty, result.getOrElse(""))
   }
 
-}
-
-object ImageOdtSpec {
-  def resources = "resources"
-  def testInput(testName: String): (File, File) =
-    (new File(getClass.getResource(s"/tests/$testName.odt").getFile), //(s"$resources/tests/$testName.odt"),
-      new File(getClass.getResource(s"/specs/$testName-content.xml").getFile))
 }

@@ -266,7 +266,7 @@ trait OptimizerCoalesceBlocks[T] {
 
     @tailrec
     def codeBlock(elems: Seq[Repr.Aux[T]], codeElems: Seq[Repr.Aux[T]]): (Seq[Repr.Aux[T]], Seq[Repr.Aux[T]]) = elems match {
-      case (elem) :: rest if elem hasTag CODE =>
+      case (elem) :: rest if elem hasTag BLOCKCODE =>
         codeBlock(rest, elem +: codeElems)
       case _ =>
         (codeElems, elems)
@@ -274,7 +274,7 @@ trait OptimizerCoalesceBlocks[T] {
 
     @tailrec
     def extractNonCodeNodes(elems: Seq[Repr.Aux[T]], blockq: Seq[Repr.Aux[T]])(implicit blockParent: Repr.Aux[T]): (Seq[Repr.Aux[T]], Seq[Repr.Aux[T]]) = elems match {
-      case (elem: Repr) :: rest if elem hasTag CODE =>
+      case (elem: Repr) :: rest if elem hasTag BLOCKCODE =>
         (blockq, elems)
 
       case (elem: Repr) :: rest =>
@@ -428,7 +428,7 @@ trait OptimizerCoalesceSiblings[T] {
         attrs = sig._2)(first.source, implicitly[NodeFactory.Aux[T]]) :: Nil
     } getOrElse (compactedElems)
   }
-  
+
 }
 
 trait OptimzerCoalesceHeadings[T] {

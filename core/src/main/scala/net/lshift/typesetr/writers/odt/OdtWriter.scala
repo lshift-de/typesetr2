@@ -121,7 +121,7 @@ class OdtWriter(inputFile: File) extends Writer {
           case _ =>
             writer.write(s"$docSpace<${n.prefix}:${n.label}$attrbs $scope>$docNewLine")
             node.tag match {
-              case InternalTags.CODE =>
+              case InternalTags.BLOCKCODE =>
                 val x = node.getAttribute(InternalAttributes.indent).flatMap(_.value).map(_.toInt).getOrElse(0)
                 if (x > 1) {
                   writer.write(s"$docSpace${(pandoc.Writer.TypesetrPreSpace * x).toString}")

@@ -19,6 +19,11 @@ sealed abstract class StyleId {
   override def toString: String =
     family map (f => s"$f:$name") getOrElse (s"none:$name")
 
+  override def equals(x: Any): Boolean = x match {
+    case x: StyleId => (family equals x.family) && (name equals x.name)
+    case _          => false
+  }
+
 }
 
 object StyleId {

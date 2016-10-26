@@ -18,6 +18,7 @@ package object odt {
     // openoffice crudified standard namespaces
     "fo" -> "urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0",
     "svg" -> "urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0",
+    "loext" -> "urn:org:documentfoundation:names:experimental:office:xmlns:loext:1.0",
 
     // general standards
     "dc" -> "http://purl.org/dc/elements/1.1/",

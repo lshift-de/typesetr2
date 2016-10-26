@@ -11,7 +11,7 @@ object TagGroups {
     B, I, S, U,
     //"em", "strong", "mark",
     SUP, SUB, SMALL,
-    CODE,
+    BLOCKCODE,
     //"kbd", "var", "samp",
     //"abbr", "time",
     CITE, Q,
@@ -61,7 +61,7 @@ object TagGroups {
   final val NEVER_BLANK = List(FIGURE, IMG, CMD, LIT, PAGEBREAK)
 
   final val CAN_OCCUR_IN_HEADER =
-    List(A, FOOTNOTE, ASIDE, CODE,
+    List(A, FOOTNOTE, ASIDE, BLOCKCODE,
       // allow underlining, to ensure we don't strip out CMDs and
       // LITs in headings before we get around to calling
       // `underlines_to_commands` on the heading)

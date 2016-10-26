@@ -13,6 +13,7 @@ object InternalTags {
   final lazy val SUP = Tag("sup")
   final lazy val SUB = Tag("sub")
   final lazy val SMALL = Tag("small")
+  final lazy val BLOCKCODE = Tag("blockcode")
   final lazy val CODE = Tag("code")
   final lazy val CITE = Tag("cite")
   final lazy val Q = Tag("q")
