@@ -17,17 +17,16 @@ class BlocksOdtSpec extends OdtSpec {
   lazy val differ: Differ = new OdtTestDiffer()
   lazy val testRunner = new OdtOptimizerRunner(new File(s"$resources/styles"))
 
-  "A simple indented block" should
-    "be formatted into a blockquote" in {
-      val name = "simple-block"
-      val (input, spec) = testInput(name)
-      val resultF = testRunner.run(input)
+  "A simple indented block" should "be formatted into a blockquote" in {
+    val name = "simple-block"
+    val (input, spec) = testInput(name)
+    val resultF = testRunner.run(input)
 
-      assert(resultF.isRight, "Optimizing of the document failed")
+    assert(resultF.isRight, "Optimizing of the document failed")
 
-      val result = differ.diff(spec, resultF.right.get)
-      assert(result.isEmpty, result.getOrElse(""))
-    }
+    val result = differ.diff(spec, resultF.right.get)
+    assert(result.isEmpty, result.getOrElse(""))
+  }
 
   it should "take into account right-aligned text" in {
     val name = "simple-block-with-right-align"
@@ -64,6 +63,17 @@ class BlocksOdtSpec extends OdtSpec {
 
   it should "not be detected if there is no indentation" in {
     val name = "simple-code-block-no-indent"
+    val (input, spec) = testInput(name)
+    val resultF = testRunner.run(input)
+
+    assert(resultF.isRight, "Optimizing of the document failed")
+
+    val result = differ.diff(spec, resultF.right.get)
+    assert(result.isEmpty, result.getOrElse(""))
+  }
+
+  "An inlined code" should "be detected by the font-family" in {
+    val name = "code-block-inlined"
     val (input, spec) = testInput(name)
     val resultF = testRunner.run(input)
 

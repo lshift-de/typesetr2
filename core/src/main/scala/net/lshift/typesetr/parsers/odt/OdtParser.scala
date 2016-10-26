@@ -262,13 +262,15 @@ class OdtParser() extends Parser {
         // Note: Here we dictate how the code block (potentially) will be displayed.
         //       Spaces have to be preserved in the code blocks, and they inherit
         //       the indentation from their first child that has that info, if any.
-        val attrs2 = children.flatMap(_.getAttribute(InternalAttributes.indent)).headOption
+        val attrs2 = children.flatMap(_.getAttribute(InternalAttributes.indent)).headOption.map(_ :: Nil).getOrElse(Nil)
         val body2 = sty.fontFamily.filter(_.isCodeFont).map(_ =>
             Repr.makeElem(
               tag = if (ctx.inBlock) Tags.BLOCKCODE else Tags.CODE,
               body = children,
               contents = None,
-              attrs = Attribute(InternalAttributes.style, "Standard") :: attrs2.map(_ :: Nil).getOrElse(Nil)))
+              // Style name is reset, so that Pandoc does not attempt to perform
+              // its own code formatting
+              attrs = if (ctx.inBlock) Attribute(InternalAttributes.style, "Standard") :: attrs2 else attrs2))
 
         // Maybe it is a caption
         val txtContent = children.flatMap(_.extractPlainText(deep = false)).mkString
