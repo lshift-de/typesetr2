@@ -16,8 +16,19 @@ class ListsOdtSpec extends OdtSpec {
   lazy val differ: Differ = new OdtTestDiffer()
   lazy val testRunner = new OdtOptimizerRunner(new File(s"$resources/styles"))
 
-  "A simple list" should "correctly start, restart sub-start enumerations" in {
+  "A list" should "correctly start, restart sub-start enumerations" in {
     val name = "enumeration"
+    val (input, spec) = testInput(name)
+    val resultF = testRunner.run(input)
+
+    assert(resultF.isRight, "Optimizing of the document failed")
+
+    val result = differ.diff(spec, resultF.right.get)
+    assert(result.isEmpty, result.getOrElse(""))
+  }
+
+  "A very deep list" should "produce a regularly formatted list" in {
+    val name = "lists-deep"
     val (input, spec) = testInput(name)
     val resultF = testRunner.run(input)
 
