@@ -72,6 +72,8 @@ class BlocksOdtSpec extends OdtSpec {
     assert(result.isEmpty, result.getOrElse(""))
   }
 
+  // For example. Consolas is not considered to be a code font
+  // by Pandoc so we have to make it as if it was.
   "An inlined code" should "be detected by the font-family" in {
     val name = "code-block-inlined"
     val (input, spec) = testInput(name)

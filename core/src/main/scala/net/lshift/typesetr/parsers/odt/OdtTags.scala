@@ -7,7 +7,8 @@ object OdtTags {
   // main tags
   val Document: XmlTag = (implicitly[NameSpaces].apply("office"), "document-content")
   val AutomaticStyle: XmlTag = (implicitly[NameSpaces].apply("office"), "automatic-styles")
-  val Font: XmlTag = (implicitly[NameSpaces].apply("office"), "font-face-decls")
+  val FontDecls: XmlTag = (implicitly[NameSpaces].apply("office"), "font-face-decls")
+
   val Body: XmlTag = (implicitly[NameSpaces].apply("office"), "body")
   val Text: XmlTag = (implicitly[NameSpaces].apply("office"), "text")
   val MasterStyle: XmlTag = (implicitly[NameSpaces].apply("office"), "master-styles")
@@ -76,6 +77,7 @@ object OdtTags {
   val StyleTProps: XmlTag = (implicitly[NameSpaces].apply("style"), "text-properties")
   val StylePageLayout: XmlTag = (implicitly[NameSpaces].apply("style"), "page-layout")
   val StylePageLayoutProps: XmlTag = (implicitly[NameSpaces].apply("style"), "page-layout-properties")
+  val StyleFont: XmlTag = (implicitly[NameSpaces].apply("style"), "font-face")
 
   val StyleParentStyle: XmlAttribute = (implicitly[NameSpaces].apply("style"), "parent-style-name")
   val StyleDisplayName: XmlAttribute = (implicitly[NameSpaces].apply("style"), "display-name")
@@ -94,6 +96,7 @@ object OdtTags {
   val StyleJustifySingleWord: XmlAttribute = (implicitly[NameSpaces].apply("style"), "justify-single-word")
   val StyleAutoTextIndent: XmlAttribute = (implicitly[NameSpaces].apply("style"), "auto-text-indent")
   val StyleWritingMode: XmlAttribute = (implicitly[NameSpaces].apply("style"), "writing-mode")
+  val StyleFontPitch: XmlAttribute = (implicitly[NameSpaces].apply("style"), "font-pitch")
 
   val FoFSize: XmlAttribute = (implicitly[NameSpaces].apply("fo"), "font-size")
   val FoFWeight: XmlAttribute = (implicitly[NameSpaces].apply("fo"), "font-weight")

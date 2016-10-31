@@ -3,7 +3,6 @@ package parsers
 package odt
 package styles
 
-import net.lshift.typesetr.pandoc.Markers
 import net.lshift.typesetr.parsers.styles.{ Style, StyleId, DocumentFormatingFactory }
 import net.lshift.typesetr.util.{ Percentage, Inches, ValOfUnit }
 import net.lshift.typesetr.xml.XmlAttribute
@@ -18,6 +17,51 @@ object OdtDocumentFormatingFactory {
   def odtQuoting(parent: Style, counter: Int): (StyleId, DocumentFormatingFactory.Aux[scala.xml.Node]) = {
     val randomName = StyleId(parent.id.family, s"${parent.id.name}_${counter}")
     (randomName, QuotingStyleParagraph(parent, PandocQuoteLeftMargin))
+  }
+
+  def odtInlineCode(parent: Style): (StyleId, DocumentFormatingFactory.Aux[scala.xml.Node]) = {
+    val codeStyle = StyleId(Some("text"), "Source_20_Text")
+    (codeStyle, CodeStyleText(parent))
+  }
+
+  // Desired output along the lines of
+  // <style:style style:name="some-random-name" style:family="paragraph" style:parent-style-name="$style-parent">
+  //   <style:paragraph-properties fo:margin-left="0.5in" fo:margin-right="0in" fo:line-height="115%" fo:text-align="justify" style:justify-single-word="false" fo:text-indent="0in" style:auto-text-indent="false" fo:break-before="auto" fo:break-after="auto" style:writing-mode="lr-tb"/>
+  //   <style:text-properties fo:font-style="italic" style:font-style-asian="italic" style:font-style-complex="italic"/>
+  // </style:style>
+  private case class CodeStyleText(parentStyle: Style) extends DocumentFormatingFactory {
+
+    type DocNode = scala.xml.Node
+
+    def create(styleId: StyleId)(implicit factory: NodeFactory.Aux[scala.xml.Node]): Repr.Aux[scala.xml.Node] = {
+      val props = Seq.empty[Repr.Aux[scala.xml.Node]]
+
+      val meta =
+        List(
+          (OdtTags.StyleName, styleId.name),
+          (OdtTags.StyleFamily, "text"),
+          (OdtTags.StyleParentStyle, parentStyle.id.name))
+
+      basicReprNode(
+        new Elem(
+          prefix = OdtTags.StyleStyle.namespace.toString,
+          label = OdtTags.StyleStyle.tag,
+          // FIXME: get rid of casting
+          attributes1 = (scala.xml.Null).fromTags(meta),
+          parentStyle.source.map(_.asInstanceOf[Elem].scope).getOrElse(TopScope),
+          minimizeEmpty = false, (props.map(_.source)): _*),
+        nodes = props)
+    }
+
+    def modifyBody(styleId: StyleId, children: Seq[Repr.Aux[scala.xml.Node]])(implicit factory: NodeFactory.Aux[scala.xml.Node]): Seq[Repr.Aux[scala.xml.Node]] = {
+      children
+    }
+
+    private def basicReprNode[T](source: T, nodes: Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T]): Repr.Aux[T] = {
+      Repr.makeElem(xml.Tag.nodeTag, body = nodes, contents = None, attrs = Nil)(
+        source, factory)
+    }
+
   }
 
   // Desired output along the lines of
@@ -98,5 +142,8 @@ object OdtDocumentFormatingFactory {
   }
 
   private final val PandocQuoteLeftMargin = Inches(2)
+
+  private implicit def entry[T](v: (XmlAttribute, T))(implicit conv: T => String): (XmlAttribute, String) =
+    (v._1, conv(v._2))
 
 }

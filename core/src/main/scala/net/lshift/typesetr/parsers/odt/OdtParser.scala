@@ -3,7 +3,7 @@ package parsers
 
 import net.lshift.typesetr.parsers.styles.{StyleId, DocumentStyle, StylePropKey, Style}
 import odt.styles._
-import net.lshift.typesetr.xml.attributes.StyleAttribute
+import net.lshift.typesetr.xml.attributes.{FontFamily, StyleAttribute}
 import xml._
 import odt._
 
@@ -41,7 +41,7 @@ class OdtParser() extends Parser {
 
       // 2. Find all the key nodes in the unpacked binary (either in content.xml or styles.xml)
       // a) font node
-      rawFont          <- rootStyle \!! OdtTags.Font
+      rawFont          <- root \!! OdtTags.FontDecls
       // b) automatic style node in meta
       rawAutoStyle     <- rootStyle \!! OdtTags.AutomaticStyle
       // c) body node in the content.xml
@@ -263,14 +263,23 @@ class OdtParser() extends Parser {
         //       Spaces have to be preserved in the code blocks, and they inherit
         //       the indentation from their first child that has that info, if any.
         val attrs2 = children.flatMap(_.getAttribute(InternalAttributes.indent)).headOption.map(_ :: Nil).getOrElse(Nil)
-        val body2 = sty.fontFamily.filter(_.isCodeFont).map(_ =>
-            Repr.makeElem(
-              tag = if (ctx.inBlock) Tags.BLOCKCODE else Tags.CODE,
-              body = children,
-              contents = None,
-              // Style name is reset, so that Pandoc does not attempt to perform
-              // its own code formatting
-              attrs = if (ctx.inBlock) Attribute(InternalAttributes.style, "Standard") :: attrs2 else attrs2))
+        val body2 = sty.fontFamily.filter(_.isCodeFont).map { _ =>
+          val styleName = if (ctx.inBlock) "Standard" else {
+            val (newStyleId, fact) = OdtDocumentFormatingFactory.odtInlineCode(parent = sty)
+            newStyles =
+              if (newStyles.contains(newStyleId)) newStyles
+              else newStyles + (newStyleId -> fact.create(newStyleId))
+
+            newStyleId.name
+          }
+          Repr.makeElem(
+            tag = if (ctx.inBlock) Tags.BLOCKCODE else Tags.CODE,
+            body = children,
+            contents = None,
+            // Style name is reset, so that Pandoc does not attempt to perform
+            // its own code formatting
+            attrs = Attribute(InternalAttributes.style, styleName) :: attrs2)
+        }
 
         // Maybe it is a caption
         val txtContent = children.flatMap(_.extractPlainText(deep = false)).mkString
@@ -441,6 +450,7 @@ class OdtParser() extends Parser {
 /**
   * Object represetning the content (child-parent) relationship
   * between the nodes, during parsing
+  *
   * @param inFrame is the parser within a frame node
   * @param inTable is the parser currently parsing a table
   * @param inBlock is the parser currently parsing some block

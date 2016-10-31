@@ -24,6 +24,7 @@ abstract class DocumentFormatingFactory {
 
   /**
    * Returns a modified fragment
+   *
    * @param styleId id of the style describing the formatting
    * @param children fragment of the document to be formatted
    * @param factory a document-dependent node factory

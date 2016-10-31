@@ -55,10 +55,10 @@ where
 ### Overview
  
  - [o] headers - no sections above heading level 5
- - [ ] inline code - ODT Parser in Pandoc does not recognize any code blocks (other input formats support it)
+ - [X] inline code - ODT Parser in Pandoc does not recognize any code blocks (other input formats support it). See [PR](https://github.com/jgm/pandoc/pull/3186)
  - [ ] removal of bogus paragraph elements - won't be implemented (Pandoc understands those correctly)
  - [ ] list items - custom typesetr's styling - desired?
- - [i] list items - starting/restarting numbering - currently Pandoc hardcoded 1 as a starting number for ODT documents (see [PR](https://github.com/jgm/pandoc/pull/3146))
+ - [X] list items - starting/restarting numbering - currently Pandoc hardcoded 1 as a starting number for ODT documents (see [PR](https://github.com/jgm/pandoc/pull/3146))
  - [ ] images - not supported in the ODT Parser in Pandoc (see `image` in other parsers)
  - [X] labels - needs to translate local href references to bookmark references
  - [X] inline math formulas - Pandoc translates backslashes to \textbackslash{}, which breaks the latex conversion
@@ -69,8 +69,8 @@ where
  - [X] page numbering - total number of pages is broken
  - [X] table of contents 
  - [ ] links as new commands - remains to be decided whether it is necessary with the new design
- - [i] deeply nested items - currently not supported ([Pandoc limitation](https://github.com/jgm/pandoc/issues/2922))
- 
+ - [X] deeply nested items - currently not supported ([Pandoc limitation](https://github.com/jgm/pandoc/issues/2922))
+ - [ ] odt - no native support for inline math text - we can add Pandoc support for it potentially
 Legend:
  - empty - not supported
  - o - partially supported
@@ -80,7 +80,7 @@ Legend:
 
 ## Bugs
 
- - [ ] duplicate entries for references, bookmarks etc (see [reported bug](https://github.com/jgm/pandoc/issues/3143))
+ - [X] duplicate entries for references, bookmarks etc (see [reported bug](https://github.com/jgm/pandoc/issues/3143))
 
 ### Headers
 
