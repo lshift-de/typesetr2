@@ -36,6 +36,7 @@ class LatexWriter(from: File,
         |\\\\newenvironment\\{rightalign\\}\\{\\\\begin\\{flushright\\}\\\\itshape\\}\\{\\\\end\\{flushright\\}\\}
         |\\\\renewlist\\{itemize\\}\\{itemize\\}\\{20\\}
         |\\\\renewlist\\{enumerate\\}\\{enumerate\\}\\{20\\}
+        |\\\\let\\\\itemize\\\\ul
         |\\\\providecommand\\{\\\\tightlist\\}\\{%
         |  \\\\setlength\\{\\\\itemsep\\}\\{0pt\\}\\\\setlength\\{\\\\parskip\\}\\{0pt\\}\\}
         |\\\\setcounter\\{tocdepth\\}\\{${config.tocDepth}\\}
@@ -106,7 +107,7 @@ class LatexWriter(from: File,
       if (pdfgenerated != 0 || target.exists())
         logger.info(s"Target file already exists. Overriding.")
       val tmpPdf = tmpDir \ (fromF.getName.stripSuffix(".tex") + ".pdf")
-      if (!tmpPdf.moveTo(target))
+      if (!tmpPdf.exists || !tmpPdf.moveTo(target))
         logger.info("Failed to create a pdf")
 
       if (!config.Ytmp) {

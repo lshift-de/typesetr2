@@ -59,6 +59,7 @@ where
  - [ ] removal of bogus paragraph elements - won't be implemented (Pandoc understands those correctly)
  - [ ] list items - custom typesetr's styling - desired?
  - [X] list items - starting/restarting numbering - currently Pandoc hardcoded 1 as a starting number for ODT documents (see [PR](https://github.com/jgm/pandoc/pull/3146))
+ - [X] bullet items - only a single character representing bullet points (original typesetr had the possibility of 'disc', 'circle', 'square', 'hyphen'). Will reuse lshift style.
  - [ ] images - not supported in the ODT Parser in Pandoc (see `image` in other parsers)
  - [X] labels - needs to translate local href references to bookmark references
  - [X] inline math formulas - Pandoc translates backslashes to \textbackslash{}, which breaks the latex conversion
