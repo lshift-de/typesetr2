@@ -318,16 +318,16 @@ class OdtParser() extends Parser {
       case OdtTags.Table =>
         logger.warn(s"[limitation] Ignoring Table node")
         // TODO: ignore for the moment
-        None
+        node.wrap(tag = Tags.TABLE, body = children, attributes = Nil)
 
       case OdtTags.TableRow =>
-        node.wrap(tag = Tags.TR, body = children)
+        node.wrap(tag = Tags.TR, body = children, attributes = Nil)
 
       case OdtTags.TableCell =>
-        node.wrap(tag = Tags.TD, body = children)
+        node.wrap(tag = Tags.TD, body = children, attributes = Nil)
 
       case OdtTags.TableColumn =>
-        node.wrap(tag = Tags.COL, body = children)
+        node.wrap(tag = Tags.TH, body = children, attributes = Nil)
 
       case t@ OdtTags.Frame =>
         val width = source.attributes.getTag(OdtTags.SvgWidth).toRight("0cm").fold(ValOfUnit.parse, ValOfUnit.parse)
