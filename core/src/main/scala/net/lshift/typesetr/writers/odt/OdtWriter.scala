@@ -6,7 +6,7 @@ import java.io.{ File, FileOutputStream }
 import java.nio.channels.Channels
 
 import cmd.Config
-import net.lshift.typesetr.pandoc.Markers
+import net.lshift.typesetr.pandoc.{ UUIDGen, Markers }
 import net.lshift.typesetr.parsers.odt.OdtTags
 import parsers.Repr.Aux
 import util.Logger
@@ -15,7 +15,7 @@ import net.lshift.typesetr.xml.{ InternalTags, InternalAttributes, Tag }
 import scala.annotation.tailrec
 import scala.xml._
 
-class OdtWriter(inputFile: File) extends Writer {
+class OdtWriter(inputFile: File)(implicit val uuidGen: UUIDGen) extends Writer {
   type N = scala.xml.Node
 
   import OdtWriter._

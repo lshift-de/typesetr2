@@ -7,57 +7,45 @@ import scala.xml.Text
 
 object Markers {
 
-  private[this] var counter = 0
-
-  private[this] def increment(): Int = {
-    val res = counter
-    counter = counter + 1
-    res
-  }
-
-  def reset(): Unit = {
-    counter = 0
-  }
-
-  private def wrap[T](name: String, beginName: String, endName: String)(txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T]): Seq[Repr.Aux[T]] = {
-    val name1 = name + "-" + increment()
+  private def wrap[T](name: String, beginName: String, endName: String)(txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T], uuid: UUIDGen): Seq[Repr.Aux[T]] = {
+    val name1 = name + "-" + uuid.increment()
     (Repr.makeTextElem(s"$beginName!$name1!", synthetic = false) +:
       txt) :+
       Repr.makeTextElem(s"$endName!$name1!", synthetic = false)
   }
 
-  private def env[T](name: String)(txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T]): Seq[Repr.Aux[T]] =
+  private def env[T](name: String)(txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T], uuid: UUIDGen): Seq[Repr.Aux[T]] =
     wrap(name, BeginEnv, EndEnv)(txt)
 
-  private def cmd[T](name: String)(txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T]): Seq[Repr.Aux[T]] =
+  private def cmd[T](name: String)(txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T], uuid: UUIDGen): Seq[Repr.Aux[T]] =
     wrap(name, BeginCmd, EndCmd)(txt)
 
-  private def verbatim[T](name: String)(txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T]): Seq[Repr.Aux[T]] =
+  private def verbatim[T](name: String)(txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T], uuid: UUIDGen): Seq[Repr.Aux[T]] =
     wrap(name, BeginFormat, EndFormat)(txt)
 
-  def citationInBlockQuotation[T](txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T]): Seq[Repr.Aux[T]] =
+  def citationInBlockQuotation[T](txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T], uuid: UUIDGen): Seq[Repr.Aux[T]] =
     cmd(RightAlign)(txt)
 
-  def formatBlock[T](txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T]): Seq[Repr.Aux[T]] =
+  def formatBlock[T](txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T], uuid: UUIDGen): Seq[Repr.Aux[T]] =
     verbatim(Verbatim)(txt)
 
-  private def imgBlock[T](imgKind: String, txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T]): Seq[Repr.Aux[T]] =
+  private def imgBlock[T](imgKind: String, txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T], uuid: UUIDGen): Seq[Repr.Aux[T]] =
     wrap(imgKind, BeginImgEnv, EndImgEnv)(txt)
 
-  def inlineImg[T](txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T]): Seq[Repr.Aux[T]] =
+  def inlineImg[T](txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T], uuid: UUIDGen): Seq[Repr.Aux[T]] =
     imgBlock(ImgInline, txt)
 
-  def blockImg[T](txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T]): Seq[Repr.Aux[T]] =
+  def blockImg[T](txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T], uuid: UUIDGen): Seq[Repr.Aux[T]] =
     imgBlock(ImgBlock, txt)
 
-  def fullWidthImg[T](txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T]): Seq[Repr.Aux[T]] =
+  def fullWidthImg[T](txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T], uuid: UUIDGen): Seq[Repr.Aux[T]] =
     imgBlock(ImgFull, txt)
 
-  def rawImg[T](txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T]): Seq[Repr.Aux[T]] =
+  def rawImg[T](txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T], uuid: UUIDGen): Seq[Repr.Aux[T]] =
     imgBlock(ImgRaw, txt)
 
-  def mathBlock(txt: => String): String = {
-    val name1 = Math + "-" + increment()
+  def mathBlock(txt: => String)(implicit uuid: UUIDGen): String = {
+    val name1 = Math + "-" + uuid.increment()
     s"$BeginMath!$name1!$txt$EndMath!$name1!"
   }
 
@@ -112,7 +100,7 @@ object Markers {
   */
 sealed abstract class ImageFormatting {
   type K <: ImageKind
-  def format[T](txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T]): Seq[Repr.Aux[T]]
+  def format[T](txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T], uuid: UUIDGen): Seq[Repr.Aux[T]]
 }
 
 object ImageFormatting {
@@ -124,8 +112,8 @@ object ImageFormatting {
 
       type K = parsers.InlineImg.type
 
-      def format[T](txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T]): Seq[Repr.Aux[T]] =
-        Markers.inlineImg(txt)(factory)
+      def format[T](txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T], uuid: UUIDGen): Seq[Repr.Aux[T]] =
+        Markers.inlineImg(txt)
 
     }
 
@@ -134,8 +122,8 @@ object ImageFormatting {
 
       type K = parsers.BlockImg.type
 
-      def format[T](txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T]): Seq[Repr.Aux[T]] =
-        Markers.blockImg(txt)(factory)
+      def format[T](txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T], uuid: UUIDGen): Seq[Repr.Aux[T]] =
+        Markers.blockImg(txt)
 
     }
 
@@ -145,8 +133,8 @@ object ImageFormatting {
 
       type K = parsers.FullWidthImg.type
 
-      def format[T](txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T]): Seq[Repr.Aux[T]] =
-        Markers.fullWidthImg(txt)(factory)
+      def format[T](txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T], uuid: UUIDGen): Seq[Repr.Aux[T]] =
+        Markers.fullWidthImg(txt)
 
     }
 
@@ -155,8 +143,8 @@ object ImageFormatting {
 
       type K = parsers.RawImg.type
 
-      def format[T](txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T]): Seq[Repr.Aux[T]] =
-        Markers.rawImg(txt)(factory)
+      def format[T](txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T], uuid: UUIDGen): Seq[Repr.Aux[T]] =
+        Markers.rawImg(txt)
 
     }
 

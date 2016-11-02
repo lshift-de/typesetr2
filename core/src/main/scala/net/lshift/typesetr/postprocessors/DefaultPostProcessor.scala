@@ -1,11 +1,12 @@
 package net.lshift.typesetr
 package postprocessors
 
+import net.lshift.typesetr.pandoc.UUIDGen
 import parsers.NodeConfigs
 
 object DefaultPostProcessor {
 
-  private class OptimizerAndMetaExtractor[T](config: NodeConfigs.WithNode[T])
+  private class OptimizerAndMetaExtractor[T](config: NodeConfigs.WithNode[T], uuidGen: UUIDGen)
     extends PostProcessor[T]
     with Optimizer[T]
     with PostProcessorUtils[T]
@@ -16,10 +17,11 @@ object DefaultPostProcessor {
     with MetaInferencer[T] {
 
     protected def nodeConfig: NodeConfigs.WithNode[T] = config
+    protected def uuid: UUIDGen = uuidGen
 
   }
 
-  def fromConfig[T](config: NodeConfigs.WithNode[T]): PostProcessor[T] =
-    new OptimizerAndMetaExtractor(config)
+  def fromConfig[T](config: NodeConfigs.WithNode[T])(implicit uuid: UUIDGen): PostProcessor[T] =
+    new OptimizerAndMetaExtractor(config, uuid)
 
 }

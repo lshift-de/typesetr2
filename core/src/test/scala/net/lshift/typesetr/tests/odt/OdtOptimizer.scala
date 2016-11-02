@@ -6,7 +6,7 @@ import net.lshift.typesetr.cmd._
 
 import java.io.File
 
-import net.lshift.typesetr.pandoc.Markers
+import net.lshift.typesetr.pandoc.{ UUIDGen, Markers }
 import net.lshift.typesetr.parsers
 import net.lshift.typesetr.parsers.OdtParser
 import net.lshift.typesetr.util.Logger
@@ -17,7 +17,7 @@ class OdtOptimizerRunner(styleBase0: File) extends FileConfigUtils {
     implicit val config = defaultOdtConfig(input)
     implicit val logger = Logger(config.logging)
 
-    Markers.reset()
+    implicit val uuid = UUIDGen()
     // 1. Infer the input-specific parser
     val parser = new parsers.OdtParser()
     val writer = new OdtWriter(input)

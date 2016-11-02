@@ -6,6 +6,7 @@ import java.io.{ File }
 
 import cmd.InputFormat.Markdown
 import cmd._
+import net.lshift.typesetr.pandoc.UUIDGen
 import net.lshift.typesetr.styles.MetaFromDocument
 import pandoc.writers.latex.LatexWriter
 import parsers.OdtParser
@@ -26,6 +27,7 @@ object Converter extends FileConfigUtils {
       case Some(config) =>
         implicit val logger = Logger(config.logging)
         implicit val c = config
+        implicit val uuid = UUIDGen()
 
         val result = for {
           inputFile <- retrieveInputFile(config).right

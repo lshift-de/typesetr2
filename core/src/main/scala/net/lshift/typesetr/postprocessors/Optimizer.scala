@@ -1,7 +1,7 @@
 package net.lshift.typesetr
 package postprocessors
 
-import pandoc.Markers
+import net.lshift.typesetr.pandoc.{ UUIDGen, Markers }
 import parsers.styles.DocumentStyle
 import net.lshift.typesetr.xml.attributes.TextAlign
 import parsers.odt.styles._
@@ -37,6 +37,8 @@ trait Optimizer[T] {
   protected def coalesce(nodes: List[Repr.Aux[T]])(implicit logger: Logger, sty: DocumentStyle.Aux[T]): List[Repr.Aux[T]]
 
   implicit protected def nodeConfig: NodeConfigs.WithNode[T]
+
+  implicit protected def uuid: UUIDGen
 
 }
 
