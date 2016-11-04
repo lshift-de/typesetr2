@@ -45,6 +45,7 @@ object OdtTags {
   val TextNameAttr: XmlAttribute = (implicitly[NameSpaces].apply("text"), "name")
   val Linebreak: XmlTag = (implicitly[NameSpaces].apply("text"), "line-break")
   val SeqDecl: XmlTag = (implicitly[NameSpaces].apply("text"), "sequence-decls")
+  val Seq: XmlTag = (implicitly[NameSpaces].apply("text"), "sequence")
   val StyleNameAttr: XmlAttribute = (implicitly[NameSpaces].apply("text"), "style-name")
   val SoftPageBreak: XmlTag = (implicitly[NameSpaces].apply("text"), "soft-page-break")
   val TextOutlineStyle: XmlTag = (implicitly[NameSpaces].apply("text"), "outline-style")
@@ -57,6 +58,7 @@ object OdtTags {
   val TableColumn: XmlTag = (implicitly[NameSpaces].apply("table"), "table-column")
   val TableRow: XmlTag = (implicitly[NameSpaces].apply("table"), "table-row")
   val TableCell: XmlTag = (implicitly[NameSpaces].apply("table"), "table-cell")
+  val TableTitle: XmlTag = (implicitly[NameSpaces].apply("table"), "title")
 
   val Id: XmlTag = (implicitly[NameSpaces].apply("xml"), "id")
 
@@ -73,6 +75,7 @@ object OdtTags {
   val StyleStyle: XmlTag = (implicitly[NameSpaces].apply("style"), "style")
   val StyleName: XmlAttribute = (implicitly[NameSpaces].apply("style"), "name")
   val StyleFamily: XmlAttribute = (implicitly[NameSpaces].apply("style"), "family")
+  val StyleClass: XmlAttribute = (implicitly[NameSpaces].apply("style"), "class")
   val StylePProps: XmlTag = (implicitly[NameSpaces].apply("style"), "paragraph-properties")
   val StyleTProps: XmlTag = (implicitly[NameSpaces].apply("style"), "text-properties")
   val StylePageLayout: XmlTag = (implicitly[NameSpaces].apply("style"), "page-layout")

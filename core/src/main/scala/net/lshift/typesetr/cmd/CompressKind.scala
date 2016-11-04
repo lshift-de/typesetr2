@@ -2,6 +2,9 @@ package net.lshift.typesetr.cmd
 
 import scopt.Read
 
+/**
+ * Representation of the compression-type of the file
+ */
 sealed abstract class CompressKind
 
 object CompressKind {

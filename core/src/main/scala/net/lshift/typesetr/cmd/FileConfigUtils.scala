@@ -1,6 +1,6 @@
 package net.lshift.typesetr.cmd
 
-import java.io.{ PrintWriter, File }
+import java.io.{ IOException, PrintWriter, File }
 
 import net.lshift.typesetr.util.Logger
 import org.apache.commons.io.FilenameUtils
@@ -8,26 +8,36 @@ import org.apache.commons.io.FilenameUtils
 trait FileConfigUtils {
 
   def retrieveInputFile(config: Config): Either[String, File] = {
-    Right(config.inFile.getOrElse({
+    config.inFile match {
+      case Some(file) => Right(file)
+      case None =>
 
-      // Read from a standard input and save to
-      // a temporary file
-      val conts = scala.io.Source.stdin.getLines().mkString(System.lineSeparator)
+        // Read from a standard input and save to
+        // a temporary file
+        val conts = scala.io.Source.stdin.getLines().mkString(System.lineSeparator)
 
-      val kind = conts match {
-        case InputFormat(format) =>
-          format
-        case _ =>
-          // TODO: produce some reasonable error message
-          ???
-      }
+        val kind = conts match {
+          case InputFormat(format) =>
+            Right(format)
+          case _ =>
+            Left("Unable to infer the type of the input from the input format")
+        }
 
-      val f = java.io.File.createTempFile("typeseter", kind.suffix)
-      val pw = new PrintWriter(f)
-      pw.write(conts)
-      pw.close
-      f
-    }))
+        try {
+          for {
+            k <- kind.right
+          } yield {
+            val f = java.io.File.createTempFile("typeseter", k.suffix)
+            val pw = new PrintWriter(f)
+            pw.write(conts)
+            pw.close
+            f
+          }
+        } catch {
+          case _: IOException =>
+            Left("Unable to read the input document from the input stream")
+        }
+    }
   }
 
   def retrieveOutputFile(config: Config)(implicit logger: Logger): Either[String, ProcessingFileInfo] = {
@@ -51,13 +61,8 @@ trait FileConfigUtils {
             (fPath0, config.outFormat)
         }
 
-        // TODO: some packaging hacks missing
-        //val rewriteF = File.createTempFile("rewritten", extIn)
-        //logger.info(s"Rewrite input to ${rewriteF}")
-
         Right(ProcessingFileInfo(format, fOut))
       case _ =>
-        // TODO:
         Left("Implementation limitation - cannot write to stdout/from stdin yet.")
     }
   }

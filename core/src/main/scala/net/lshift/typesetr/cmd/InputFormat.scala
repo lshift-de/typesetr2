@@ -7,9 +7,13 @@ sealed abstract class InputFormat {
 }
 
 object InputFormat {
+
   case object Odt extends InputFormat { val suffix = "odt" }
+
   case object Docx extends InputFormat { val suffix = "docx" }
+
   case object Markdown extends InputFormat { val suffix = "md" }
+
   case object Html extends InputFormat { val suffix = "html" }
 
   implicit def toOpt: Read[InputFormat] = Read.reads { (name: String) =>

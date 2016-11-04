@@ -9,7 +9,15 @@ import scopt.Read
 import scala.reflect.macros.ParseException
 
 trait CommandParser {
+
+  /**
+   * Parse arguments of the program provide in the command line
+   *
+   * @param args arguments provided to the converter
+   * @return a configuration instance
+   */
   def parse(args: Array[String]): Option[Config]
+
 }
 
 object CommandParser extends OptReaders {
@@ -160,6 +168,8 @@ object CommandParser extends OptReaders {
 }
 
 trait OptReaders {
+
+  // -- readers for non-standard properties --
 
   implicit def toJsonRead: Read[Json] = Read.reads { (v: String) => Json.fromString(v) }
 
