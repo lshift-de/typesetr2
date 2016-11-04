@@ -2,6 +2,8 @@ package net.lshift.typesetr
 package parsers
 package styles
 
+import scala.language.implicitConversions
+
 /**
  * Class representing a unique identifier of a single style.
  *
@@ -35,6 +37,9 @@ object StyleId {
       else fOrder
     }
   }
+
+  implicit def toStyleId(familyWithName: (String, String)): StyleId =
+    apply(Some(familyWithName._1), familyWithName._2)
 
   def apply(family: Option[String], name: String): StyleId = StyleIdImpl(family, name)
 

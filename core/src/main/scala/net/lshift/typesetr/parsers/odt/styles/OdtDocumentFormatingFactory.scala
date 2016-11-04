@@ -20,8 +20,50 @@ object OdtDocumentFormatingFactory {
   }
 
   def odtInlineCode(parent: Style): (StyleId, DocumentFormatingFactory.Aux[scala.xml.Node]) = {
-    val codeStyle = StyleId(Some("text"), "Source_20_Text")
+    val codeStyle = StyleId(Some("text"), InlineCodeStyleName)
     (codeStyle, CodeStyleText(parent))
+  }
+
+  def odtTableCaption(parent: Style): (StyleId, DocumentFormatingFactory.Aux[scala.xml.Node]) = {
+    val codeStyle = StyleId(Some(CaptionStyleNameAndFamily._2), CaptionStyleNameAndFamily._1)
+    (codeStyle, TableCaptionParagraph("Standard"))
+  }
+
+  // Desired output along the lines of
+  // <style:style style:name="Table" style:family="paragraph" style:parent-style-name="Standard" style:class="extra"/>
+  private case class TableCaptionParagraph(parentStyleName: String) extends DocumentFormatingFactory {
+
+    type DocNode = scala.xml.Node
+
+    def create(styleId: StyleId)(implicit factory: NodeFactory.Aux[scala.xml.Node]): Repr.Aux[scala.xml.Node] = {
+      val props = Seq.empty[Repr.Aux[scala.xml.Node]]
+
+      val meta =
+        List(
+          (OdtTags.StyleName, styleId.name),
+          (OdtTags.StyleFamily, "paragraph"),
+          (OdtTags.StyleClass, "extra"),
+          (OdtTags.StyleParentStyle, parentStyleName))
+
+      basicReprNode(
+        new Elem(
+          prefix = OdtTags.StyleStyle.namespace.toString,
+          label = OdtTags.StyleStyle.tag,
+          attributes1 = (scala.xml.Null).fromTags(meta),
+          TopScope,
+          minimizeEmpty = false, (props.map(_.source)): _*),
+        nodes = props)
+    }
+
+    def modifyBody(styleId: StyleId, children: Seq[Repr.Aux[scala.xml.Node]])(implicit factory: NodeFactory.Aux[scala.xml.Node]): Seq[Repr.Aux[scala.xml.Node]] = {
+      children
+    }
+
+    private def basicReprNode[T](source: T, nodes: Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T]): Repr.Aux[T] = {
+      Repr.makeElem(xml.Tag.nodeTag, body = nodes, contents = None, attrs = Nil)(
+        source, factory)
+    }
+
   }
 
   // Desired output along the lines of
@@ -46,7 +88,6 @@ object OdtDocumentFormatingFactory {
         new Elem(
           prefix = OdtTags.StyleStyle.namespace.toString,
           label = OdtTags.StyleStyle.tag,
-          // FIXME: get rid of casting
           attributes1 = (scala.xml.Null).fromTags(meta),
           parentStyle.source.map(_.asInstanceOf[Elem].scope).getOrElse(TopScope),
           minimizeEmpty = false, (props.map(_.source)): _*),
@@ -88,7 +129,6 @@ object OdtDocumentFormatingFactory {
         new Elem(
           prefix = OdtTags.StyleStyle.namespace.toString,
           label = OdtTags.StyleStyle.tag,
-          // FIXME: get rid of casting
           (scala.xml.Null).fromTags(meta), parentStyle.source.map(_.asInstanceOf[Elem].scope).getOrElse(TopScope),
           minimizeEmpty = false, (props.map(_.source)): _*),
         nodes = props)
@@ -145,5 +185,8 @@ object OdtDocumentFormatingFactory {
 
   private implicit def entry[T](v: (XmlAttribute, T))(implicit conv: T => String): (XmlAttribute, String) =
     (v._1, conv(v._2))
+
+  final val CaptionStyleNameAndFamily = ("Table", "paragraph")
+  final val InlineCodeStyleName = "Source_20_Text"
 
 }

@@ -283,14 +283,25 @@ class OdtParser() extends Parser {
 
         // Maybe it is a caption
         val txtContent = children.flatMap(_.extractPlainText(deep = false)).mkString
-        val body3 = if (txtContent == CAPTION_TXT) Some(
-          Repr.makeElem(
-            tag = Tags.CAPTION,
-            body = children,
-            contents = None,
-            attrs = Nil
+        val body3 = if (txtContent == CAPTION_TXT) {
+          if (docStyle.style(OdtDocumentFormatingFactory.CaptionStyleNameAndFamily.swap).isEmpty) {
+            val (newStyleId, fact) = OdtDocumentFormatingFactory.odtInlineCode(parent = sty)
+            // Caption style needs to be present in the situation we
+            // later want to associate it with a particular node.
+            // This is required by Pandoc.
+            // i.e. we cannot have references to non-existent styles
+            // even if we only check their names.
+            newStyles = newStyles + (newStyleId -> fact.create(newStyleId))
+          }
+          Some(
+            Repr.makeElem(
+              tag = Tags.CAPTION,
+              body = children,
+              contents = None,
+              attrs = Nil
+            )
           )
-        ) else None
+        } else None
 
         scalaz.Tag.unwrap(
           First(body2) |+| First(body3) |+|
@@ -382,6 +393,9 @@ class OdtParser() extends Parser {
 
       case t @ OdtTags.AutomaticStyle =>
         parseStyleNode(node)
+
+      case t @ OdtTags.Seq =>
+        None
 
       case tag =>
         // TODO:

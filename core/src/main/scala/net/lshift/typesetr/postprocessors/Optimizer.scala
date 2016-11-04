@@ -130,8 +130,7 @@ trait PostProcessorUtils[T] extends OpimizerStrategies[T] {
     // Attach a caption to the element, if present.
     // Captions are associated with figures/tables if they are immediately
     // following the given element.
-    def paragraphSlidingWindow(elems: List[Repr.Aux[T]], acc: List[Repr.Aux[T]]): List[Repr.Aux[T]] = elems match {
-      // Figure and its caption in separate paragraphs but still next to each other
+    def paragraphSlidingWindow(elems: List[Repr.Aux[T]], acc: List[Repr.Aux[T]])(implicit prev: Option[Tag]): List[Repr.Aux[T]] = elems match { // Figure and its caption in separate paragraphs but still next to each other
       case (p @ FigureP(pre, figElem, post)) :: (c @ CaptionP(txtElems)) :: rest =>
         // create a new figure with a caption
         val postTxt = post.flatMap(_.extractPlainText(deep = true)).mkString("")
@@ -160,8 +159,11 @@ trait PostProcessorUtils[T] extends OpimizerStrategies[T] {
         } getOrElse (p)
         paragraphSlidingWindow(rest, newP :: acc)
 
-      // FIXME: this potentially means that there was a table before
-      //        will need to update this condition, once the support is in
+      case (elem @ CaptionP(txtElems)) :: rest if prev == Some(TABLE) =>
+        val attr1 = Attribute(InternalAttributes.style, "Table") :: Nil
+        val tableCaption = implicitly[NodeFactory.Aux[T]].paragraphFrom(txtElems, elem)
+        paragraphSlidingWindow(rest, tableCaption.copy(attr = attr1) :: acc)
+
       case (elem @ CaptionP(txtElems)) :: rest =>
         logger.info(s"""Ignoring caption ${txtElems.map(_.extractPlainText).mkString("")} not associated with any image/table""")
         paragraphSlidingWindow(rest, elem :: acc)
@@ -173,7 +175,7 @@ trait PostProcessorUtils[T] extends OpimizerStrategies[T] {
         acc.reverse
     }
 
-    def maybeCollapseGroups(key: ElemSig, elems: Seq[Repr.Aux[T]])(implicit logger: Logger): Seq[Repr.Aux[T]] = {
+    def maybeCollapseGroups(key: ElemSig, elems: Seq[Repr.Aux[T]], prev: Option[(Tag, Seq[Repr.Aux[T]])])(implicit logger: Logger): Seq[Repr.Aux[T]] = {
       logger.debug(s"Collapse groups of ${key._1}")
       key._1 match {
         case inline if inline isIn INLINE_TAG_WITH_BLOCKQUOTE =>
@@ -184,7 +186,7 @@ trait PostProcessorUtils[T] extends OpimizerStrategies[T] {
           // collapse blocks into one
           coalesceBlocks(key, elems) //.filterNot(BogusElement.isBogus)
         case P =>
-          paragraphSlidingWindow(elems.toList, acc = Nil)
+          paragraphSlidingWindow(elems.toList, acc = Nil)(prev.map(_._1))
         case _ =>
           logger.debug(s"Coalesce based on parent-child relation ${key._1}")
           (for {
@@ -215,9 +217,16 @@ trait PostProcessorUtils[T] extends OpimizerStrategies[T] {
     })._2
 
     val grouped = withGroupTag._2.zip(withGroupTag._1).reverse.groupBy(_._2)
+    val groupedKeys = grouped.keys.toList.sortBy(_.idx)
+
+    def findTag(idx: Int, from: List[GroupKey]): Option[(Tag, Seq[Repr.Aux[T]])] =
+      from.find(_.idx == idx).flatMap {
+        case k @ SigKey(key, _) => grouped.get(k).map(elems => (key._1, elems.map(_._1)))
+        case _                  => None
+      }
 
     (for {
-      key <- grouped.keys.toList.sortBy(_.idx)
+      key <- groupedKeys
       elems0 <- grouped.get(key)
     } yield {
       val elems = elems0.map(_._1)
@@ -225,8 +234,8 @@ trait PostProcessorUtils[T] extends OpimizerStrategies[T] {
         case TextKey(_) =>
           val text = elems.flatMap(_.extractPlainText).mkString("")
           Repr.makeTextElem(text) :: Nil
-        case SigKey(key, _) =>
-          maybeCollapseGroups(key, elems)
+        case SigKey(key, idx) =>
+          maybeCollapseGroups(key, elems, findTag(idx - 1, groupedKeys))
         case SkolemKey(_) =>
           elems
         case RemoveKey(_) =>

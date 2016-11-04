@@ -27,4 +27,15 @@ class TableOdtSpec extends OdtSpec {
     assert(result.isEmpty, result.getOrElse(""))
   }
 
+  "A table" should "have an associated caption, if present" in {
+    val name = "tableWithCaption"
+    val (input, spec) = testInput(name)
+    val resultF = testRunner.run(input)
+
+    assert(resultF.isRight, "Optimizing of the document failed")
+
+    val result = differ.diff(spec, resultF.right.get)
+    assert(result.isEmpty, result.getOrElse(""))
+  }
+
 }

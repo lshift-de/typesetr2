@@ -24,7 +24,9 @@ abstract class NodeFactory {
 
   def paragraphFrom(body: Seq[Repr.Aux[DocNode]], p0: Repr.Aux[DocNode]): Repr.Aux[DocNode]
 
-  def copy(children: Seq[Repr.Aux[DocNode]], source1: DocNode)(repr: Repr.Aux[DocNode]): Repr.Aux[DocNode]
+  def insertTableTitle(table: Repr.Aux[DocNode], caption: Seq[Repr.Aux[DocNode]])(implicit info: NodeInfo.Aux[DocNode]): Repr.Aux[DocNode]
+
+  def copy(children: Seq[Repr.Aux[DocNode]], source1: DocNode, attributes: List[Attribute])(repr: Repr.Aux[DocNode]): Repr.Aux[DocNode]
 
   def textNode(text: String): DocNode
 

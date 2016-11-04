@@ -5,7 +5,7 @@ package odt
 import Repr._
 import net.lshift.typesetr.xml.{ InternalTags, Attribute, Tag }
 
-import scala.xml.{ PrefixedAttribute, TopScope, Elem, Text }
+import scala.xml._
 
 import scala.language.existentials
 
@@ -22,8 +22,8 @@ class OdtNodeFactory extends NodeFactory {
              contents: Option[String] = None): Aux[scala.xml.Node] =
     OdtNodeRepr(elem, children, tag, contents, attrs)
 
-  def copy(children: Seq[Aux[DocNode]], source1: DocNode)(repr: Aux[DocNode]) =
-    OdtNodeRepr(source1, children, repr.tag, repr.contents, repr.attr)
+  def copy(children: Seq[Aux[DocNode]], source1: DocNode, attributes: List[Attribute])(repr: Aux[DocNode]) =
+    OdtNodeRepr(source1, children, repr.tag, repr.contents, attributes)
 
   def imgWithCaption(img: Repr.Aux[DocNode], caption: Seq[Repr.Aux[DocNode]]): Repr.Aux[DocNode] = {
     /*
@@ -90,6 +90,21 @@ class OdtNodeFactory extends NodeFactory {
   def paragraphFrom(body: Seq[Repr.Aux[DocNode]], p0: Repr.Aux[DocNode]): Repr.Aux[DocNode] = {
     val p = p0.source.copy(body = body.map(_.source))
     p0.copy(children = body, source1 = p)(this)
+  }
+
+  def insertTableTitle(table: Repr.Aux[DocNode], caption: Seq[Repr.Aux[DocNode]])(implicit info: NodeInfo.Aux[DocNode]): Repr.Aux[DocNode] = {
+    val captionTxtRaw = caption.flatMap(_.extractPlainText(deep = true)).mkString(" ")
+    val captionTxt = Repr.makeTextElem(captionTxtRaw)(this)
+    val captionN =
+      new Elem(prefix = OdtTags.TableTitle.namespace.short.value,
+        label = OdtTags.TableTitle.tag,
+        attributes = (scala.xml.Null: MetaData),
+        scope = table.source.scope,
+        child = captionTxt.source)
+
+    val captionRepr: Repr.Aux[DocNode] = Repr.makeElem(Tag.nodeTag, List(captionTxt), Some(captionTxtRaw), attrs = Nil)(captionN, this)
+
+    table.copy(children = (table.body :+ captionRepr))(this)
   }
 
   def textNode(text: String): scala.xml.Node =
