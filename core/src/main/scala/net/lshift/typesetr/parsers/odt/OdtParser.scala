@@ -219,15 +219,11 @@ class OdtParser() extends Parser {
         None
 
       case t @ OdtTags.Note =>
-        // TODO: bring back safe-checks
-        children match {
-          case node :: Nil => node
-          case _           => None
-        }
+        Repr.makeElem(tag = Tags.FOOTNOTE, body = children, contents = None, attrs = Nil)
 
       case OdtTags.NoteBody =>
         // TODO: postprocessing should remove any whitespaces
-        Repr.makeElem(Tags.FOOTNOTE, children, contents = None, attrs = Nil)
+        Repr.makeElem(Tag.nodeTag, children, contents = None, attrs = Nil)
 
       case OdtTags.P =>
         // infer indentation level from the style
@@ -417,6 +413,9 @@ class OdtParser() extends Parser {
 
       case t @ OdtTags.Seq =>
         None
+
+      case t @ OdtTags.TextListHeader =>
+        node.wrap(tag = t.toInternalTag, body = children)
 
       case tag =>
         // TODO:

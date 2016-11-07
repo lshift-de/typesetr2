@@ -33,6 +33,7 @@ object OdtTags {
   val H: XmlTag = (implicitly[NameSpaces].apply("text"), "h")
   val TextList: XmlTag = (implicitly[NameSpaces].apply("text"), "list")
   val TextListItem: XmlTag = (implicitly[NameSpaces].apply("text"), "list-item")
+  val TextListHeader: XmlTag = (implicitly[NameSpaces].apply("text"), "list-header")
   val TextListStyle: XmlTag = (implicitly[NameSpaces].apply("text"), "list-style")
   val Note: XmlTag = (implicitly[NameSpaces].apply("text"), "note")
   val NoteBody: XmlTag = (implicitly[NameSpaces].apply("text"), "note-body")
