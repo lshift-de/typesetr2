@@ -12,19 +12,39 @@ import scala.xml.{ TopScope, Elem, MetaData, Text }
 
 import scala.language.implicitConversions
 
-object OdtDocumentFormatingFactory {
+/**
+ * Provides factories for creating ODT styles
+ */
+object OdtStyleFactory {
 
-  def odtQuoting(parent: Style, counter: Int): (StyleId, DocumentFormatingFactory.Aux[scala.xml.Node]) = {
+  /**
+   * Create a style that mimics paragraph quoting
+   * @param parent parent style reference
+   * @param counter uuid
+   * @return a new style name and a corresponding odt definition
+   */
+  def quotingStyle(parent: Style, counter: Int): (StyleId, DocumentFormatingFactory.Aux[scala.xml.Node]) = {
     val randomName = StyleId(parent.id.family, s"${parent.id.name}_${counter}")
     (randomName, QuotingStyleParagraph(parent, PandocQuoteLeftMargin))
   }
 
-  def odtInlineCode(parent: Style): (StyleId, DocumentFormatingFactory.Aux[scala.xml.Node]) = {
+  /**
+   * Create a style that formats the text so that it looks like an inlined code
+   * @param parent parent style reference
+   * @return a new style name and a corresponding odt definition
+   */
+
+  def inlineCodeStyle(parent: Style): (StyleId, DocumentFormatingFactory.Aux[scala.xml.Node]) = {
     val codeStyle = StyleId(Some("text"), InlineCodeStyleName)
     (codeStyle, CodeStyleText(parent))
   }
 
-  def odtTableCaption(parent: Style): (StyleId, DocumentFormatingFactory.Aux[scala.xml.Node]) = {
+  /**
+   * Create a style that mimics table's caption
+   * @param parent parent style's name
+   * @return a new style name and a corresponding odt definition
+   */
+  def tableCaptionStyle(parent: Style): (StyleId, DocumentFormatingFactory.Aux[scala.xml.Node]) = {
     val codeStyle = StyleId(Some(CaptionStyleNameAndFamily._2), CaptionStyleNameAndFamily._1)
     (codeStyle, TableCaptionParagraph("Standard"))
   }

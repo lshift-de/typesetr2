@@ -3,18 +3,34 @@ package pandoc.writers.latex
 
 abstract class LatexTools {
 
+  /**
+   * Returns a latex-encoded quoted value
+   *
+   * @param s value to be quoted
+   * @return a latex representation of the quotation
+   */
   def quote(s: String): String
+
+  /**
+   * Returns a latex command to be used in the
+   * final document
+   *
+   * @param name name of the command
+   * @param opts command options
+   * @param args command arguments
+   * @return a latex representation of the command
+   */
   def cmd(name: String, opts: List[String], args: List[String]): String
 
 }
 
 object LatexTools {
 
-  implicit def utils: LatexTools = LatexUtils
+  implicit lazy val texTools: LatexTools = new LatexToolsImpl
 
 }
 
-object LatexUtils extends LatexTools {
+private class LatexToolsImpl extends LatexTools {
 
   private final val unicodeMap: Map[Char, String] = Map(
     '\u0023' -> "\\#",

@@ -2,22 +2,21 @@ package net.lshift.typesetr
 package tests
 package odt
 
-import net.lshift.typesetr.Differ
 import net.lshift.typesetr.odt.OdtTestDiffer
 import org.scalatest._
 import java.io.File
 
 import scala.language.postfixOps
 
-class HeaderOdtSpec extends OdtSpec {
+class MetaInferenceOdtSpec extends OdtSpec {
 
   import OdtSpec._
 
   lazy val differ: Differ = new OdtTestDiffer()
   lazy val testRunner = new OdtOptimizerRunner(new File(s"$resources/styles"))
 
-  "A simple header" should "be formatted correctly" in {
-    val name = "simple-header"
+  "A simple document" should "infer meta information from the beginning of the document and remove it" in {
+    val name = "legacy-meta-inference"
     val (input, spec) = testInput(name)
     val resultF = testRunner.run(input)
 
@@ -27,8 +26,8 @@ class HeaderOdtSpec extends OdtSpec {
     assert(result.isEmpty, result.getOrElse(""))
   }
 
-  "A (new style) simple header" should "be formatted correctly" in {
-    val name = "new-simple-header"
+  "A simple document" should "infer (new format) meta information from the beginning of the document and remove it" in {
+    val name = "new-meta-inference"
     val (input, spec) = testInput(name)
     val resultF = testRunner.run(input)
 

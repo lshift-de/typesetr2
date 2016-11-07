@@ -9,7 +9,7 @@ import odt._
 
 import java.io.File
 
-import scala.xml.{ Atom, XML, Text }
+import scala.xml.{Elem, Atom, XML, Text}
 import scalaz.Tags.First
 import scalaz.{ Tags => STags, Tag => STag, _ }
 import scalaz.Scalaz._
@@ -234,26 +234,44 @@ class OdtParser() extends Parser {
         val indentLvl =
           First(sty.marginLeft) |+| First(sty.textIndent)
 
-        Some(scalaz.Tag.unwrap(indentLvl).filter(_.toCm > 1).map { lvl =>
-          // Augment the style of the paragraph to
-          // introduce blockquote.
+        val headerLevel = sty.parent.flatMap(p => HeadingP.findFirstMatchIn(p.name)).map(_.group("level"))
+        val headerElem = headerLevel.map { (lvl: String) =>
+          val headerSource = new Elem(
+          prefix = OdtTags.H.namespace.short.value,
+          label = OdtTags.H.tag,
+          attributes1 = source.attributes,
+          minimizeEmpty = source.asInstanceOf[Elem].minimizeEmpty,
+          scope = source.scope,
+          child = (source.child: _*))
+          Repr.makeElem(tag = Tags.HEADER, body = children, contents = None,
+            attrs = Attribute(InternalAttributes.outlineLvl, lvl) :: Nil)(
+            headerSource, implicitly[NodeFactory.Aux[DocNode]])
+        }
 
-          // Note: we only add a new style here, but do not modify the node
-          // directly here.
-          // The change of style is reflected in the Typesetr's internal
-          // attribute list that carries over the new style info name.
-          // The latter will be modified, if necessary, in the Odt writer.
-          val (newStyleId, fact) = OdtDocumentFormatingFactory.odtQuoting(parent = sty, counter)
-          newStyles = if (newStyles.contains(newStyleId))
-            newStyles
-          else
-            newStyles + (newStyleId -> fact.create(newStyleId))
+        val indentElem =  scalaz.Tag.unwrap(indentLvl).filter(_.toCm > 1).map { lvl =>
+            // Augment the style of the paragraph to
+            // introduce blockquote.
 
-          val attr1 = Attribute(InternalAttributes.style, newStyleId.name) :: Nil
-          val children1 = node.child.flatMap(parseBody(_)(docStyle, logger, ctx.copy(inBlock = true)))
-          Repr.makeElem(tag = Tags.BLOCK, children1, attrs = attr1, contents = None)(
-            source, implicitly[NodeFactory.Aux[DocNode]])
-        } getOrElse (Repr.makeElem(tag = Tags.P, body = children, attrs = Nil, contents = None)))
+            // Note: we only add a new style here, but do not modify the node
+            // directly here.
+            // The change of style is reflected in the Typesetr's internal
+            // attribute list that carries over the new style info name.
+            // The latter will be modified, if necessary, in the Odt writer.
+            val (newStyleId, fact) = OdtStyleFactory.quotingStyle(parent = sty, counter)
+            newStyles = if (newStyles.contains(newStyleId))
+              newStyles
+            else
+              newStyles + (newStyleId -> fact.create(newStyleId))
+
+            val attr1 = Attribute(InternalAttributes.style, newStyleId.name) :: Nil
+            val children1 = node.child.flatMap(parseBody(_)(docStyle, logger, ctx.copy(inBlock = true)))
+            Repr.makeElem(tag = Tags.BLOCK, children1, attrs = attr1, contents = None)(
+              source, implicitly[NodeFactory.Aux[DocNode]])
+          }
+
+        val fallback = Some(Repr.makeElem(tag = Tags.P, body = children, attrs = Nil, contents = None))
+
+        scalaz.Tag.unwrap(First(headerElem) |+| First(indentElem) |+| First(fallback))
 
       case OdtTags.Span =>
         // Translate attributes into individual, nested nodes
@@ -265,7 +283,7 @@ class OdtParser() extends Parser {
         val attrs2 = children.flatMap(_.getAttribute(InternalAttributes.indent)).headOption.map(_ :: Nil).getOrElse(Nil)
         val body2 = sty.fontFamily.filter(_.isCodeFont).map { _ =>
           val styleName = if (ctx.inBlock) "Standard" else {
-            val (newStyleId, fact) = OdtDocumentFormatingFactory.odtInlineCode(parent = sty)
+            val (newStyleId, fact) = OdtStyleFactory.inlineCodeStyle(parent = sty)
             newStyles =
               if (newStyles.contains(newStyleId)) newStyles
               else newStyles + (newStyleId -> fact.create(newStyleId))
@@ -284,14 +302,17 @@ class OdtParser() extends Parser {
         // Maybe it is a caption
         val txtContent = children.flatMap(_.extractPlainText(deep = false)).mkString
         val body3 = if (txtContent == CAPTION_TXT) {
-          if (docStyle.style(OdtDocumentFormatingFactory.CaptionStyleNameAndFamily.swap).isEmpty) {
-            val (newStyleId, fact) = OdtDocumentFormatingFactory.odtInlineCode(parent = sty)
+          if (docStyle.style(OdtStyleFactory.CaptionStyleNameAndFamily.swap).isEmpty) {
+            val (newStyleId, fact) = OdtStyleFactory.tableCaptionStyle(parent = sty)
             // Caption style needs to be present in the situation we
             // later want to associate it with a particular node.
             // This is required by Pandoc.
             // i.e. we cannot have references to non-existent styles
             // even if we only check their names.
-            newStyles = newStyles + (newStyleId -> fact.create(newStyleId))
+
+            // avoid duplicates
+            if (!newStyles.contains(newStyleId))
+              newStyles = newStyles + (newStyleId -> fact.create(newStyleId))
           }
           Some(
             Repr.makeElem(
@@ -513,9 +534,10 @@ object OdtParser {
             StyleToTag[OdtStylePropKeys.TextPosition.type](OdtStylePropKeys.TextPosition)(ValToTag(attributes.TextPosition.Sub, Tags.SUB) :: ValToTag(attributes.TextPosition.Sup, Tags.SUP) :: Nil) ::
               HNil
 
-  private final val spaceEncoded = " &nbsp;"
-  private final val linebreakEncoded = "br"
-  private final val tabEncoded = " \\t"
+  private final lazy val spaceEncoded = " &nbsp;"
+  private final lazy val linebreakEncoded = "br"
+  private final lazy val tabEncoded = " \\t"
+  private final lazy val HeadingP = new scala.util.matching.Regex("Heading_20_(\\d+)", "level")
 
   private final val CAPTION_TXT = "Caption:"
 

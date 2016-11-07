@@ -196,6 +196,9 @@ object LatexWriter {
         |\\\\usepackage{float}
         |\\\\def\\\\languageshorthands#1{}""".stripMargin
 
+  // -- Typsetr's .tex templates have three main
+  // sections that are replaced in the process with the
+  // actual document
   private final val SectionBabel = "INTERPOLATEBABEL"
   private final val SectionHead = "INTERPOLATEHEAD"
   private final val SectionMeta = "INTERPOLATEMETA"
