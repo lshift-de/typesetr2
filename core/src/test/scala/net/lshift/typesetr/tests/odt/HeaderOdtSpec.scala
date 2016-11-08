@@ -38,4 +38,15 @@ class HeaderOdtSpec extends OdtSpec {
     assert(result.isEmpty, result.getOrElse(""))
   }
 
+  "A header with a footnote" should "produce a latex-compatible header" in {
+    val name = "header-footnotes"
+    val (input, spec) = testInput(name)
+    val resultF = testRunner.run(input)
+
+    assert(resultF.isRight, "Optimizing of the document failed")
+
+    val result = differ.diff(spec, resultF.right.get)
+    assert(result.isEmpty, result.getOrElse(""))
+  }
+
 }
