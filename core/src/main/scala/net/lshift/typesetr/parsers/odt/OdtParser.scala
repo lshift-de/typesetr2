@@ -35,26 +35,27 @@ class OdtParser() extends Parser {
     val parsed = for {
       // 1. Take an input file, and attempt to unpack it
       //    since it is an ODT binary
-      (inFile, odtDir) <- input.unpack()
-      root             <- inFile.content.map(XML.loadFile) // content.xml
-      rootStyle        <- inFile.style.map(XML.loadFile) // styles.xml
+      unpacked <- input.unpack().toRight("Cannot upack the .odt file").right
+      root             <- unpacked._1.content.map(XML.loadFile).toRight("Cannot find a content.xml file").right // content.xml
+      rootStyle        <- unpacked._1.style.map(XML.loadFile).toRight("Cannot find a styles.xml file").right // styles.xml
 
       // 2. Find all the key nodes in the unpacked binary (either in content.xml or styles.xml)
       // a) font node
-      rawFont          <- root \!! OdtTags.FontDecls
+      rawFont          <- (root \!! OdtTags.FontDecls).toRight("Cannot find fonts declarations").right
       // b) automatic style node in meta
-      rawAutoStyle     <- rootStyle \!! OdtTags.AutomaticStyle
+      rawAutoStyle     <- (rootStyle \!! OdtTags.AutomaticStyle).toRight("Cannot find styles declarations in stylex.xml").right
       // c) body node in the content.xml
-      rawBody          <- root \!! OdtTags.Body
+      rawBody          <- (root \!! OdtTags.Body).toRight("Cannot find a body of the document").right
       // d) automatic style node in the content.xml
-      rawStyleInBody   <- root \!! OdtTags.AutomaticStyle
+      rawStyleInBody   <- (root \!! OdtTags.AutomaticStyle).toRight("Cannot find style declarations in the document").right
 
       //rawStyle <- rootStyle \!! OdtTags.Styles
-      (styleNode, styleFromMeta) <- loadDocStyleFromMeta(rootStyle)
-      autoStyle        <- parseBody(rawAutoStyle)(styleFromMeta, logger, implicitly[ParsingContext])
+      loadedStyles <- loadDocStyleFromMeta(rootStyle).toRight("Cannot infer basic meta information").right
+      autoStyle        <- parseBody(rawAutoStyle)(loadedStyles._2, logger, implicitly[ParsingContext]).toRight("Failed to parse main style information").right
 
-      styleInBody      <- parseBody(rawStyleInBody)(styleFromMeta, logger, implicitly[ParsingContext])
+      styleInBody      <- parseBody(rawStyleInBody)(loadedStyles._2, logger, implicitly[ParsingContext]).toRight("Failed to parse document-specific style information").right
     } yield {
+      val (styleNode, styleFromMeta) = loadedStyles
       // (optional) scripts node parsing
       val scriptsNode =
         (for {
@@ -75,7 +76,7 @@ class OdtParser() extends Parser {
         case (doc, styleNode) => styleParser.appendStyleNode(styleNode.source, doc) }
 
       if (!config.Ytmp)
-        odtDir.deleteDirectory()
+        unpacked._2.deleteDirectory()
 
       (root,
         reifiedStylesDict,
@@ -83,10 +84,10 @@ class OdtParser() extends Parser {
     }
 
     parsed match {
-      case Some((root, style, rootBody)) =>
+      case Right((root, style, rootBody)) =>
         Right(ParsedDocument(root.wrap(tag = Tags.ROOT, body = rootBody), style))
-      case None =>
-        Left("Invalid .odt binary. File corrupted?") // TODO
+      case Left(err) =>
+        Left(err)
     }
   }
 
