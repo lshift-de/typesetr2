@@ -207,6 +207,6 @@ object OdtStyleFactory {
     (v._1, conv(v._2))
 
   final val CaptionStyleNameAndFamily = ("Table", "paragraph")
-  final val InlineCodeStyleName = "Source_20_Text"
+  final val InlineCodeStyleName = "Source_Text"
 
 }
