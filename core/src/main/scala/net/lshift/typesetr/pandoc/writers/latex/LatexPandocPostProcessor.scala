@@ -67,7 +67,14 @@ class LatexPandocPostProcessor extends PandocPostProcessor {
               val opts = mInner.group("opts").split(",").toList.flatMap(s => keyvalentry(s)).toMap
               val width = opts.get("width").map(_.stripSuffix("\\textwidth")).getOrElse("1")
               val caption = "TODO" // TODO
-              Regex.quoteReplacement(s"$prefix\\tystrblockfigure[$width]{$caption}{${mInner.group("url")}}")
+              Regex.quoteReplacement(
+                s"""|$prefix\\begin{adjustbox}{
+                    |width=$width\\tystrfigurewidth,
+                    |max totalsize={\\linewidth}{0.9\\textheight},center}
+                    |\\includegraphics{${mInner.group("url")}}
+                    |\\end{adjustbox}""".stripMargin)
+            //Regex.quoteReplacement(s"$prefix\\tystrblockfigurenocap{$width}{${mInner.group("url")}}")
+
           }
         }))
       }

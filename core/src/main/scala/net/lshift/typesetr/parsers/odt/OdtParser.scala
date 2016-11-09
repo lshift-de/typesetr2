@@ -347,7 +347,8 @@ class OdtParser() extends Parser {
       case OdtTags.Table =>
         logger.warn(s"[limitation] Ignoring Table node")
         // TODO: ignore for the moment
-        node.wrap(tag = Tags.TABLE, body = children, attributes = Nil)
+        val children1 = node.child.flatMap(parseBody(_)(docStyle, logger, ctx.copy(inTable = true)))
+        node.wrap(tag = Tags.TABLE, body = children1, attributes = Nil)
 
       case OdtTags.TableRow =>
         node.wrap(tag = Tags.TR, body = children, attributes = Nil)
@@ -370,9 +371,11 @@ class OdtParser() extends Parser {
         val noTypesetrTransform = !ctx.inFrame && children1.exists(_.tag == Tags.IMG)
 
         val frameAttributes = source.attributes.getTag(OdtTags.AnchorTpe).map { v =>
-          Attribute(InternalAttributes.imgWidth, Utils.inferWidthPercentage(relWidth)) :: (
+          Attribute(InternalAttributes.imgWidth,
+                    Utils.inferWidthPercentage(relWidth)) :: (
             if (noTypesetrTransform)
-              Attribute(InternalAttributes.frameDisplay, Utils.shouldInline(v == "as-char", relWidth)) :: Nil
+              Attribute(InternalAttributes.frameDisplay,
+                        Utils.shouldInline((v == "as-char") && !ctx.inTable, relWidth)) :: Nil
             else Nil)
         }
 
