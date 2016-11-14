@@ -14,12 +14,12 @@ class BlocksOdtSpec extends OdtSpec {
 
   import OdtSpec._
 
-  lazy val differ: Differ = new OdtTestDiffer()
+  lazy val differ: Differ[File] = new OdtTestDiffer()
   lazy val testRunner = new OdtOptimizerRunner(new File(s"$resources/styles"))
 
   "A simple indented block" should "be formatted into a blockquote" in {
     val name = "simple-block"
-    val (input, spec) = testInput(name)
+    val (input, spec) = testInputOdt(name)
     val resultF = testRunner.run(input)
 
     assert(resultF.isRight, "Optimizing of the document failed")
@@ -30,7 +30,7 @@ class BlocksOdtSpec extends OdtSpec {
 
   it should "take into account right-aligned text" in {
     val name = "simple-block-with-right-align"
-    val (input, spec) = testInput(name)
+    val (input, spec) = testInputOdt(name)
     val resultF = testRunner.run(input)
 
     assert(resultF.isRight, "Optimizing of the document failed")
@@ -41,7 +41,7 @@ class BlocksOdtSpec extends OdtSpec {
 
   "A slightly indented block" should "not be formatted into a blockquote" in {
     val name = "simple-block-not"
-    val (input, spec) = testInput(name)
+    val (input, spec) = testInputOdt(name)
     val resultF = testRunner.run(input)
 
     assert(resultF.isRight, "Optimizing of the document failed")
@@ -52,7 +52,7 @@ class BlocksOdtSpec extends OdtSpec {
 
   "A code block" should "be detected by the font-family and indentation" in {
     val name = "simple-code-block"
-    val (input, spec) = testInput(name)
+    val (input, spec) = testInputOdt(name)
     val resultF = testRunner.run(input)
 
     assert(resultF.isRight, "Optimizing of the document failed")
@@ -63,7 +63,7 @@ class BlocksOdtSpec extends OdtSpec {
 
   it should "not be detected if there is no indentation" in {
     val name = "simple-code-block-no-indent"
-    val (input, spec) = testInput(name)
+    val (input, spec) = testInputOdt(name)
     val resultF = testRunner.run(input)
 
     assert(resultF.isRight, "Optimizing of the document failed")
@@ -76,7 +76,7 @@ class BlocksOdtSpec extends OdtSpec {
   // by Pandoc so we have to make it as if it was.
   "An inlined code" should "be detected by the font-family" in {
     val name = "code-block-inlined"
-    val (input, spec) = testInput(name)
+    val (input, spec) = testInputOdt(name)
     val resultF = testRunner.run(input)
 
     assert(resultF.isRight, "Optimizing of the document failed")

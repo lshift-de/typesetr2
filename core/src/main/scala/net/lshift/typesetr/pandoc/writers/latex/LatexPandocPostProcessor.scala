@@ -66,7 +66,7 @@ class LatexPandocPostProcessor extends PandocPostProcessor {
             case _ =>
               val opts = mInner.group("opts").split(",").toList.flatMap(s => keyvalentry(s)).toMap
               val width = opts.get("width").map(_.stripSuffix("\\textwidth")).getOrElse("1")
-              val caption = "TODO" // TODO
+              // TODO: Any captions are currently ignored for that one currently.
               Regex.quoteReplacement(
                 s"""|$prefix\\begin{adjustbox}{
                     |width=$width\\tystrfigurewidth,

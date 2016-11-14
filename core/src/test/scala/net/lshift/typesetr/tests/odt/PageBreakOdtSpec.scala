@@ -4,21 +4,22 @@ package odt
 
 import net.lshift.typesetr.Differ
 import net.lshift.typesetr.odt.OdtTestDiffer
+import net.lshift.typesetr.tex.{ LatexFilesTestDiffer, LatexStringsTestDiffer }
 import org.scalatest._
 import java.io.File
 
 import scala.language.postfixOps
 
-class TextOdtSpec extends OdtSpec {
+class PageBreakOdtSpec extends OdtSpec {
 
   import OdtSpec._
 
-  lazy val differ: Differ[File] = new OdtTestDiffer()
-  lazy val testRunner = new OdtOptimizerRunner(new File(s"$resources/styles"))
+  lazy val differ: Differ[File] = new LatexFilesTestDiffer()
+  lazy val testRunner = new OdtOptimizerWithTexRunner(new File(s"$resources/styles"))
 
-  "A footnote in a normal paragraph" should "be left without a change" in {
-    val name = "basic-footnotes"
-    val (input, spec) = testInputOdt(name)
+  "A page break in ODT " should "lead \\clearpage commands in .tex" in {
+    val name = "page-break"
+    val (input, spec) = testInputTex(name)
     val resultF = testRunner.run(input)
 
     assert(resultF.isRight, "Optimizing of the document failed")

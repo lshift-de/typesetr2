@@ -67,12 +67,13 @@ where
  - [ ] simple tables - currently ignored
  - [ ] inner quoations (American style) - unknown state
  - [ ] negative numbers - (also broken in the old typesetr)
- - [ ] page breaks - Pandoc [limitation](https://github.com/jgm/pandoc/issues/1934)
+ - [i] page breaks - Pandoc [limitation](https://github.com/jgm/pandoc/issues/1934), see [our PR](https://github.com/jgm/pandoc/pull/3230)
  - [X] page numbering - total number of pages is broken
  - [X] table of contents 
  - [ ] links as new commands - remains to be decided whether it is necessary with the new design
  - [X] deeply nested items - currently not supported ([Pandoc limitation](https://github.com/jgm/pandoc/issues/2922))
  - [ ] odt - no native support for inline math text - we can add Pandoc support for it potentially
+ - [ ] multiple text style changes - Pandoc only picks the first one (see [Issue](https://github.com/jgm/pandoc/issues/3223))
 Legend:
  - empty - not supported
  - o - partially supported

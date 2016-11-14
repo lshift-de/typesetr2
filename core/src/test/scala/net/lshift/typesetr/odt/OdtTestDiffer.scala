@@ -9,7 +9,7 @@ import org.xml.sax.SAXParseException
 import scala.io.Source
 import scala.xml.XML
 
-class OdtTestDiffer extends Differ {
+class OdtTestDiffer extends Differ[File] {
   def diff(spec: File, output: File): Option[String] = {
     // Spec is a content.xml file,
     // while the output is an .odt file.

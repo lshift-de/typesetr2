@@ -10,12 +10,12 @@ import scala.language.postfixOps
 class ImageOdtSpec extends OdtSpec {
   import OdtSpec._
 
-  lazy val differ: Differ = new OdtTestDiffer()
+  lazy val differ: Differ[File] = new OdtTestDiffer()
   lazy val testRunner = new OdtOptimizerRunner(new File(s"$resources/styles"))
 
   "A simple image" should "be wrapped in Typesetr's image blocks and modified width" in {
     val name = "simple-image"
-    val (input, spec) = testInput(name)
+    val (input, spec) = testInputOdt(name)
     val resultF = testRunner.run(input)
 
     assert(resultF.isRight, "Optimizing of the document failed")
@@ -26,7 +26,7 @@ class ImageOdtSpec extends OdtSpec {
 
   "A small inlined image" should "be wrapped in Typesetr's inlined image blocks" in {
     val name = "simple-image-inline"
-    val (input, spec) = testInput(name)
+    val (input, spec) = testInputOdt(name)
     val resultF = testRunner.run(input)
 
     assert(resultF.isRight, "Optimizing of the document failed")
@@ -37,7 +37,7 @@ class ImageOdtSpec extends OdtSpec {
 
   "A big inlined image" should "be wrapped in Typesetr's block image block" in {
     val name = "simple-image-inline"
-    val (input, spec) = testInput(name)
+    val (input, spec) = testInputOdt(name)
     val resultF = testRunner.run(input)
 
     assert(resultF.isRight, "Optimizing of the document failed")
@@ -55,7 +55,7 @@ class ImageOdtSpec extends OdtSpec {
     // mechanism to allow for captions that are not placed
     // directly in the image.
     val name = "simple-image-caption-basic"
-    val (input, spec) = testInput(name)
+    val (input, spec) = testInputOdt(name)
     val resultF = testRunner.run(input)
 
     assert(resultF.isRight, "Optimizing of the document failed")
@@ -67,7 +67,7 @@ class ImageOdtSpec extends OdtSpec {
 
   "An image" should "detect a caption command in the same paragraph" in {
     val name = "simple-image-gdoc-caption01"
-    val (input, spec) = testInput(name)
+    val (input, spec) = testInputOdt(name)
     val resultF = testRunner.run(input)
 
     assert(resultF.isRight, "Optimizing of the document failed")
@@ -78,7 +78,7 @@ class ImageOdtSpec extends OdtSpec {
 
   "An image" should "detect a caption command in the next paragraph" in {
     val name = "simple-image-gdoc-caption02"
-    val (input, spec) = testInput(name)
+    val (input, spec) = testInputOdt(name)
     val resultF = testRunner.run(input)
 
     assert(resultF.isRight, "Optimizing of the document failed")
@@ -89,7 +89,7 @@ class ImageOdtSpec extends OdtSpec {
 
   "And image" should "parse an image and an empty caption command" in {
     val name = "simple-image-gdoc-caption03"
-    val (input, spec) = testInput(name)
+    val (input, spec) = testInputOdt(name)
     val resultF = testRunner.run(input)
 
     assert(resultF.isRight, "Optimizing of the document failed")

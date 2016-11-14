@@ -12,12 +12,12 @@ class MetaInferenceOdtSpec extends OdtSpec {
 
   import OdtSpec._
 
-  lazy val differ: Differ = new OdtTestDiffer()
+  lazy val differ: Differ[File] = new OdtTestDiffer()
   lazy val testRunner = new OdtOptimizerRunner(new File(s"$resources/styles"))
 
   "A simple document" should "infer meta information from the beginning of the document and remove it" in {
     val name = "legacy-meta-inference"
-    val (input, spec) = testInput(name)
+    val (input, spec) = testInputOdt(name)
     val resultF = testRunner.run(input)
 
     assert(resultF.isRight, "Optimizing of the document failed")
@@ -28,7 +28,7 @@ class MetaInferenceOdtSpec extends OdtSpec {
 
   "A simple document" should "infer (new format) meta information from the beginning of the document and remove it" in {
     val name = "new-meta-inference"
-    val (input, spec) = testInput(name)
+    val (input, spec) = testInputOdt(name)
     val resultF = testRunner.run(input)
 
     assert(resultF.isRight, "Optimizing of the document failed")
