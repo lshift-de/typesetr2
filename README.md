@@ -61,10 +61,10 @@ where
  - [X] list items - starting/restarting numbering - currently Pandoc hardcoded 1 as a starting number for ODT documents (see [PR](https://github.com/jgm/pandoc/pull/3146))
  - [X] bullet items - only a single character representing bullet points (original typesetr had the possibility of 'disc', 'circle', 'square', 'hyphen'). Will reuse lshift style.
  - [X] tables are always empty (see [PR](https://github.com/jgm/pandoc/pull/3199))
- - [ ] images - not supported in the ODT Parser in Pandoc (see `image` in other parsers)
+ - [X] images - not supported in the ODT Parser in Pandoc (see [PR](https://github.com/jgm/pandoc/pull/3165) and follow ups)
  - [X] labels - needs to translate local href references to bookmark references
  - [X] inline math formulas - Pandoc translates backslashes to \textbackslash{}, which breaks the latex conversion
- - [ ] simple tables - currently ignored
+ - [X] simple tables - currently ignored
  - [ ] inner quoations (American style) - unknown state
  - [ ] negative numbers - (also broken in the old typesetr)
  - [i] page breaks - Pandoc [limitation](https://github.com/jgm/pandoc/issues/1934), see [our PR](https://github.com/jgm/pandoc/pull/3230)
@@ -72,7 +72,7 @@ where
  - [X] table of contents 
  - [ ] links as new commands - remains to be decided whether it is necessary with the new design
  - [X] deeply nested items - currently not supported ([Pandoc limitation](https://github.com/jgm/pandoc/issues/2922))
- - [ ] odt - no native support for inline math text - we can add Pandoc support for it potentially
+ - [o] odt - no native support for inline math text - we can add Pandoc support for it potentially. Partially supported by doing some postprocessing.
  - [ ] multiple text style changes - Pandoc only picks the first one (see [Issue](https://github.com/jgm/pandoc/issues/3223))
 Legend:
  - empty - not supported
