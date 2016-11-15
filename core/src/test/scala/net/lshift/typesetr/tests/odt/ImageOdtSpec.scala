@@ -24,7 +24,18 @@ class ImageOdtSpec extends OdtSpec {
     assert(result.isEmpty, result.getOrElse(""))
   }
 
-  "A small inlined image" should "be wrapped in Typesetr's inlined image blocks" in {
+  "An individual small inlined image in a paragraph" should "be wrapped in Typesetr's block image since it " in {
+    val name = "simple-image-inline"
+    val (input, spec) = testInputOdt(name)
+    val resultF = testRunner.run(input)
+
+    assert(resultF.isRight, "Optimizing of the document failed")
+
+    val result = differ.diff(spec, resultF.right.get)
+    assert(result.isEmpty, result.getOrElse(""))
+  }
+
+  "An small inlined image in a paragraph (populated by other elements)" should "be wrapped in Typesetr's inline image since it " in {
     val name = "simple-image-inline"
     val (input, spec) = testInputOdt(name)
     val resultF = testRunner.run(input)
@@ -36,7 +47,7 @@ class ImageOdtSpec extends OdtSpec {
   }
 
   "A big inlined image" should "be wrapped in Typesetr's block image block" in {
-    val name = "simple-image-inline"
+    val name = "simple-image-inline-big"
     val (input, spec) = testInputOdt(name)
     val resultF = testRunner.run(input)
 
@@ -89,6 +100,17 @@ class ImageOdtSpec extends OdtSpec {
 
   "And image" should "parse an image and an empty caption command" in {
     val name = "simple-image-gdoc-caption03"
+    val (input, spec) = testInputOdt(name)
+    val resultF = testRunner.run(input)
+
+    assert(resultF.isRight, "Optimizing of the document failed")
+
+    val result = differ.diff(spec, resultF.right.get)
+    assert(result.isEmpty, result.getOrElse(""))
+  }
+
+  "Inlined images" should "be potentially be marked as blocks in the postprocessing phase" in {
+    val name = "figure-inline"
     val (input, spec) = testInputOdt(name)
     val resultF = testRunner.run(input)
 

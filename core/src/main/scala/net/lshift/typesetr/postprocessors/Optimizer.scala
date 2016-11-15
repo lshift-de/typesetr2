@@ -139,22 +139,25 @@ trait PostProcessorUtils[T] extends OpimizerStrategies[T] {
           paragraphSlidingWindow(p :: rest, acc)
         } else {
           val withInferredCaption = implicitly[NodeFactory.Aux[T]].imgWithCaption(figElem, txtElems)
-          val newP = implicitly[NodeFactory.Aux[T]].paragraphFrom(pre ++ Seq(withInferredCaption), p)
+          val newP = implicitly[NodeFactory.Aux[T]].paragraphFrom(
+            pre.flatMap(parseImages) ++ Seq(withInferredCaption), p)
           paragraphSlidingWindow(rest, newP :: acc)
         }
 
       // Figure and caption in the same paragraph
       case (p @ FigureWithCaptionP(pre, figElem, caption)) :: rest =>
         val withInferredCaption = implicitly[NodeFactory.Aux[T]].imgWithCaption(figElem, caption)
-        val newP = implicitly[NodeFactory.Aux[T]].paragraphFrom(pre ++ Seq(withInferredCaption), p)
+        val newP = implicitly[NodeFactory.Aux[T]].paragraphFrom(
+          pre.flatMap(parseImages) ++ Seq(withInferredCaption), p)
         paragraphSlidingWindow(rest, newP :: acc)
 
       case (p @ FigureP(pre, fig, post)) :: rest =>
         val imgKindOpt = hasImgAttribute(fig.attr)
         val newP = imgKindOpt.map {
-          case (imgKind, width) =>
+          case (imgKind0, width) =>
+            val imgKind = if (post.isEmpty && pre.isEmpty) BlockImg else imgKind0
             val body1: Seq[Repr.Aux[T]] =
-              pre.toSeq ++ imgKind.formatting.format(Seq(fig)) ++ post.toSeq
+              pre.flatMap(parseImages) ++ imgKind.formatting.format(Seq(fig)) ++ post.flatMap(parseImages)
             implicitly[NodeFactory.Aux[T]].paragraphFrom(body1, p)
         } getOrElse (p)
         paragraphSlidingWindow(rest, newP :: acc)
@@ -174,6 +177,9 @@ trait PostProcessorUtils[T] extends OpimizerStrategies[T] {
       case _ =>
         acc.reverse
     }
+
+    def parseImages(elem: Repr.Aux[T]): Seq[Repr.Aux[T]] =
+      hasImgAttribute(elem.attr).map(kind => kind._1.formatting.format(Seq(elem))).getOrElse(Seq(elem))
 
     def maybeCollapseGroups(key: ElemSig, elems: Seq[Repr.Aux[T]], prev: Option[(Tag, Seq[Repr.Aux[T]])])(implicit logger: Logger): Seq[Repr.Aux[T]] = {
       logger.debug(s"Collapse groups of ${key._1}")
