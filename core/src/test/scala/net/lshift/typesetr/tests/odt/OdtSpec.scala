@@ -13,11 +13,11 @@ object OdtSpec {
   def resources = "resources"
 
   def testInputOdt(testName: String): (File, File) =
-    (new File(getClass.getResource(s"/tests/$testName.odt").getFile), //(s"$resources/tests/$testName.odt"),
+    (new File(getClass.getResource(s"/tests/$testName.odt").getFile),
       new File(getClass.getResource(s"/specs/$testName-content.xml").getFile))
 
   def testInputTex(testName: String): (File, File) =
-    (new File(getClass.getResource(s"/tests/$testName.odt").getFile), //(s"$resources/tests/$testName.odt"),
+    (new File(getClass.getResource(s"/tests/$testName.odt").getFile),
       new File(getClass.getResource(s"/specs/$testName-content.tex").getFile))
 
 }

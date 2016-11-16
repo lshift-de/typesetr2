@@ -62,6 +62,7 @@ where
  - [X] bullet items - only a single character representing bullet points (original typesetr had the possibility of 'disc', 'circle', 'square', 'hyphen'). Will reuse lshift style.
  - [X] tables are always empty (see [PR](https://github.com/jgm/pandoc/pull/3199))
  - [X] images - not supported in the ODT Parser in Pandoc (see [PR](https://github.com/jgm/pandoc/pull/3165) and follow ups)
+ - [i] floating figures - not supported in Pandoc's LaTeX writer (see our [PR](https://github.com/jgm/pandoc/pull/3180))
  - [X] labels - needs to translate local href references to bookmark references
  - [X] inline math formulas - Pandoc translates backslashes to \textbackslash{}, which breaks the latex conversion
  - [X] simple tables - currently ignored

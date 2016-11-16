@@ -2,6 +2,7 @@ package net.lshift.typesetr.tests.odt
 
 import net.lshift.typesetr.Differ
 import net.lshift.typesetr.odt.OdtTestDiffer
+import net.lshift.typesetr.tex.LatexFilesTestDiffer
 import org.scalatest._
 import java.io.File
 
@@ -11,7 +12,9 @@ class ImageOdtSpec extends OdtSpec {
   import OdtSpec._
 
   lazy val differ: Differ[File] = new OdtTestDiffer()
+  lazy val texDiffer: Differ[File] = new LatexFilesTestDiffer()
   lazy val testRunner = new OdtOptimizerRunner(new File(s"$resources/styles"))
+  lazy val texTestRunner = new OdtOptimizerWithTexRunner(new File(s"$resources/styles"))
 
   "A simple image" should "be wrapped in Typesetr's image blocks and modified width" in {
     val name = "simple-image"
@@ -109,6 +112,17 @@ class ImageOdtSpec extends OdtSpec {
     assert(result.isEmpty, result.getOrElse(""))
   }
 
+  "And image" should "parse an image and an empty caption command [tex]" in {
+    val name = "simple-image-gdoc-caption03"
+    val (input, spec) = testInputTex(name)
+    val resultF = texTestRunner.run(input)
+
+    assert(resultF.isRight, "Optimizing of the document failed")
+
+    val result = texDiffer.diff(spec, resultF.right.get)
+    assert(result.isEmpty, result.getOrElse(""))
+  }
+
   "Inlined images" should "be potentially be marked as blocks in the postprocessing phase" in {
     val name = "figure-inline"
     val (input, spec) = testInputOdt(name)
@@ -117,6 +131,17 @@ class ImageOdtSpec extends OdtSpec {
     assert(resultF.isRight, "Optimizing of the document failed")
 
     val result = differ.diff(spec, resultF.right.get)
+    assert(result.isEmpty, result.getOrElse(""))
+  }
+
+  "Floating images" should "be placed right where they are in the document" in {
+    val name = "figure-float"
+    val (input, spec) = testInputTex(name)
+    val resultF = texTestRunner.run(input)
+
+    assert(resultF.isRight, "Optimizing of the document failed")
+
+    val result = texDiffer.diff(spec, resultF.right.get)
     assert(result.isEmpty, result.getOrElse(""))
   }
 
