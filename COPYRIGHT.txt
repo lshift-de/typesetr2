@@ -1,0 +1,8 @@
+'Typesetr2' software is copyright LShift Ltd, 2016.
+
+"Leuphana Universität Lüneburg" is granted a non-transferable, worldwide
+license to operate and reproduce the "Typesetr" software produced by LShift
+and used in their project for a period of two years.
+
+The contents of the core/ directory are covered by the license in
+LICENSE.txt.

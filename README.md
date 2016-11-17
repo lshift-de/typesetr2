@@ -21,7 +21,7 @@ the documents before and after Pandoc.
 ### Dependencies
 
  - Simple Build Tool - install the latest version of [sbt](http://www.scala-sbt.org/)
- - Pandoc - install version [1.17.2](http://pandoc.org/installing.html)
+ - Pandoc - requires a local build of the [master](http://pandoc.org/installing.html) branch that contains our latest changes. Since some of our PRs may still be in the queue to the official master we have a [fork]() and a special branch called `master-typesetr` that contains the latest changes. Same applied to Pandoc's definitions, [pandoc-types](). 
  - Scala - (optional) `sbt` handles all the compilation process and provides a console but you may still find it useful
 
 ### Compiling and running
@@ -48,6 +48,9 @@ where
  - `$OUTPUTFILE.pdf` - is the desired location where the pdf is to be created
  - `lshift/pitch` - determines the template/style to use
  - `$TYPESETRSTYLES` - is the location where all styles are defined
+
+To test, simply run:
+    sbt> test
 
 
 ## Limitations
