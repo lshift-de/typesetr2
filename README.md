@@ -21,7 +21,7 @@ the documents before and after Pandoc.
 ### Dependencies
 
  - Simple Build Tool - install the latest version of [sbt](http://www.scala-sbt.org/)
- - Pandoc - requires a local build of the [master](http://pandoc.org/installing.html) branch that contains our latest changes. Since some of our PRs may still be in the queue to the official master we have a [fork]() and a special branch called `master-typesetr` that contains the latest changes. Same applied to Pandoc's definitions, [pandoc-types](). 
+ - Pandoc - requires a local build of the [master](http://pandoc.org/installing.html) branch that contains our latest contributions (there was no release that contains them, yet). Since some of our PRs may still be in the queue to the official master we have a [fork of Pandoc](https://github.com/hubertp-lshift/pandoc) and a special branch called `master-typesetr` that contains the latest changes. Same applied to Pandoc's definitions, [pandoc-types](https://github.com/hubertp-lshift/pandoc-types). 
  - Scala - (optional) `sbt` handles all the compilation process and provides a console but you may still find it useful
 
 ### Compiling and running
@@ -50,6 +50,7 @@ where
  - `$TYPESETRSTYLES` - is the location where all styles are defined
 
 To test, simply run:
+
     sbt> test
 
 
@@ -75,9 +76,9 @@ To test, simply run:
  - [X] page numbering - total number of pages is broken
  - [X] table of contents 
  - [ ] links as new commands - remains to be decided whether it is necessary with the new design
- - [X] deeply nested items - currently not supported ([Pandoc limitation](https://github.com/jgm/pandoc/issues/2922))
+ - [X] deeply nested items - currently not supported ([Pandoc limitation](https://github.com/jgm/pandoc/issues/2922)). We added a workaround in our templates.
  - [o] odt - no native support for inline math text - we can add Pandoc support for it potentially. Partially supported by doing some postprocessing.
- - [ ] multiple text style changes - Pandoc only picks the first one (see [Issue](https://github.com/jgm/pandoc/issues/3223))
+ - [ ] multiple text style changes - Pandoc only picks the first one (see [issue](https://github.com/jgm/pandoc/issues/3223))
 Legend:
  - empty - not supported
  - o - partially supported
