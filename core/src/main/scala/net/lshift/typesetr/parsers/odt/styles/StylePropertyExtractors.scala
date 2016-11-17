@@ -4,11 +4,11 @@ package parsers.odt.styles
 import net.lshift.typesetr.parsers.styles.StylePropKey
 import shapeless.HMap
 
-/*
- * Defines the relation between the style property and how
- * information about should be extracted from the properties
- * nodes.
- */
+/**
+  * Defines the relation between the styles properties and how
+  * the information about it can be inferred from the documents'
+  * nodes
+  */
 object StylePropertyExtractors {
 
   class StyleProp2Extractor[K, V]
@@ -39,6 +39,6 @@ object StylePropertyExtractors {
 
     OdtStylePropKeys.ColWidth        -> PropertiesExtractor.paragraph,
     OdtStylePropKeys.MinHeight       -> PropertiesExtractor.paragraph
-
   )
+
 }

@@ -12,6 +12,13 @@ import java.util.zip._
 import scala.collection.mutable
 import scala.language.implicitConversions
 
+/**
+ * Helper class for representing/manipulating the ODT archive.
+ *
+ * @param mmap a map between the name of the file in the binary
+ *             and its location in some temporary directory
+ *             where it has been unpacked.
+ */
 class OdtFile(mmap: Map[String, File]) {
   import OdtFile._
 
@@ -49,6 +56,13 @@ object OdtFile {
 
   private final val MIMETYPE = "mimetype"
 
+  /**
+   * Construct an ODT archive from a mapping for its archive files
+   *
+   * @param mmap a map between the name of the file and its real location
+   * @return a non-empty internal representation of the unpacked ODT file,
+   *         empty if invalid
+   */
   def fromMap(mmap: Map[String, File]): Option[OdtFile] =
     for {
       c <- mmap.get(CONTENT_F)

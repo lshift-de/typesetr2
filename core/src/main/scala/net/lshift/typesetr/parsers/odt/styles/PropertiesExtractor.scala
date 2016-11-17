@@ -10,7 +10,7 @@ import scalaz.Scalaz._
 import scala.language.implicitConversions
 
 /**
- * Extracts a node of the given `name` from the appropriate
+ * Extracts a value of the `name` property from the appropriate
  * properties node, `props`.
  */
 abstract class PropertiesExtractor(props: Props) {
@@ -18,9 +18,11 @@ abstract class PropertiesExtractor(props: Props) {
 }
 
 /**
- * There are different kinds of nodes that store properties nodes.
- * Some of them have internal nodes that have the same name, so
- * builders instantiate the extractors where they will be looked up.
+ * Property nodes store different kind of properties.
+ *
+ * PropertiesExtractorFactory abstract over how such
+ * properties are internally represented and returns
+ * a simple interface for extracting their values.
  */
 abstract class PropertiesExtractorFactory {
   def build(ps: Props): PropertiesExtractor

@@ -4,6 +4,10 @@ import net.lshift.typesetr.util.Logger
 
 abstract class StyleParser {
 
+  /**
+   * The underlying representation in the document used
+   * for defining styles' meta information
+   */
   type DocNode
 
   /**

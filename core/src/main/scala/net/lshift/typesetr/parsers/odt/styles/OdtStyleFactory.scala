@@ -19,6 +19,7 @@ object OdtStyleFactory {
 
   /**
    * Create a style that mimics paragraph quoting
+   *
    * @param parent parent style reference
    * @param counter uuid
    * @return a new style name and a corresponding odt definition
@@ -30,6 +31,7 @@ object OdtStyleFactory {
 
   /**
    * Create a style that formats the text so that it looks like an inlined code
+   *
    * @param parent parent style reference
    * @return a new style name and a corresponding odt definition
    */
@@ -40,6 +42,7 @@ object OdtStyleFactory {
 
   /**
    * Create a style that mimics table's caption
+   *
    * @param parent parent style's name
    * @return a new style name and a corresponding odt definition
    */
