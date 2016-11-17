@@ -5,6 +5,16 @@ import net.lshift.typesetr.parsers.{Repr, NodeFactory, ImageKind}
 
 import scala.xml.Text
 
+/**
+  * Workaround for missing (or different) features in Pandoc.
+  * Whenever a piece of the document needs a special
+  * formatting (or treatment) it is wrapped in the text block
+  * environment.
+  *
+  * Such text fragments are later identified in the post-Pandoc
+  * phase and replaced with the appropriate output-specific
+  * document fragments.
+  */
 object Markers {
 
   private def wrap[T](name: String, beginName: String, endName: String)(txt: => Seq[Repr.Aux[T]])(implicit factory: NodeFactory.Aux[T], uuid: UUIDGen): Seq[Repr.Aux[T]] = {

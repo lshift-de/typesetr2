@@ -3,12 +3,24 @@ package pandoc
 package writers
 package latex
 
+/**
+ * A representation of the meta information in LaTeX
+ */
 abstract class XMPMeta extends styles.MetaKey {
 
+  /**
+   * Pretty-printed name of the meta information
+   */
   def name: String
 
+  /**
+   * Raw, as defined in the LaTeX document, name of the meta information
+   */
   def rawName: String
 
+  /**
+   * Fallback raw name to be used if `rawName` is not present in the document
+   */
   def fallback: Option[String]
 
 }

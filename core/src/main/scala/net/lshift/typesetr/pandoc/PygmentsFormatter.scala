@@ -4,6 +4,15 @@ package pandoc
 import org.python.util.PythonInterpreter
 import scala.util.matching.Regex
 
+/**
+ * Java has no decent equivalent of the pygments code formatting
+ * capabilities from Python world.
+ * So for now we kick off the python interpreter and use jython
+ * to perform code formatting.
+ *
+ * This is pretty a copy-past operation from the old Typesetr's
+ * implementation.
+ */
 private class PygmentsFormatter {
 
   def format(from: String, kind: PygmentsFormatterKind)(implicit log: util.Logger): String = {

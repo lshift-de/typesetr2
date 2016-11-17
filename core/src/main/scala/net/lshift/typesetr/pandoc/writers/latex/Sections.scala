@@ -1,5 +1,8 @@
 package net.lshift.typesetr.pandoc.writers.latex
 
+/**
+ * Supported section kind in LaTeX
+ */
 sealed abstract class Sections {
   override def toString = super.toString.toLowerCase
 }

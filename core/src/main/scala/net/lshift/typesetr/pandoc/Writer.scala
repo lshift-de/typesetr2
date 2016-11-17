@@ -4,10 +4,20 @@ package pandoc
 import cmd.Config
 import postprocessors.PandocPostProcessor
 
+/**
+  * Post-processing of the Pandoc output into the desired
+  * final output format.
+  */
 abstract class Writer {
 
+  /**
+    * The type of the Pandoc output value for the given output format
+    */
   type BodyTpe
 
+  /**
+    * The desired output format e.g., LaTex, Markdown, HTML.
+    */
   type Out <: cmd.OutputFormat
 
   /**
@@ -34,7 +44,7 @@ abstract class Writer {
    *            specific envs and cmds in the target document format
    * @return the (potentially modified) body of the new document
    */
-  def bodyFixes(body: BodyTpe)(implicit ppp: PandocPostProcessor.Aux[Out, BodyTpe], log: util.Logger): BodyTpe
+  protected def bodyFixes(body: BodyTpe)(implicit ppp: PandocPostProcessor.Aux[Out, BodyTpe], log: util.Logger): BodyTpe
 
 }
 

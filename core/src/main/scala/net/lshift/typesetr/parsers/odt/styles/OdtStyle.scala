@@ -13,8 +13,6 @@ import syntax.singleton._
 import record._
 import util.ValOfUnit
 
-// TODO: the set of inherited properties from the parent.
-
 
 object OdtStyle {
 

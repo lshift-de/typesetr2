@@ -1,6 +1,9 @@
 package net.lshift.typesetr
 package pandoc.writers.latex
 
+/**
+ * Utility functions for generating LaTeX code.
+ */
 abstract class LatexTools {
 
   /**
@@ -26,6 +29,10 @@ abstract class LatexTools {
 
 object LatexTools {
 
+  /**
+   * A default implementation of LaTeXTools that
+   * is available in the implicit search scope.
+   */
   implicit lazy val texTools: LatexTools = new LatexToolsImpl
 
 }

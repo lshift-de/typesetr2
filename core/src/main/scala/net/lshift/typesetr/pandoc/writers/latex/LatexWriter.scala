@@ -18,12 +18,26 @@ import scala.language.postfixOps
 
 import XMPMeta.lang
 
+/**
+ * Typesetr's implementation of the Writer for LaTeX.
+ * It takes Pandoc's partial .tex file and produces a complete
+ * .tex file with all templates, workarounds applied.
+ *
+ * @param from Pandoc's .tex file
+ * @param target desired location for the final .tex file
+ * @param template typesetr's template to apply to the Pandoc's file
+ * @param docMeta additional meta information inferred from the document
+ * @param generatePdf true if we need to generate a PDF file from a final .tex file, false otherwise
+ * @param mediaExtractor initial document's specific way of extracting media file (e.g., images)
+ *
+ */
 class LatexWriter(from: File,
                   target: File,
                   template: styles.StyleTemplate,
                   docMeta: styles.MetaFromDocument,
                   generatePdf: Boolean,
                   mediaExtractor: MediaExtractor) extends Writer {
+
   import LatexWriter._
 
   type Out = cmd.OutputFormat.Tex.type
@@ -31,6 +45,7 @@ class LatexWriter(from: File,
   type BodyTpe = String
 
   private def customCmds(config: Config) =
+
     // TODO: Are there legitimate situations when `quote` should be left as-is?
     s"""|\\\\renewenvironment\\{quote\\}\\{\\\\begin\\{quoting\\}\\}\\{\\\\end\\{quoting\\}\\}
         |\\\\newenvironment\\{rightalign\\}\\{\\\\begin\\{flushright\\}\\\\itshape\\}\\{\\\\end\\{flushright\\}\\}
@@ -120,7 +135,7 @@ class LatexWriter(from: File,
 
   }
 
-  def bodyFixes(body: BodyTpe)(implicit ppp: postprocessors.PandocPostProcessor.Aux[Out, BodyTpe], log: util.Logger): BodyTpe = {
+  protected def bodyFixes(body: BodyTpe)(implicit ppp: postprocessors.PandocPostProcessor.Aux[Out, BodyTpe], log: util.Logger): BodyTpe = {
     val v1 = ppp.replaceEnvBlock(body)
     val v2 = ppp.replaceCmdBlock(v1)
     val v3 = ppp.replaceFormattedBlock(v2)
@@ -207,7 +222,7 @@ object LatexWriter {
 }
 
 /**
- * Latex-converted meta info
+ * LaTeX-converted meta info
  *
  * Key and value for the meta information of the document
  *
@@ -215,9 +230,11 @@ object LatexWriter {
  * @param orig - value of the individual meta information
  */
 class LatexMetaVar(name: String, orig: MetaEntry) {
+
   def fullName: String = LatexMetaVar.prefix + name
 
   def value: String = orig.toLatex
+
 }
 
 object LatexMetaVar {

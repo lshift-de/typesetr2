@@ -75,8 +75,10 @@ abstract class PandocPostProcessor {
 }
 
 object PandocPostProcessor {
+
   type Aux[T <: cmd.OutputFormat, B] =
     PandocPostProcessor { type BodyTpe = B; type Out = T }
+
 }
 
 

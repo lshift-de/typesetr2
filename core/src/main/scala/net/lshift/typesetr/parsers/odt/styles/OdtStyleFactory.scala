@@ -33,7 +33,6 @@ object OdtStyleFactory {
    * @param parent parent style reference
    * @return a new style name and a corresponding odt definition
    */
-
   def inlineCodeStyle(parent: Style): (StyleId, DocumentFormatingFactory.Aux[scala.xml.Node]) = {
     val codeStyle = StyleId(Some("text"), InlineCodeStyleName)
     (codeStyle, CodeStyleText(parent))

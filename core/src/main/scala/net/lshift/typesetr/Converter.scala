@@ -57,7 +57,6 @@ object Converter extends FileConfigUtils with pandoc.PandocPhase {
               optimizer.optimize(parsedDoc.root)(implicitly[Logger], parsedDoc.style)
             else
               parsedDoc.root).right
-            //inferredMeta <- Right(optimizer.inferMeta(optimizedDoc)(parsedDoc.style)).right
             inferredMeta <- optimizer.inferMeta(optimizedDoc)(parsedDoc.style).right
             // 4. Store the optimized document
             pandocInputF <- writer.writeToFile(inferredMeta._1)(implicitly[Logger], config).
