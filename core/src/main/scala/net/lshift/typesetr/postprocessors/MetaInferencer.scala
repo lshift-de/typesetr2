@@ -59,19 +59,20 @@ trait MetaInferencer[T] { self =>
 
     object MetaSpan {
       def unapply(elem: Repr.Aux[T]): Option[Repr.Aux[T]] = elem.tag match {
-        case InternalTags.SPAN => elem.body.headOption
-        case _                 => None
+        case InternalTags.U => elem.body.headOption
+        case _              => None
       }
     }
 
     object SpanWithValue {
-      def unapply(elems: Seq[Repr.Aux[T]]): Option[InferredMetaEntryNode] =
+      def unapply(elems: Seq[Repr.Aux[T]]): Option[InferredMetaEntryNode] = {
         elems match {
-          case MetaSpan(cmd) :: rest if cmd.tag == InternalTags.U =>
+          case MetaSpan(cmd) :: rest =>
             RegularMetaEntryNode(cmd, rest)
           case _ =>
             None
         }
+      }
     }
 
   }

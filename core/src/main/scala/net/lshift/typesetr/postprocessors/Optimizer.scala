@@ -2,9 +2,8 @@ package net.lshift.typesetr
 package postprocessors
 
 import net.lshift.typesetr.pandoc.{ UUIDGen, Markers }
-import parsers.styles.DocumentStyle
+import parsers.styles.{ DocumentStyle, StyleId }
 import net.lshift.typesetr.xml.attributes.TextAlign
-import parsers.odt.styles._
 import styles.MetaFromDocument
 
 import xml._
@@ -21,7 +20,7 @@ import scalaz.Scalaz._
 
 trait Optimizer[T] {
 
-  type ElemSig = (Tag, List[Attribute])
+  type ElemSig = (Tag, List[Attribute], Option[StyleId])
 
   def optimize(node: Repr.Aux[T])(implicit logger: Logger, sty: DocumentStyle.Aux[T]): Repr.Aux[T] = {
     logger.info("Optimizing document")
@@ -71,7 +70,9 @@ trait PostProcessorUtils[T] extends OpimizerStrategies[T] {
         case Tag.textTag => TextKey(idx)
         case t =>
           t.state match {
-            case Tag.Optimize => SigKey((t, x.attr), idx)
+            case Tag.Optimize if nodeConfig.nodeInfo.isFormattedText(x) =>
+              SigKey((t, x.attr, nodeConfig.styleExtractor.extractId(x)), idx)
+            case Tag.Optimize => SigKey((t, x.attr, None), idx)
             case Tag.Leave    => SkolemKey(idx)
             case Tag.Replace  => RemoveKey(idx)
           }
@@ -183,18 +184,23 @@ trait PostProcessorUtils[T] extends OpimizerStrategies[T] {
 
     def maybeCollapseGroups(key: ElemSig, elems: Seq[Repr.Aux[T]], prev: Option[(Tag, Seq[Repr.Aux[T]])])(implicit logger: Logger): Seq[Repr.Aux[T]] = {
       logger.debug(s"Collapse groups of ${key._1}")
+
       key._1 match {
         case inline if inline isIn INLINE_TAG_WITH_BLOCKQUOTE =>
           // weird odt splitting
           // TODO: enable filtering once styles are back
+          logger.debug(s"[optimizer] coalesce siblings of ${elems.length} elements")
           coalesceSiblings(key, elems) //.filterNot(BogusElement.isBogus)
         case BLOCK =>
           // collapse blocks into one
+          logger.debug("[optimizer] coalesce blocks")
           coalesceBlocks(key, elems) //.filterNot(BogusElement.isBogus)
         case P =>
+          logger.debug("[optimizer] coalesce paragraph")
           paragraphSlidingWindow(elems.toList, acc = Nil)(prev.map(_._1))
         case _ =>
-          logger.debug(s"Coalesce based on parent-child relation ${key._1}")
+          logger.debug(s"[optimizer] coalesce based on parent-child relation ${key._1}")
+
           (for {
             elem <- elems
             elem1 <- coalesceParentChild(key, elem)
@@ -241,6 +247,7 @@ trait PostProcessorUtils[T] extends OpimizerStrategies[T] {
           val text = elems.flatMap(_.extractPlainText).mkString("")
           Repr.makeTextElem(text) :: Nil
         case SigKey(key, idx) =>
+          logger.debug(s"[optimizer] maybe collapse a node with $key and ${elems.headOption.map(_.source)}")
           maybeCollapseGroups(key, elems, findTag(idx - 1, groupedKeys))
         case SkolemKey(_) =>
           elems
@@ -259,7 +266,10 @@ trait PostProcessorUtils[T] extends OpimizerStrategies[T] {
     override def equals(x: Any): Boolean =
       x match {
         case SigKey(elemSig2, idx2) =>
-          (elemSig2._1 equals elemSig._1) && (elemSig2._2 equals elemSig._2) && (idx2 == idx)
+          (elemSig2._1 equals elemSig._1) &&
+            (elemSig2._2 equals elemSig._2) &&
+            (elemSig2._3 equals elemSig._3) &&
+            (idx2 == idx)
         case _ =>
           false
       }
@@ -434,16 +444,53 @@ trait OptimizerCoalesceSiblings[T] {
   self: Optimizer[T] =>
 
   protected def coalesceSiblings(sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit logger: Logger, sty: DocumentStyle.Aux[T]): Seq[Repr.Aux[T]] = {
+    logger.debug(s"coalesce siblings: $sig")
+
     // pack together the elements of the group
     // should apply cleaning up recursively
-    val compactedElems = coalesce(elems.flatMap(_.body).toList)
+    elems match {
+      case StyleSpanWithinSpan(elem) :: Nil =>
+        coalesce(elem :: Nil)
+      case _ =>
+        // do an actual coalescing, that is not related to text formatting
+        val compactedElems = coalesce(elems.flatMap(_.body).toList)
 
-    logger.debug(s"coalesce siblings: $sig > Reduced ${elems.length} to ${compactedElems.length}")
+        logger.debug(s"Reduced ${elems.length}")
 
-    elems.headOption.map { first =>
-      Repr.makeElem(sig._1, compactedElems, contents = None,
-        attrs = sig._2)(first.source, implicitly[NodeFactory.Aux[T]]) :: Nil
-    } getOrElse (compactedElems)
+        elems.headOption.map { first =>
+          Repr.makeElem(sig._1, compactedElems, contents = None,
+            attrs = sig._2)(first.source, implicitly[NodeFactory.Aux[T]]) :: Nil
+        } getOrElse (compactedElems)
+    }
+
+  }
+
+  object SpanElem {
+    def unapply(elem: Repr.Aux[T]): Option[Repr.Aux[T]] =
+      if (nodeConfig.nodeInfo.isFormattedText(elem)) Some(elem)
+      else None
+  }
+
+  object StyleSpanWithinSpan {
+
+    // Span elements with other Span elements with the same
+    // style name is an unnecessary structure. Collapse them
+    // into one.
+    def unapply(elem: Repr.Aux[T]): Option[Repr.Aux[T]] = {
+      elem match {
+        case SpanElem(elem1) =>
+          elem1.body match {
+            case SpanElem(elem2) :: Nil =>
+              val styleInner = nodeConfig.styleExtractor.extractId(elem2)
+              val styleOuter = nodeConfig.styleExtractor.extractId(elem1)
+              if (styleInner == styleOuter) Some(elem2)
+              else None
+            case _ => None
+          }
+        case _ => None
+      }
+    }
+
   }
 
 }

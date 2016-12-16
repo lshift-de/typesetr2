@@ -79,6 +79,7 @@ To test, simply run:
  - [X] deeply nested items - currently not supported ([Pandoc limitation](https://github.com/jgm/pandoc/issues/2922)). We added a workaround in our templates.
  - [o] odt - no native support for inline math text - we can add Pandoc support for it potentially. Partially supported by doing some postprocessing.
  - [ ] multiple text style changes - Pandoc only picks the first one (see [issue](https://github.com/jgm/pandoc/issues/3223))
+ - [ ] underline formatting - Pandoc [limitation](https://github.com/jgm/pandoc/issues/2264)
 Legend:
  - empty - not supported
  - o - partially supported

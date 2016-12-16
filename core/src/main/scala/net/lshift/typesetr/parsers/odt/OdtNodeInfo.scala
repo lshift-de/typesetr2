@@ -41,4 +41,7 @@ class OdtNodeInfo extends NodeInfo {
     case _                 => None
   }
 
+  def isFormattedText(node: Repr.Aux[DocNode]): Boolean =
+    node.source.hasTag(InternalTags.SPAN)
+
 }

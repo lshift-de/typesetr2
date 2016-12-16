@@ -22,7 +22,10 @@ class OdtNodeConfig extends NodeConfigs {
     new StyleExtractor {
       type DocNode = Node
       def extractId(node: Repr.Aux[Node]): Option[parsers.styles.StyleId] =
-        OdtStyleId.forNonStyleNode(node.source)
+        node.source match {
+          case _: scala.xml.Text => None
+          case _                 => OdtStyleId.forNonStyleNode(node.source)
+        }
     }
 
   lazy val nodeFactory: NodeFactory.Aux[Node] = new OdtNodeFactory

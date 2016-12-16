@@ -50,6 +50,14 @@ abstract class NodeInfo {
    */
   def textRepresentation(node: Repr.Aux[DocNode]): Option[String]
 
+  /**
+   * Does the given node represent a formatted text fragment
+   *
+   * @param node node of the document
+   * @return true is the node represents the formatted text, false otherwise
+   */
+  def isFormattedText(node: Repr.Aux[DocNode]): Boolean
+
 }
 
 object NodeInfo {

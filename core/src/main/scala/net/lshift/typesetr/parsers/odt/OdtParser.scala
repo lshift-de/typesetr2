@@ -329,7 +329,6 @@ class OdtParser() extends Parser {
         val hrefAttr = AttributeKey(OdtTags.HrefType)
         // TODO: re-enable the assert
         //assert((tpeAttr inAttributes (attr)).getOrElse("") == "simple")
-
         // TODO: store a definition separately
 
         val hrefLink = source.attributes.getTag(OdtTags.HrefAttr)
