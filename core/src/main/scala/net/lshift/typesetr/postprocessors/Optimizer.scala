@@ -4,14 +4,13 @@ package postprocessors
 import net.lshift.typesetr.pandoc.{ UUIDGen, Markers }
 import parsers.styles.{ DocumentStyle, StyleId }
 import net.lshift.typesetr.xml.attributes.TextAlign
-import styles.MetaFromDocument
 
 import xml._
 import xml.InternalTags._
 import xml.Attributes._
 import parsers._
 
-import util.{ ValOfUnit, Logger }
+import util.Logger
 
 import scala.annotation.tailrec
 
@@ -33,11 +32,40 @@ trait Optimizer[T] {
       attrs = node.attr)
   }
 
+  /**
+   * Combine the nodes of the document, if possible.
+   *
+   * @param nodes a list of initial nodes to optimize
+   * @param logger Typesetr's internal logging instance
+   * @param sty document's stylesheet
+   * @return a list of nodes, potentially combined/modified
+   */
   protected def coalesce(nodes: List[Repr.Aux[T]])(implicit logger: Logger, sty: DocumentStyle.Aux[T]): List[Repr.Aux[T]]
 
   implicit protected def nodeConfig: NodeConfigs.WithNode[T]
 
+  /**
+   * A token for generating Typesetr's tags that are unique for
+   * the given compilation phase
+   *
+   * @return a unique token
+   */
   implicit protected def uuid: UUIDGen
+
+}
+
+trait OpimizerStrategies[T] {
+  self: Optimizer[T] =>
+
+  protected def coalesceBlocks(sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit logger: Logger, sty: DocumentStyle.Aux[T]): Seq[Repr.Aux[T]]
+
+  protected def coalesceSiblings(sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit logger: Logger, sty: DocumentStyle.Aux[T]): Seq[Repr.Aux[T]]
+
+  protected def coalesceHeadings(body: Repr.Aux[T])(implicit logger: Logger, sty: DocumentStyle.Aux[T]): Option[Seq[Repr.Aux[T]]]
+
+  protected def coalesceParentChild(sig: ElemSig, elem: Repr.Aux[T])(implicit logger: Logger, sty: DocumentStyle.Aux[T]): Option[Repr.Aux[T]]
+
+  protected def coalesceParagraphs(elems: List[Repr.Aux[T]])(implicit logger: Logger, prev: Option[Tag]): List[Repr.Aux[T]]
 
 }
 
@@ -78,110 +106,6 @@ trait PostProcessorUtils[T] extends OpimizerStrategies[T] {
           }
       }
 
-    def hasImgAttribute(attrs: List[Attribute]): Option[(ImageKind, Double)] =
-      for {
-        imgKindRaw <- InternalAttributes.frameDisplay inAttributes attrs flatMap (_.value)
-        imgWidthRaw <- InternalAttributes.imgWidth inAttributes attrs flatMap (_.value)
-        imgKind <- ImageKind(imgKindRaw)
-      } yield (imgKind, imgWidthRaw.toDouble)
-
-    object FigureP {
-      // Extracts the last frame element and whatever was pre- and post- of it, if any.
-      def unapply(elem: Repr.Aux[T]): Option[(List[Repr.Aux[T]], Repr.Aux[T], List[Repr.Aux[T]])] = {
-        // Only attach the caption to the last frame node
-        val spanned = elem.body.foldRight((Nil: List[Repr.Aux[T]], Nil: List[Repr.Aux[T]])) {
-          case (elem, acc) =>
-            if (acc._1.nonEmpty) (elem :: acc._1, acc._2)
-            else if (elem.tag == InternalTags.FRAME) (elem :: Nil, acc._2)
-            else (Nil, elem :: acc._2)
-        }
-        spanned._1.reverse match {
-          case head :: rest => Some((rest, head, spanned._2))
-          case Nil          => None
-        }
-      }
-    }
-
-    object FigureWithCaptionP {
-      // Extracts the last frame element and whatever was pre- and post- of it, if any.
-      def unapply(elem: Repr.Aux[T]): Option[(List[Repr.Aux[T]], Repr.Aux[T], List[Repr.Aux[T]])] = {
-        // Only attach the caption to the last frame node
-        val spanned = elem.body.foldRight((Nil: List[Repr.Aux[T]], Nil: List[Repr.Aux[T]])) {
-          case (elem, acc) =>
-            if (acc._1.nonEmpty) (elem :: acc._1, acc._2)
-            else if (elem.tag == InternalTags.FRAME) (elem :: Nil, acc._2)
-            else (Nil, elem :: acc._2)
-        }
-        (spanned._1.reverse, spanned._2) match {
-          case (head :: rest, caption :: rest2) =>
-            if (caption.tag == InternalTags.CAPTION)
-              Some((rest, head, rest2))
-            else
-              None
-          case _ => None
-        }
-      }
-    }
-
-    object CaptionP {
-      def unapply(elem: Repr.Aux[T]): Option[List[Repr.Aux[T]]] =
-        elem.body.headOption.filter(_.tag == InternalTags.CAPTION).map(_ => elem.body.tail.toList)
-    }
-
-    // Attach a caption to the element, if present.
-    // Captions are associated with figures/tables if they are immediately
-    // following the given element.
-    def paragraphSlidingWindow(elems: List[Repr.Aux[T]], acc: List[Repr.Aux[T]])(implicit prev: Option[Tag]): List[Repr.Aux[T]] = elems match { // Figure and its caption in separate paragraphs but still next to each other
-      case (p @ FigureP(pre, figElem, post)) :: (c @ CaptionP(txtElems)) :: rest =>
-        // create a new figure with a caption
-        val postTxt = post.flatMap(_.extractPlainText(deep = true)).mkString("")
-        if (postTxt.trim != "") {
-          logger.info("A text between a figure and a caption is non-empty. Ignoring caption.")
-          paragraphSlidingWindow(p :: rest, acc)
-        } else {
-          val withInferredCaption = implicitly[NodeFactory.Aux[T]].imgWithCaption(figElem, txtElems)
-          val newP = implicitly[NodeFactory.Aux[T]].paragraphFrom(
-            pre.flatMap(parseImages) ++ Seq(withInferredCaption), p)
-          paragraphSlidingWindow(rest, newP :: acc)
-        }
-
-      // Figure and caption in the same paragraph
-      case (p @ FigureWithCaptionP(pre, figElem, caption)) :: rest =>
-        val withInferredCaption = implicitly[NodeFactory.Aux[T]].imgWithCaption(figElem, caption)
-        val newP = implicitly[NodeFactory.Aux[T]].paragraphFrom(
-          pre.flatMap(parseImages) ++ Seq(withInferredCaption), p)
-        paragraphSlidingWindow(rest, newP :: acc)
-
-      case (p @ FigureP(pre, fig, post)) :: rest =>
-        val imgKindOpt = hasImgAttribute(fig.attr)
-        val newP = imgKindOpt.map {
-          case (imgKind0, width) =>
-            val imgKind = if (post.isEmpty && pre.isEmpty) BlockImg else imgKind0
-            val body1: Seq[Repr.Aux[T]] =
-              pre.flatMap(parseImages) ++ imgKind.formatting.format(Seq(fig)) ++ post.flatMap(parseImages)
-            implicitly[NodeFactory.Aux[T]].paragraphFrom(body1, p)
-        } getOrElse (p)
-        paragraphSlidingWindow(rest, newP :: acc)
-
-      case (elem @ CaptionP(txtElems)) :: rest if prev == Some(TABLE) =>
-        val attr1 = Attribute(InternalAttributes.style, "Table") :: Nil
-        val tableCaption = implicitly[NodeFactory.Aux[T]].paragraphFrom(txtElems, elem)
-        paragraphSlidingWindow(rest, tableCaption.copy(attr = attr1) :: acc)
-
-      case (elem @ CaptionP(txtElems)) :: rest =>
-        logger.info(s"""Ignoring caption ${txtElems.map(_.extractPlainText).mkString("")} not associated with any image/table""")
-        paragraphSlidingWindow(rest, elem :: acc)
-
-      case head :: rest =>
-        paragraphSlidingWindow(rest, head :: acc)
-
-      case _ =>
-        acc.reverse
-    }
-
-    def parseImages(elem: Repr.Aux[T]): Seq[Repr.Aux[T]] =
-      hasImgAttribute(elem.attr).map(kind => kind._1.formatting.format(Seq(elem))).getOrElse(Seq(elem))
-
     def maybeCollapseGroups(key: ElemSig, elems: Seq[Repr.Aux[T]], prev: Option[(Tag, Seq[Repr.Aux[T]])])(implicit logger: Logger): Seq[Repr.Aux[T]] = {
       logger.debug(s"Collapse groups of ${key._1}")
 
@@ -197,7 +121,7 @@ trait PostProcessorUtils[T] extends OpimizerStrategies[T] {
           coalesceBlocks(key, elems) //.filterNot(BogusElement.isBogus)
         case P =>
           logger.debug("[optimizer] coalesce paragraph")
-          paragraphSlidingWindow(elems.toList, acc = Nil)(prev.map(_._1))
+          coalesceParagraphs(elems.toList)(logger, prev.map(_._1))
         case _ =>
           logger.debug(s"[optimizer] coalesce based on parent-child relation ${key._1}")
 
@@ -276,6 +200,117 @@ trait PostProcessorUtils[T] extends OpimizerStrategies[T] {
   }
   case class SkolemKey(idx: Int) extends GroupKey
   case class RemoveKey(idx: Int) extends GroupKey
+
+}
+
+trait OptimizerCoalesceParagraphs[T] {
+  self: Optimizer[T] =>
+
+  def coalesceParagraphs(elems: List[Repr.Aux[T]])(implicit logger: Logger, prev: Option[Tag]): List[Repr.Aux[T]] =
+    paragraphSlidingWindow(elems, acc = Nil)
+
+  // Figure and its caption in separate paragraphs but still next to each other
+  private def paragraphSlidingWindow(elems: List[Repr.Aux[T]], acc: List[Repr.Aux[T]])(implicit logger: Logger, prev: Option[Tag]): List[Repr.Aux[T]] =
+    elems match {
+      case (p @ FigureP(pre, figElem, post)) :: (c @ CaptionP(txtElems)) :: rest =>
+        // create a new figure with a caption
+        val postTxt = post.flatMap(_.extractPlainText(deep = true)).mkString("")
+        if (postTxt.trim != "") {
+          logger.info("A text between a figure and a caption is non-empty. Ignoring caption.")
+          paragraphSlidingWindow(p :: rest, acc)
+        } else {
+          val withInferredCaption = implicitly[NodeFactory.Aux[T]].imgWithCaption(figElem, txtElems)
+          val newP = implicitly[NodeFactory.Aux[T]].paragraphFrom(
+            pre.flatMap(parseImages) ++ Seq(withInferredCaption), p)
+          paragraphSlidingWindow(rest, newP :: acc)
+        }
+
+      // Figure and caption in the same paragraph
+      case (p @ FigureWithCaptionP(pre, figElem, caption)) :: rest =>
+        val withInferredCaption = implicitly[NodeFactory.Aux[T]].imgWithCaption(figElem, caption)
+        val newP = implicitly[NodeFactory.Aux[T]].paragraphFrom(
+          pre.flatMap(parseImages) ++ Seq(withInferredCaption), p)
+        paragraphSlidingWindow(rest, newP :: acc)
+
+      case (p @ FigureP(pre, fig, post)) :: rest =>
+        val imgKindOpt = hasImgAttribute(fig.attr)
+        val newP = imgKindOpt.map {
+          case (imgKind0, width) =>
+            val imgKind = if (post.isEmpty && pre.isEmpty) BlockImg else imgKind0
+            val body1: Seq[Repr.Aux[T]] =
+              pre.flatMap(parseImages) ++ imgKind.formatting.format(Seq(fig)) ++ post.flatMap(parseImages)
+            implicitly[NodeFactory.Aux[T]].paragraphFrom(body1, p)
+        } getOrElse (p)
+        paragraphSlidingWindow(rest, newP :: acc)
+
+      case (elem @ CaptionP(txtElems)) :: rest if prev == Some(TABLE) =>
+        val attr1 = Attribute(InternalAttributes.style, "Table") :: Nil
+        val tableCaption = implicitly[NodeFactory.Aux[T]].paragraphFrom(txtElems, elem)
+        paragraphSlidingWindow(rest, tableCaption.copy(attr = attr1) :: acc)
+
+      case (elem @ CaptionP(txtElems)) :: rest =>
+        logger.info(s"""Ignoring caption ${txtElems.map(_.extractPlainText).mkString("")} not associated with any image/table""")
+        paragraphSlidingWindow(rest, elem :: acc)
+
+      case head :: rest =>
+        paragraphSlidingWindow(rest, head :: acc)
+
+      case _ =>
+        acc.reverse
+    }
+
+  private def hasImgAttribute(attrs: List[Attribute]): Option[(ImageKind, Double)] =
+    for {
+      imgKindRaw <- InternalAttributes.frameDisplay inAttributes attrs flatMap (_.value)
+      imgWidthRaw <- InternalAttributes.imgWidth inAttributes attrs flatMap (_.value)
+      imgKind <- ImageKind(imgKindRaw)
+    } yield (imgKind, imgWidthRaw.toDouble)
+
+  private object FigureP {
+    // Extracts the last frame element and whatever was pre- and post- of it, if any.
+    def unapply(elem: Repr.Aux[T]): Option[(List[Repr.Aux[T]], Repr.Aux[T], List[Repr.Aux[T]])] = {
+      // Only attach the caption to the last frame node
+      val spanned = elem.body.foldRight((Nil: List[Repr.Aux[T]], Nil: List[Repr.Aux[T]])) {
+        case (elem, acc) =>
+          if (acc._1.nonEmpty) (elem :: acc._1, acc._2)
+          else if (elem.tag == InternalTags.FRAME) (elem :: Nil, acc._2)
+          else (Nil, elem :: acc._2)
+      }
+      spanned._1.reverse match {
+        case head :: rest => Some((rest, head, spanned._2))
+        case Nil          => None
+      }
+    }
+  }
+
+  private object FigureWithCaptionP {
+    // Extracts the last frame element and whatever was pre- and post- of it, if any.
+    def unapply(elem: Repr.Aux[T]): Option[(List[Repr.Aux[T]], Repr.Aux[T], List[Repr.Aux[T]])] = {
+      // Only attach the caption to the last frame node
+      val spanned = elem.body.foldRight((Nil: List[Repr.Aux[T]], Nil: List[Repr.Aux[T]])) {
+        case (elem, acc) =>
+          if (acc._1.nonEmpty) (elem :: acc._1, acc._2)
+          else if (elem.tag == InternalTags.FRAME) (elem :: Nil, acc._2)
+          else (Nil, elem :: acc._2)
+      }
+      (spanned._1.reverse, spanned._2) match {
+        case (head :: rest, caption :: rest2) =>
+          if (caption.tag == InternalTags.CAPTION)
+            Some((rest, head, rest2))
+          else
+            None
+        case _ => None
+      }
+    }
+  }
+
+  private object CaptionP {
+    def unapply(elem: Repr.Aux[T]): Option[List[Repr.Aux[T]]] =
+      elem.body.headOption.filter(_.tag == InternalTags.CAPTION).map(_ => elem.body.tail.toList)
+  }
+
+  private def parseImages(elem: Repr.Aux[T]): Seq[Repr.Aux[T]] =
+    hasImgAttribute(elem.attr).map(kind => kind._1.formatting.format(Seq(elem))).getOrElse(Seq(elem))
 
 }
 
@@ -542,15 +577,6 @@ trait OptimzerCoalesceHeadings[T] {
       }
     } else Some(body :: Nil)
   }
-}
-
-trait OpimizerStrategies[T] {
-  self: Optimizer[T] =>
-
-  protected def coalesceBlocks(sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit logger: Logger, sty: DocumentStyle.Aux[T]): Seq[Repr.Aux[T]]
-  protected def coalesceSiblings(sig: ElemSig, elems: Seq[Repr.Aux[T]])(implicit logger: Logger, sty: DocumentStyle.Aux[T]): Seq[Repr.Aux[T]]
-  protected def coalesceHeadings(body: Repr.Aux[T])(implicit logger: Logger, sty: DocumentStyle.Aux[T]): Option[Seq[Repr.Aux[T]]]
-  protected def coalesceParentChild(sig: ElemSig, elem: Repr.Aux[T])(implicit logger: Logger, sty: DocumentStyle.Aux[T]): Option[Repr.Aux[T]]
 }
 
 trait OptimizerCoalesceParentChild[T] {

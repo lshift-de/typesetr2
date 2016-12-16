@@ -14,6 +14,7 @@ object DefaultPostProcessor {
     with OptimizerCoalesceBlocks[T]
     with OptimizerCoalesceSiblings[T]
     with OptimzerCoalesceHeadings[T]
+    with OptimizerCoalesceParagraphs[T]
     with MetaInferencer[T] {
 
     protected def nodeConfig: NodeConfigs.WithNode[T] = config
