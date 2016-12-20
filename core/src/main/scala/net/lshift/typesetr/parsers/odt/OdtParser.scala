@@ -420,6 +420,9 @@ class OdtParser() extends Parser {
       case t @ OdtTags.TextListHeader =>
         node.wrap(tag = t.toInternalTag, body = children)
 
+      case t @ OdtTags.TextPageNumber =>
+        node.wrap(tag = t.toInternalTag, body = children)
+
       case tag =>
         // TODO:
         // if sty and sty.type.endswith('title'):

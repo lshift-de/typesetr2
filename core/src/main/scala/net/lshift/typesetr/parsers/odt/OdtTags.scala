@@ -53,6 +53,7 @@ object OdtTags {
   val TextOutlineLevel: XmlAttribute = (implicitly[NameSpaces].apply("text"), "outline-level")
   val TextNotesConf: XmlTag = (implicitly[NameSpaces].apply("text"), "notes-configuration")
   val TextLineNumConf: XmlTag = (implicitly[NameSpaces].apply("text"), "linenumbering-configuration")
+  val TextPageNumber: XmlTag = (implicitly[NameSpaces].apply("text"), "page-number")
 
   val TableStyleNameAttr: XmlAttribute = (implicitly[NameSpaces].apply("table"), "style-name")
   val Table: XmlTag = (implicitly[NameSpaces].apply("table"), "table")

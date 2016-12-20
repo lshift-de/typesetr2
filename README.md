@@ -78,7 +78,7 @@ To test, simply run:
  - [ ] links as new commands - remains to be decided whether it is necessary with the new design
  - [X] deeply nested items - currently not supported ([Pandoc limitation](https://github.com/jgm/pandoc/issues/2922)). We added a workaround in our templates.
  - [o] odt - no native support for inline math text - we can add Pandoc support for it potentially. Partially supported by doing some postprocessing.
- - [ ] multiple text style changes - Pandoc only picks the first one (see [issue](https://github.com/jgm/pandoc/issues/3223))
+ - [o] multiple text style changes - Pandoc only picks the first one (see [issue](https://github.com/jgm/pandoc/issues/3223)). Looks like it is partially the fault of Typesetr's templates. 
  - [ ] underline formatting - Pandoc [limitation](https://github.com/jgm/pandoc/issues/2264)
 Legend:
  - empty - not supported

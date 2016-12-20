@@ -100,7 +100,7 @@ class OdtWriter(inputFile: File)(implicit val uuidGen: UUIDGen) extends Writer {
             val encoded1 = inlineMath.replaceAllIn(encoded,
               m => scala.util.matching.Regex.quoteReplacement(
                 Markers.mathBlock(m.group(inlineMathGroup))))
-            writer.write(s"$space$encoded1$NewLine")
+            writer.write(s"$encoded1")
             true
           case _ =>
             writer.write(s"<missing text>$NewLine")
